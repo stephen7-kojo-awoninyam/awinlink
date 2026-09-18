@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h1 class="fw-bold mb-1">
+                My Courses
+            </h1>
+
+            <p class="text-muted mb-0">
+                Create, manage, and track your courses.
+            </p>
+
+        </div>
+
+        <a href="{% url 'create_course' %}"
+           class="btn btn-primary">
+
+            <i class="bi bi-plus-lg me-1"></i>
+            Create Course
+
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         COURSE LIST
+    ====================================================== -->
+
+    <div class="row g-4">
+
+        {% for course in courses %}
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+
+                <!-- COURSE IMAGE -->
+
+                {% if course.thumbnail %}
+
+                <img
+                    src="{{ course.thumbnail.url }}"
+                    class="card-img-top"
+                    style="height: 180px; object-fit: cover;"
+                    alt="{{ course.title }}"
+                >
+
+                {% else %}
+
+                <div
+                    class="bg-light d-flex align-items-center justify-content-center"
+                    style="height: 180px;"
+                >
+
+                    <i class="bi bi-book fs-1 text-muted"></i>
+
+                </div>
+
+                {% endif %}
+
+
+                <!-- COURSE BODY -->
+
+                <div class="card-body d-flex flex-column">
+
+                    <h5 class="fw-bold">
+                        {{ course.title }}
+                    </h5>
+
+
+                    {% if course.category %}
+
+                    <p class="small text-muted mb-2">
+
+                        {{ course.category.name }}
+
+                    </p>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         COURSE STATUS
+                    ================================================== -->
+
+                    {% if course.status == "DRAFT" %}
+
+                        <span class="badge bg-secondary align-self-start">
+                            Draft
+                        </span>
+
+                    {% elif course.status == "PENDING" %}
+
+                        <span class="badge bg-warning text-dark align-self-start">
+                            Pending Approval
+                        </span>
+
+                    {% elif course.status == "APPROVED" %}
+
+                        <span class="badge bg-success align-self-start">
+                            Approved
+                        </span>
+
+                    {% elif course.status == "REJECTED" %}
+
+                        <span class="badge bg-danger align-self-start">
+                            Rejected
+                        </span>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         REJECTION REASON
+                    ================================================== -->
+
+                    {% if course.status == "REJECTED" and course.rejection_reason %}
+
+                    <div class="alert alert-danger mt-3 mb-0 small">
+
+                        <strong>
+                            Reason for rejection:
+                        </strong>
+
+                        <div class="mt-1">
+                            {{ course.rejection_reason|linebreaksbr }}
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         COURSE INFORMATION
+                    ================================================== -->
+
+                    <div class="small text-muted mt-3">
+
+                        <div class="mb-1">
+
+                            <i class="bi bi-journal-text me-1"></i>
+
+                            {{ course.lessons.count }} lesson{{ course.lessons.count|pluralize }}
+
+                        </div>
+
+                        <div>
+
+                            <i class="bi bi-calendar3 me-1"></i>
+
+                            Created:
+                            {{ course.created_at|date:"M d, Y" }}
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ACTIONS
+                    ================================================== -->
+
+                    <div class="mt-auto pt-4">
+
+
+                        <!-- DRAFT -->
+
+                        {% if course.status == "DRAFT" %}
+
+                        <div class="d-grid gap-2">
+
+                            <a
+                                href="{% url 'manage_course' course.id %}"
+                                class="btn btn-primary"
+                            >
+                                Manage Course
+                            </a>
+
+                            <a
+                                href="{% url 'edit_course' course.id %}"
+                                class="btn btn-outline-secondary"
+                            >
+                                Edit Course
+                            </a>
+
+                            {% if course.lessons.exists %}
+
+                            <form
+                                method="POST"
+                                action="{% url 'submit_course' course.id %}"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-success w-100"
+                                    onclick="return confirm('Submit this course for admin approval?');"
+                                >
+                                    Submit for Approval
+                                </button>
+
+                            </form>
+
+                            {% else %}
+
+                            <div class="alert alert-warning small mb-0">
+
+                                Add at least one lesson before submitting.
+
+                            </div>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- PENDING -->
+
+                        {% elif course.status == "PENDING" %}
+
+                        <div class="d-grid gap-2">
+
+                            <a
+                                href="{% url 'manage_course' course.id %}"
+                                class="btn btn-outline-primary"
+                            >
+                                View Course
+                            </a>
+
+                            <div class="alert alert-warning small mb-0">
+
+                                <i class="bi bi-clock me-1"></i>
+
+                                This course is currently waiting for
+                                administrator approval.
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- APPROVED -->
+
+                        {% elif course.status == "APPROVED" %}
+
+                        <div class="d-grid gap-2">
+
+                            <a
+                                href="{% url 'course_detail' course.slug %}"
+                                class="btn btn-success"
+                            >
+                                View Published Course
+                            </a>
+
+                            <div class="alert alert-success small mb-0">
+
+                                <i class="bi bi-check-circle me-1"></i>
+
+                                This course is published and available
+                                to learners.
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- REJECTED -->
+
+                        {% elif course.status == "REJECTED" %}
+
+                        <div class="d-grid gap-2">
+
+                            <a
+                                href="{% url 'manage_course' course.id %}"
+                                class="btn btn-primary"
+                            >
+                                Manage Course
+                            </a>
+
+                            <a
+                                href="{% url 'edit_course' course.id %}"
+                                class="btn btn-outline-secondary"
+                            >
+                                Edit Course
+                            </a>
+
+                            {% if course.lessons.exists %}
+
+                            <form
+                                method="POST"
+                                action="{% url 'submit_course' course.id %}"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-success w-100"
+                                    onclick="return confirm('Submit this corrected course for approval?');"
+                                >
+                                    Resubmit for Approval
+                                </button>
+
+                            </form>
+
+                            {% else %}
+
+                            <div class="alert alert-warning small mb-0">
+
+                                Add at least one lesson before resubmitting.
+
+                            </div>
+
+                            {% endif %}
+
+                        </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        {% empty %}
+
+        <!-- =====================================================
+             NO COURSES
+        ====================================================== -->
+
+        <div class="col-12">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center py-5">
+
+                    <i class="bi bi-book fs-1 text-muted"></i>
+
+                    <h4 class="fw-bold mt-3">
+                        You haven't created any courses yet.
+                    </h4>
+
+                    <p class="text-muted">
+                        Start creating your first learning course.
+                    </p>
+
+                    <a
+                        href="{% url 'create_course' %}"
+                        class="btn btn-primary"
+                    >
+                        Create Your First Course
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

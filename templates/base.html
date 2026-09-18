@@ -1,0 +1,902 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+```
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>{% block title %}Awinlink{% endblock %}</title>
+
+
+<!-- =====================================================
+     BOOTSTRAP
+====================================================== -->
+
+<link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+>
+
+
+<!-- =====================================================
+     BOOTSTRAP ICONS
+====================================================== -->
+
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+>
+
+
+<!-- =====================================================
+     AWINLINK CSS
+====================================================== -->
+
+<link
+    rel="stylesheet"
+    href="{% static 'css/main.css' %}"
+>
+
+
+{% block extra_css %}
+{% endblock %}
+
+<style>
+
+.incoming-call-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 10000;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.incoming-call-window {
+    width: 350px;
+    max-width: 90%;
+
+    background: white;
+    border-radius: 15px;
+
+    padding: 30px;
+
+    text-align: center;
+
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.35);
+}
+
+.incoming-call-icon {
+    font-size: 50px;
+    margin-bottom: 15px;
+}
+
+.incoming-call-window h4 {
+    margin-bottom: 10px;
+}
+
+.incoming-call-window p {
+    margin-bottom: 25px;
+}
+
+.incoming-call-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.incoming-call-actions button {
+    min-width: 110px;
+}
+
+
+</style>
+
+</head>
+
+<body>
+
+{% if user.is_authenticated %}
+
+
+<!-- =========================================================
+     GLOBAL INCOMING CALL UI
+========================================================= -->
+
+<div
+    id="globalIncomingCallContainer"
+    style="display: none;"
+>
+</div>
+
+<!-- =========================================================
+     AUTHENTICATED USER INTERFACE
+========================================================= -->
+
+<!-- =========================================================
+     MOBILE TOP BAR
+========================================================= -->
+
+<nav class="mobile-topbar d-lg-none">
+
+```
+<div class="container-fluid d-flex align-items-center justify-content-between">
+
+    <button
+        class="btn mobile-menu-btn"
+        type="button"
+        id="mobileSidebarToggle"
+    >
+
+        <i class="bi bi-list"></i>
+
+    </button>
+
+
+    <a
+        href="{% url 'home' %}"
+        class="mobile-brand"
+    >
+
+        Awinlink
+
+    </a>
+
+
+    <a
+        href="{% url 'notification_list' %}"
+        class="mobile-icon-link"
+    >
+
+        <i class="bi bi-bell"></i>
+
+        {% if unread_notifications > 0 %}
+
+            <span class="notification-dot"></span>
+
+        {% endif %}
+
+    </a>
+
+</div>
+```
+
+</nav>
+
+<!-- =========================================================
+     SIDEBAR
+========================================================= -->
+
+<aside
+    class="awinlink-sidebar"
+    id="awinlinkSidebar"
+>
+
+```
+<!-- BRAND -->
+
+<div class="sidebar-brand">
+
+    <a href="{% url 'home' %}">
+
+        <span class="brand-mark">
+            A
+        </span>
+
+        <span class="brand-text">
+            Awinlink
+        </span>
+
+    </a>
+
+</div>
+
+
+
+<!-- USER -->
+
+<div class="sidebar-user">
+
+    {% if user.role == "ATHLETE" and user.talent_profile %}
+
+        <a
+            href="{% url 'talent_profile' user.talent_profile.id %}"
+            class="d-flex align-items-center text-decoration-none text-dark"
+        >
+
+            <div class="user-avatar">
+
+                {% if user.profile_picture %}
+
+                    <img
+                        src="{{ user.profile_picture.url }}"
+                        alt="Profile"
+                    >
+
+                {% elif user.talent_profile.profile_photo %}
+
+                    <img
+                        src="{{ user.talent_profile.profile_photo.url }}"
+                        alt="Profile"
+                    >
+
+                {% else %}
+
+                    <i class="bi bi-person"></i>
+
+                {% endif %}
+
+            </div>
+
+
+            <div class="user-info">
+
+                <strong>
+                    {{ user.get_full_name|default:user.username }}
+                </strong>
+
+                <small>
+                    {{ user.get_role_display }}
+                </small>
+
+            </div>
+
+        </a>
+
+    {% elif user.role == "ORGANIZATION" and user.organization_profile %}
+
+        <a
+            href="{% url 'organization_profile' user.organization_profile.id %}"
+            class="d-flex align-items-center text-decoration-none text-dark"
+        >
+
+            <div class="user-avatar">
+
+                {% if user.profile_picture %}
+
+                    <img
+                        src="{{ user.profile_picture.url }}"
+                        alt="Profile"
+                    >
+
+                {% else %}
+
+                    <i class="bi bi-building"></i>
+
+                {% endif %}
+
+            </div>
+
+
+            <div class="user-info">
+
+                <strong>
+                    {{ user.get_full_name|default:user.username }}
+                </strong>
+
+                <small>
+                    {{ user.get_role_display }}
+                </small>
+
+            </div>
+
+        </a>
+
+    {% else %}
+
+        <div class="d-flex align-items-center">
+
+            <div class="user-avatar">
+
+                {% if user.profile_picture %}
+
+                    <img
+                        src="{{ user.profile_picture.url }}"
+                        alt="Profile"
+                    >
+
+                {% else %}
+
+                    <i class="bi bi-person"></i>
+
+                {% endif %}
+
+            </div>
+
+
+            <div class="user-info">
+
+                <strong>
+                    {{ user.get_full_name|default:user.username }}
+                </strong>
+
+                <small>
+                    {{ user.get_role_display }}
+                </small>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+<!-- =====================================================
+     MAIN NAVIGATION
+====================================================== -->
+
+<div class="sidebar-section">
+
+    <span class="sidebar-label">
+        MAIN
+    </span>
+
+
+    <!-- Dashboard -->
+
+    <a
+        href="{% url 'dashboard' %}"
+        class="sidebar-link"
+    >
+
+        <i class="bi bi-grid"></i>
+
+        <span>
+            Dashboard
+        </span>
+
+    </a>
+
+
+    <!-- Home -->
+
+    <a
+        href="{% url 'home' %}"
+        class="sidebar-link"
+    >
+
+        <i class="bi bi-house"></i>
+
+        <span>
+            Home
+        </span>
+
+    </a>
+
+
+    <!-- Discover -->
+
+    <a
+        href="{% url 'talent_search' %}"
+        class="sidebar-link"
+    >
+
+        <i class="bi bi-compass"></i>
+
+        <span>
+            Discover
+        </span>
+
+    </a>
+
+
+    <!-- Talents -->
+
+    <a
+        href="{% url 'talent_search' %}"
+        class="sidebar-link"
+    >
+
+        <i class="bi bi-people"></i>
+
+        <span>
+            Talents
+        </span>
+
+    </a>
+
+
+    <!-- Organizations -->
+
+    <a
+        href="#"
+        class="sidebar-link"
+        title="Organizations"
+    >
+
+        <i class="bi bi-building"></i>
+
+        <span>
+            Organizations
+        </span>
+
+    </a>
+
+
+    <!-- Opportunities -->
+
+    <a
+        href="{% url 'opportunity_list' %}"
+        class="sidebar-link"
+        title="Opportunities"
+    >
+
+        <i class="bi bi-briefcase"></i>
+
+        <span>
+            Opportunities
+        </span>
+
+    </a>
+
+</div>
+
+<!-- Connections -->
+
+<a
+    href="{% url 'connections_list' %}"
+    class="sidebar-link"
+    title="Connections"
+>
+
+    <i class="bi bi-people"></i>
+
+    <span>
+        Connections
+    </span>
+
+</a>
+
+
+<!-- =====================================================
+     PLATFORM
+====================================================== -->
+
+<div class="sidebar-section">
+
+    <span class="sidebar-label">
+        PLATFORM
+    </span>
+
+
+    <!-- Events -->
+
+ <a href="{% url 'event_list' %}"
+   class="sidebar-link"
+   title="Events">
+
+    <i class="bi bi-calendar-event"></i>
+
+    <span>
+        Events
+    </span>
+
+</a>
+
+
+ <a href="{% url 'courses' %}"
+   class="sidebar-link"
+   title="Learning">
+
+    <i class="bi bi-mortarboard"></i>
+
+    <span>
+        Learning
+    </span>
+
+</a>
+
+
+    <!-- Messages -->
+
+    <a
+        href="{% url 'messaging:conversation_list' %}"
+        class="sidebar-link"
+    >
+
+        <i class="bi bi-chat-dots"></i>
+
+        <span>
+            Messages
+        </span>
+
+
+        {% if unread_message_count > 0 %}
+
+            <span class="sidebar-badge">
+                {{ unread_message_count }}
+            </span>
+
+        {% endif %}
+
+    </a>
+
+
+    <!-- Notifications -->
+
+    <a
+        href="{% url 'notification_list' %}"
+        class="sidebar-link"
+    >
+
+        <i class="bi bi-bell"></i>
+
+        <span>
+            Notifications
+        </span>
+
+
+        {% if unread_notifications > 0 %}
+
+            <span class="sidebar-badge">
+                {{ unread_notifications }}
+            </span>
+
+        {% endif %}
+
+    </a>
+
+</div>
+
+
+
+<!-- =====================================================
+     COACH
+====================================================== -->
+
+{% if request.user.role == "COACH" %}
+
+<div class="sidebar-section">
+
+    <span class="sidebar-label">
+        COACH
+    </span>
+
+
+    <!-- Coach Profile -->
+
+    <a
+        href="{% url 'coach_profile' %}"
+        class="sidebar-link"
+    >
+
+        <i class="bi bi-person-badge"></i>
+
+        <span>
+            Coach Profile
+        </span>
+
+    </a>
+
+
+    <!-- Saved Talents -->
+
+    <a
+        href="{% url 'saved_talents' %}"
+        class="sidebar-link"
+    >
+
+        <i class="bi bi-bookmark-star"></i>
+
+        <span>
+            Saved Talents
+        </span>
+
+    </a>
+
+
+    <!-- Analytics -->
+
+    <a
+        href="{% url 'coach_analytics' %}"
+        class="sidebar-link"
+    >
+
+        <i class="bi bi-bar-chart"></i>
+
+        <span>
+            Analytics
+        </span>
+
+    </a>
+
+</div>
+
+{% endif %}
+
+
+
+<!-- =====================================================
+     BOTTOM
+====================================================== -->
+
+<div class="sidebar-bottom">
+
+
+    <!-- Settings -->
+
+    <a
+        href="#"
+        class="sidebar-link"
+        title="Settings"
+    >
+
+        <i class="bi bi-gear"></i>
+
+        <span>
+            Settings
+        </span>
+
+    </a>
+
+
+    <!-- Logout -->
+
+    <a
+        href="{% url 'logout' %}"
+        class="sidebar-link logout-link"
+    >
+
+        <i class="bi bi-box-arrow-right"></i>
+
+        <span>
+            Logout
+        </span>
+
+    </a>
+
+</div>
+```
+
+</aside>
+
+<!-- =========================================================
+     SIDEBAR OVERLAY
+========================================================= -->
+
+<div
+    class="sidebar-overlay"
+    id="sidebarOverlay"
+></div>
+
+<!-- =========================================================
+     AUTHENTICATED MAIN AREA
+========================================================= -->
+
+<div class="awinlink-main">
+
+```
+<!-- =====================================================
+     TOP HEADER
+====================================================== -->
+
+<header class="awinlink-header">
+
+
+    <!-- GLOBAL SEARCH -->
+
+    <div class="header-search">
+
+        <i class="bi bi-search"></i>
+
+        <input
+            type="text"
+            placeholder="Search talents, organizations, opportunities..."
+            id="globalSearch"
+        >
+
+    </div>
+
+
+    <!-- HEADER ACTIONS -->
+
+    <div class="header-actions">
+
+
+        <!-- Messages -->
+
+        <a
+            href="{% url 'messaging:conversation_list' %}"
+            class="header-icon"
+            title="Messages"
+        >
+
+            <i class="bi bi-chat-dots"></i>
+
+            {% if unread_message_count > 0 %}
+
+                <span class="header-badge">
+                    {{ unread_message_count }}
+                </span>
+
+            {% endif %}
+
+        </a>
+
+
+        <!-- Notifications -->
+
+        <a
+            href="{% url 'notification_list' %}"
+            class="header-icon"
+            title="Notifications"
+        >
+
+            <i class="bi bi-bell"></i>
+
+            {% if unread_notifications > 0 %}
+
+                <span class="header-badge">
+                    {{ unread_notifications }}
+                </span>
+
+            {% endif %}
+
+        </a>
+
+
+        <!-- Profile -->
+
+        <div class="header-profile">
+
+            <div class="header-avatar">
+
+                {% if user.profile_picture %}
+
+                    <img
+                        src="{{ user.profile_picture.url }}"
+                        alt="Profile"
+                    >
+
+                {% else %}
+
+                    <i class="bi bi-person"></i>
+
+                {% endif %}
+
+            </div>
+
+
+            <div class="header-profile-info">
+
+                <strong>
+                    {{ user.get_full_name|default:user.username }}
+                </strong>
+
+                <small>
+                    {{ user.role|title }}
+                </small>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+
+<!-- =====================================================
+     PAGE CONTENT
+====================================================== -->
+
+<main class="awinlink-content">
+
+
+    <!-- DJANGO MESSAGES -->
+
+    {% if messages %}
+
+        {% for message in messages %}
+
+            <div
+                class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
+                role="alert"
+            >
+
+                {{ message }}
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                ></button>
+
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+
+    <!-- THE ONLY CONTENT BLOCK -->
+
+    {% block content %}
+    {% endblock %}
+
+
+</main>
+
+
+
+<!-- =====================================================
+     FOOTER
+====================================================== -->
+
+<footer class="awinlink-footer">
+
+    <div>
+        © {% now "Y" %} Awinlink
+    </div>
+
+    <div>
+        Discover. Connect. Grow.
+    </div>
+
+</footer>
+```
+
+</div>
+
+{% else %}
+
+<!-- =========================================================
+     PUBLIC / LOGGED-OUT AREA
+========================================================= -->
+
+<main class="public-main">
+
+```
+{% block public_content %}
+{% endblock %}
+```
+
+</main>
+
+{% endif %}
+
+<!-- =========================================================
+     BOOTSTRAP JAVASCRIPT
+========================================================= -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
+
+<script>
+    {% if user.is_authenticated %}
+        window.awinlinkCurrentUserId = {{ user.id }};
+    {% else %}
+        window.awinlinkCurrentUserId = null;
+    {% endif %}
+</script>
+
+<!-- =========================================================
+     AWINLINK JAVASCRIPT
+========================================================= -->
+
+<script
+    src="{% static 'js/main.js' %}"
+></script>
+
+
+{% block extra_js %}
+{% endblock %}
+
+</body>
+
+</html>

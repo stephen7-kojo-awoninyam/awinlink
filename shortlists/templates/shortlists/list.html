@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+⭐ My Shortlisted Talents
+</h2>
+
+
+<div class="row mt-3">
+
+
+<div class="col-md-6">
+
+<div class="card p-3 text-center">
+
+<h5>
+Total Shortlisted
+</h5>
+
+<h2>
+{{ total_shortlisted }}
+</h2>
+
+</div>
+
+</div>
+
+
+
+<div class="col-md-6">
+
+<div class="card p-3 text-center">
+
+<h5>
+Favorite Talents ⭐
+</h5>
+
+<h2>
+{{ starred_talents }}
+</h2>
+
+</div>
+
+</div>
+
+
+</div>
+
+
+
+<hr class="mt-5">
+
+
+
+<div class="row">
+
+
+
+{% for item in shortlisted_talents %}
+
+
+
+<div class="col-md-4">
+
+
+
+<div class="card p-3 mb-4 shadow-sm">
+
+
+
+{% if item.talent.profile_photo %}
+
+
+<img src="{{ item.talent.profile_photo.url }}"
+class="rounded-circle mx-auto"
+width="120"
+height="120">
+
+
+{% endif %}
+
+
+
+
+<h5 class="mt-3 text-center">
+
+{{ item.talent.user.get_full_name }}
+
+</h5>
+
+
+{% if item.starred %}
+
+
+<a href="{% url 'toggle_star' item.talent.id %}"
+class="btn btn-warning btn-sm mb-2">
+
+
+⭐ Favorite Talent
+
+
+</a>
+
+
+{% else %}
+
+
+<a href="{% url 'toggle_star' item.talent.id %}"
+class="btn btn-outline-warning btn-sm mb-2">
+
+
+☆ Mark Favorite
+
+
+</a>
+
+
+{% endif %}
+
+
+
+
+<p class="mt-3">
+
+<strong>
+Headline:
+</strong>
+
+<br>
+
+{{ item.talent.headline }}
+
+</p>
+
+
+
+
+<p>
+
+<strong>
+Location:
+</strong>
+
+{{ item.talent.city }},
+{{ item.talent.country }}
+
+</p>
+
+
+
+
+{% if item.notes %}
+
+
+<p>
+
+<strong>
+Recruiter Notes:
+</strong>
+
+<br>
+
+{{ item.notes }}
+
+</p>
+
+
+{% endif %}
+
+
+
+
+
+<p>
+
+<small class="text-muted">
+
+Shortlisted on:
+
+{{ item.created_at|date:"M d, Y" }}
+
+</small>
+
+</p>
+
+
+
+
+
+<div class="d-grid gap-2">
+
+
+
+<a href="{% url 'talent_profile' item.talent.id %}"
+
+class="btn btn-primary">
+
+View Profile
+
+</a>
+
+
+
+
+<a href="{% url 'invite_talent' item.talent.id %}"
+
+class="btn btn-success">
+
+Invite Talent
+
+</a>
+
+<a href="{% url 'update_notes' item.talent.id %}"
+class="btn btn-outline-info btn-sm">
+
+📝 Notes
+
+</a>
+
+
+<a href="{% url 'remove_from_shortlist' item.talent.id %}"
+
+class="btn btn-danger">
+
+Remove
+
+</a>
+
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+
+{% empty %}
+
+
+
+<div class="alert alert-info">
+
+No shortlisted talents yet.
+
+Start searching and save promising talents.
+
+</div>
+
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+</div>
+
+
+{% endblock %}

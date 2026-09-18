@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+My Portfolio
+</h2>
+
+
+<a href="{% url 'add_portfolio_item' %}"
+class="btn btn-success mb-3">
+
+Add Portfolio Item
+
+</a>
+
+
+
+<div class="row">
+
+
+{% for item in items %}
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3 mb-3">
+
+
+<h5>
+{{ item.title }}
+</h5>
+
+
+<span class="badge bg-primary">
+
+{{ item.get_item_type_display }}
+
+</span>
+
+
+<p class="mt-2">
+
+{{ item.description }}
+
+</p>
+
+
+
+{% if item.file %}
+
+<a href="{{ item.file.url }}"
+target="_blank"
+class="btn btn-outline-primary">
+
+View File
+
+</a>
+
+{% endif %}
+
+
+
+{% if item.link %}
+
+<a href="{{ item.link }}"
+target="_blank"
+class="btn btn-outline-success">
+
+Open Link
+
+</a>
+
+{% endif %}
+
+
+
+<br>
+
+
+<a href="{% url 'edit_portfolio_item' item.id %}"
+class="btn btn-warning btn-sm mt-2">
+
+Edit
+
+</a>
+
+
+<a href="{% url 'delete_portfolio_item' item.id %}"
+class="btn btn-danger btn-sm mt-2">
+
+Delete
+
+</a>
+
+
+
+</div>
+
+
+</div>
+
+
+{% empty %}
+
+
+<p>
+No portfolio items added yet.
+</p>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

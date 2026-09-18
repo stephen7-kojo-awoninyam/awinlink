@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+Pending Verification Requests
+</h2>
+
+
+<hr>
+
+
+
+{% for request in requests %}
+
+
+<div class="card p-3 mb-3">
+
+
+<h4>
+
+{{ request.talent.user.get_full_name }}
+
+</h4>
+
+
+
+<p>
+
+{{ request.message }}
+
+</p>
+
+
+
+{% if request.document %}
+
+
+<a href="{{ request.document.url }}"
+
+target="_blank"
+
+class="btn btn-outline-primary">
+
+View Document
+
+</a>
+
+
+{% endif %}
+
+
+
+
+<br><br>
+
+
+<a href="{% url 'approve_verification' request.id %}"
+
+class="btn btn-success">
+
+Approve
+
+</a>
+
+
+
+<a href="{% url 'reject_verification' request.id %}"
+
+class="btn btn-danger">
+
+Reject
+
+</a>
+
+
+
+</div>
+
+
+
+{% empty %}
+
+
+<p>
+
+No pending verification requests.
+
+</p>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+{% endblock %}

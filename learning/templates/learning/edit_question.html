@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body p-4">
+
+                    <div class="mb-4">
+
+                        <a
+                            href="{% url 'manage_quiz' quiz.id %}"
+                            class="text-decoration-none"
+                        >
+                            ← Back to Quiz
+                        </a>
+
+                    </div>
+
+                    <h1 class="fw-bold mb-1">
+                        Edit Question
+                    </h1>
+
+                    <p class="text-muted">
+                        {{ quiz.title }}
+                    </p>
+
+                    <form method="POST">
+
+                        {% csrf_token %}
+
+                        {{ form.as_p }}
+
+                        <div class="d-flex gap-2 mt-4">
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                            >
+                                <i class="bi bi-check-circle me-1"></i>
+                                Save Question
+                            </button>
+
+                            <a
+                                href="{% url 'manage_quiz' quiz.id %}"
+                                class="btn btn-outline-secondary"
+                            >
+                                Cancel
+                            </a>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

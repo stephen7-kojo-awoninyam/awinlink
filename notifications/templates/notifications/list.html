@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+Notifications 🔔
+</h2>
+
+
+<hr>
+
+
+{% for notification in notifications %}
+
+<div class="card mb-3 p-3">
+
+    <h5>
+
+        {{ notification.notification_type }}
+
+        {% if not notification.is_read %}
+
+            <span class="badge bg-danger">
+                New
+            </span>
+
+        {% else %}
+
+            <span class="badge bg-success">
+                Read
+            </span>
+
+        {% endif %}
+
+    </h5>
+
+    <p>
+        {{ notification.message }}
+    </p>
+
+    <small>
+        {{ notification.created_at }}
+    </small>
+
+    <br>
+
+    {% if notification.notification_type == "MESSAGE" %}
+
+        <a
+            href="{% url 'notification_detail' notification.id %}"
+            class="btn btn-primary btn-sm mt-3"
+        >
+            Open conversation
+        </a>
+
+    {% elif not notification.is_read %}
+
+        <a
+            href="{% url 'mark_notification_read' notification.id %}"
+            class="btn btn-primary btn-sm mt-3"
+        >
+            Mark as read
+        </a>
+
+    {% endif %}
+
+</div>
+
+{% empty %}
+
+<div class="alert alert-info">
+    No notifications available.
+</div>
+
+{% endfor %}
+
+
+
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h1>
+Club Dashboard 🏢
+</h1>
+
+
+<hr>
+
+
+
+<div class="row g-3">
+
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3">
+
+
+<h5>
+Opportunities
+</h5>
+
+
+<p>
+Create and manage talent opportunities.
+</p>
+
+
+<a href="{% url 'create_opportunity' %}"
+
+class="btn btn-success">
+
+Create Opportunity
+
+</a>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3">
+
+
+<h5>
+Discover Talents 🔍
+</h5>
+
+
+<p>
+Search available talents.
+</p>
+
+
+<a href="{% url 'talent_search' %}"
+
+class="btn btn-primary">
+
+Search Talents
+
+</a>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3">
+
+
+<h5>
+Shortlisted Talents ⭐
+</h5>
+
+
+<p>
+View saved talents.
+</p>
+
+
+<a href="{% url 'shortlisted_talents' %}"
+
+class="btn btn-warning">
+
+View Shortlist
+
+</a>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3">
+
+
+<h5>
+Applications 📄
+</h5>
+
+
+<p>
+Review talent applications.
+</p>
+
+
+<a href="{% url 'organization_applications' %}"
+
+class="btn btn-info">
+
+Applications
+
+</a>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3">
+
+
+<h5>
+Recruitment Pipeline 📌
+</h5>
+
+
+<p>
+Track candidates through hiring stages.
+</p>
+
+
+<a href="{% url 'recruitment_pipeline' %}"
+
+class="btn btn-dark">
+
+Pipeline
+
+</a>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3">
+
+
+<h5>
+Messages 💬
+</h5>
+
+
+<p>
+Communicate with talents.
+</p>
+
+
+<a href="{% url 'messaging:conversation_list' %}"
+
+class="btn btn-secondary">
+
+Messages
+
+</a>
+
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
+
+
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,560 @@
+{% extends "accounts/base_auth.html" %}
+
+{% block title %}
+Create Account | Awinlink
+{% endblock %}
+
+{% block content %}
+
+<div class="auth-card register-card">
+
+<!-- =====================================================
+     HEADER
+====================================================== -->
+
+<div class="auth-card-header text-center">
+
+    <div class="auth-icon">
+
+        <i class="bi bi-person-plus"></i>
+
+    </div>
+
+    <h1>
+        Create your Awinlink account
+    </h1>
+
+    <p>
+        Join the global talent network and start discovering
+        opportunities, people and organizations.
+    </p>
+
+</div>
+
+
+<!-- =====================================================
+     REGISTRATION FORM
+====================================================== -->
+
+<form
+    method="post"
+    novalidate
+>
+
+    {% csrf_token %}
+
+
+    <!-- FORM ERRORS -->
+
+    {% if form.non_field_errors %}
+
+        <div class="alert alert-danger">
+
+            {% for error in form.non_field_errors %}
+
+                <div>
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+
+
+    <!-- =================================================
+         ACCOUNT TYPE
+    ================================================== -->
+
+    <div class="form-section">
+
+        <div class="section-heading">
+
+            <i class="bi bi-person-badge"></i>
+
+            <div>
+
+                <h5>
+                    Choose your account type
+                </h5>
+
+                <p>
+                    Select the role that best describes you.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="role-grid">
+
+
+            <!-- ATHLETE -->
+
+            <label class="role-option">
+
+                <input
+                    type="radio"
+                    name="role"
+                    value="ATHLETE"
+                    {% if form.role.value == "ATHLETE" or not form.role.value %}
+                        checked
+                    {% endif %}
+                >
+
+                <div class="role-content">
+
+                    <i class="bi bi-person-running"></i>
+
+                    <strong>
+                        Athlete
+                    </strong>
+
+                    <small>
+                        Showcase your talent
+                    </small>
+
+                </div>
+
+            </label>
+
+
+            <!-- ORGANIZATION -->
+
+            <label class="role-option">
+
+                <input
+                    type="radio"
+                    name="role"
+                    value="ORGANIZATION"
+                    {% if form.role.value == "ORGANIZATION" %}
+                        checked
+                    {% endif %}
+                >
+
+                <div class="role-content">
+
+                    <i class="bi bi-building"></i>
+
+                    <strong>
+                        Organization
+                    </strong>
+
+                    <small>
+                        Discover and recruit talent
+                    </small>
+
+                </div>
+
+            </label>
+
+
+            <!-- SCOUT -->
+
+            <label class="role-option">
+
+                <input
+                    type="radio"
+                    name="role"
+                    value="SCOUT"
+                    {% if form.role.value == "SCOUT" %}
+                        checked
+                    {% endif %}
+                >
+
+                <div class="role-content">
+
+                    <i class="bi bi-binoculars"></i>
+
+                    <strong>
+                        Scout
+                    </strong>
+
+                    <small>
+                        Find emerging talent
+                    </small>
+
+                </div>
+
+            </label>
+
+
+            <!-- COACH -->
+
+            <label class="role-option">
+
+                <input
+                    type="radio"
+                    name="role"
+                    value="COACH"
+                    {% if form.role.value == "COACH" %}
+                        checked
+                    {% endif %}
+                >
+
+                <div class="role-content">
+
+                    <i class="bi bi-person-workspace"></i>
+
+                    <strong>
+                        Coach
+                    </strong>
+
+                    <small>
+                        Develop and support talent
+                    </small>
+
+                </div>
+
+            </label>
+
+
+        </div>
+
+
+        {% if form.role.errors %}
+
+            <div class="text-danger small mt-2">
+
+                {{ form.role.errors }}
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+
+    <!-- =================================================
+         PERSONAL INFORMATION
+    ================================================== -->
+
+    <div class="form-section">
+
+        <div class="section-heading">
+
+            <i class="bi bi-person-vcard"></i>
+
+            <div>
+
+                <h5>
+                    Personal information
+                </h5>
+
+                <p>
+                    Tell us a little about yourself.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="row g-3">
+
+
+            <!-- FIRST NAME -->
+
+            <div class="col-md-6">
+
+                <label
+                    for="{{ form.first_name.id_for_label }}"
+                    class="form-label"
+                >
+                    First name
+                </label>
+
+                {{ form.first_name }}
+
+                {% for error in form.first_name.errors %}
+
+                    <div class="text-danger small mt-1">
+                        {{ error }}
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+
+            <!-- LAST NAME -->
+
+            <div class="col-md-6">
+
+                <label
+                    for="{{ form.last_name.id_for_label }}"
+                    class="form-label"
+                >
+                    Last name
+                </label>
+
+                {{ form.last_name }}
+
+                {% for error in form.last_name.errors %}
+
+                    <div class="text-danger small mt-1">
+                        {{ error }}
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+
+            <!-- USERNAME -->
+
+            <div class="col-12">
+
+                <label
+                    for="{{ form.username.id_for_label }}"
+                    class="form-label"
+                >
+                    Username
+                </label>
+
+                <div class="input-group">
+
+                    <span class="input-group-text">
+                        @
+                    </span>
+
+                    {{ form.username }}
+
+                </div>
+
+
+                {% for error in form.username.errors %}
+
+                    <div class="text-danger small mt-1">
+                        {{ error }}
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+
+            <!-- EMAIL -->
+
+            <div class="col-12">
+
+                <label
+                    for="{{ form.email.id_for_label }}"
+                    class="form-label"
+                >
+                    Email address
+                </label>
+
+                {{ form.email }}
+
+                {% for error in form.email.errors %}
+
+                    <div class="text-danger small mt-1">
+                        {{ error }}
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+
+            <!-- PHONE -->
+
+            <div class="col-md-6">
+
+                <label
+                    for="{{ form.phone_number.id_for_label }}"
+                    class="form-label"
+                >
+                    Phone number
+                </label>
+
+                {{ form.phone_number }}
+
+                {% for error in form.phone_number.errors %}
+
+                    <div class="text-danger small mt-1">
+                        {{ error }}
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+
+            <!-- COUNTRY -->
+
+            <div class="col-md-6">
+
+                <label
+                    for="{{ form.country.id_for_label }}"
+                    class="form-label"
+                >
+                    Country
+                </label>
+
+                {{ form.country }}
+
+                {% for error in form.country.errors %}
+
+                    <div class="text-danger small mt-1">
+                        {{ error }}
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =================================================
+         SECURITY
+    ================================================== -->
+
+    <div class="form-section">
+
+        <div class="section-heading">
+
+            <i class="bi bi-shield-lock"></i>
+
+            <div>
+
+                <h5>
+                    Secure your account
+                </h5>
+
+                <p>
+                    Create a strong password for your account.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="row g-3">
+
+
+            <!-- PASSWORD -->
+
+            <div class="col-md-6">
+
+                <label
+                    for="{{ form.password1.id_for_label }}"
+                    class="form-label"
+                >
+                    Password
+                </label>
+
+                <div class="input-group">
+
+                    <span class="input-group-text">
+
+                        <i class="bi bi-lock"></i>
+
+                    </span>
+
+                    {{ form.password1 }}
+
+                </div>
+
+
+                {% for error in form.password1.errors %}
+
+                    <div class="text-danger small mt-1">
+                        {{ error }}
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+
+            <!-- CONFIRM PASSWORD -->
+
+            <div class="col-md-6">
+
+                <label
+                    for="{{ form.password2.id_for_label }}"
+                    class="form-label"
+                >
+                    Confirm password
+                </label>
+
+                <div class="input-group">
+
+                    <span class="input-group-text">
+
+                        <i class="bi bi-lock-fill"></i>
+
+                    </span>
+
+                    {{ form.password2 }}
+
+                </div>
+
+
+                {% for error in form.password2.errors %}
+
+                    <div class="text-danger small mt-1">
+                        {{ error }}
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =================================================
+         SUBMIT
+    ================================================== -->
+
+    <button
+        type="submit"
+        class="btn btn-primary w-100 register-button"
+    >
+
+        <i class="bi bi-person-plus me-2"></i>
+
+        Create Awinlink Account
+
+    </button>
+
+
+</form>
+
+
+
+<!-- =====================================================
+     LOGIN LINK
+====================================================== -->
+
+<div class="auth-switch">
+
+    <span>
+        Already have an account?
+    </span>
+
+    <a href="{% url 'login' %}">
+        Sign in
+    </a>
+
+</div>
+```
+
+</div>
+
+{% endblock %}

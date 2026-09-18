@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+
+    <div class="row g-4">
+
+        <!-- =====================================================
+             LESSON CONTENT
+        ====================================================== -->
+
+        <div class="col-lg-8">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body p-4">
+
+                    <!-- BACK TO COURSE -->
+
+                    <div class="mb-3">
+
+                        <a
+                            href="{% url 'course_detail' course.slug %}"
+                            class="text-decoration-none"
+                        >
+
+                            <i class="bi bi-arrow-left me-1"></i>
+
+                            Back to Course
+
+                        </a>
+
+                    </div>
+
+
+                    <!-- LESSON NUMBER -->
+
+                    <span class="badge bg-primary">
+
+                        Lesson {{ lesson.order }}
+
+                    </span>
+
+
+                    <!-- TITLE -->
+
+                    <h1 class="fw-bold mt-3">
+
+                        {{ lesson.title }}
+
+                    </h1>
+
+
+                    <!-- DESCRIPTION -->
+
+                    {% if lesson.description %}
+
+                    <p class="text-muted">
+
+                        {{ lesson.description }}
+
+                    </p>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         VIDEO
+                    ================================================== -->
+
+                    {% if lesson.video %}
+
+                    <div class="ratio ratio-16x9 mb-4">
+
+                        <video
+                            controls
+                            class="rounded"
+                        >
+
+                            <source
+                                src="{{ lesson.video.url }}"
+                            >
+
+                            Your browser does not support video playback.
+
+                        </video>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         NOTES
+                    ================================================== -->
+
+                    {% if lesson.notes %}
+
+                    <div class="card bg-light border-0 mb-4">
+
+                        <div class="card-body">
+
+                            <h5 class="fw-bold">
+
+                                <i class="bi bi-file-earmark-text me-1"></i>
+
+                                Lesson Notes
+
+                            </h5>
+
+
+                            <p class="text-muted small">
+
+                                Download the lesson notes for additional
+                                study material.
+
+                            </p>
+
+
+                            <a
+                                href="{{ lesson.notes.url }}"
+                                target="_blank"
+                                class="btn btn-outline-primary"
+                            >
+
+                                <i class="bi bi-download me-1"></i>
+
+                                Download Notes
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                            {% if quiz %}
+
+                            <div class="card border-0 shadow-sm mt-4">
+
+                                <div class="card-body">
+
+                                    <div class="d-flex justify-content-between align-items-center">
+
+                                        <div>
+
+                                            <h5 class="fw-bold mb-1">
+
+                                                <i class="bi bi-question-circle me-1"></i>
+
+                                                Lesson Quiz
+
+                                            </h5>
+
+                                            <p class="text-muted mb-0">
+
+                                                {{ quiz.title }}
+
+                                                · Passing score:
+                                                {{ quiz.passing_score }}%
+
+                                            </p>
+
+                                        </div>
+
+
+                                        <a
+                                            href="{% url 'take_quiz' quiz.id %}"
+                                            class="btn btn-primary"
+                                        >
+
+                                            Take Quiz
+
+                                        </a>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            {% endif %}
+
+
+                    <!-- =================================================
+                         COMPLETION
+                    ================================================== -->
+
+                    {% if progress.completed %}
+
+                    <div class="alert alert-success">
+
+                        <i class="bi bi-check-circle me-1"></i>
+
+                        <strong>
+                            Lesson completed.
+                        </strong>
+
+                        <div class="small mt-1">
+
+                            You have successfully completed this lesson.
+
+                        </div>
+
+                    </div>
+
+
+                    {% else %}
+
+                    <form
+                        method="POST"
+                        action="{% url 'complete_lesson' lesson.id %}"
+                    >
+
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="btn btn-success"
+                        >
+
+                            <i class="bi bi-check-circle me-1"></i>
+
+                            Mark Lesson as Complete
+
+                        </button>
+
+                    </form>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             COURSE CONTENT
+        ====================================================== -->
+
+        <div class="col-lg-4">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-header bg-white">
+
+                    <strong>
+
+                        <i class="bi bi-list-ul me-1"></i>
+
+                        Course Content
+
+                    </strong>
+
+                </div>
+
+
+                <div class="list-group list-group-flush">
+
+                    {% for item in lessons %}
+
+                    <a
+                        href="{% url 'lesson_detail' item.id %}"
+                        class="list-group-item list-group-item-action
+                        {% if item.id == lesson.id %}active{% endif %}"
+                    >
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <span>
+
+                                {{ item.order }}.
+                                {{ item.title }}
+
+                            </span>
+
+
+                            {% if item.id == lesson.id %}
+
+                            <i class="bi bi-play-circle"></i>
+
+                            {% endif %}
+
+                        </div>
+
+                    </a>
+
+
+                    {% empty %}
+
+                    <div class="p-3 text-muted">
+
+                        No lessons available.
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+
+            <!-- =====================================================
+                 PROGRESS
+            ====================================================== -->
+
+            <div class="card border-0 shadow-sm mt-4">
+
+                <div class="card-body">
+
+                    <h6 class="fw-bold">
+
+                        <i class="bi bi-bar-chart me-1"></i>
+
+                        Course Progress
+
+                    </h6>
+
+
+                    <p class="small text-muted mb-3">
+
+                        Track your progress through this course.
+
+                    </p>
+
+
+                    <a
+                        href="{% url 'course_progress' course.id %}"
+                        class="btn btn-outline-primary w-100"
+                    >
+
+                        View Course Progress
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

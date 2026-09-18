@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+
+{% block title %}
+Science & Technology Talent Profile | Awinlink
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+<div class="row justify-content-center">
+
+    <div class="col-lg-9">
+
+        <!-- =====================================================
+             HEADER
+        ====================================================== -->
+
+        <div class="text-center mb-5">
+
+            <div class="mb-3">
+
+                <div class="rounded-circle bg-success bg-opacity-10
+                            d-inline-flex p-4">
+
+                    <i class="bi bi-cpu text-success fs-1"></i>
+
+                </div>
+
+            </div>
+
+            <h1 class="fw-bold">
+                Tell us about your Science & Technology talent
+            </h1>
+
+            <p class="text-muted mb-0">
+
+                Welcome,
+                {{ talent.user.first_name|default:talent.user.username }}.
+
+                Tell Awinlink about your area of expertise,
+                experience, skills, projects and ambitions.
+
+                Describe your talent in your own words.
+
+            </p>
+
+        </div>
+
+
+        <!-- =====================================================
+             FORM
+        ====================================================== -->
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body p-4 p-md-5">
+
+                <form method="post">
+
+                    {% csrf_token %}
+
+
+                    <!-- =================================================
+                         FORM ERRORS
+                    ================================================== -->
+
+                    {% if form.non_field_errors %}
+
+                        <div class="alert alert-danger">
+
+                            {% for error in form.non_field_errors %}
+
+                                <div>
+                                    {{ error }}
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         SPECIALIZATION
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.specialization.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Area of Specialization
+                        </label>
+
+                        {{ form.specialization }}
+
+                        <div class="form-text">
+
+                            What area do you specialize in?
+
+                            For example: Software Development,
+                            Telecommunications Engineering,
+                            Artificial Intelligence,
+                            Data Science, Cybersecurity,
+                            Physics, Biotechnology, Research,
+                            or another field.
+
+                        </div>
+
+                        {% for error in form.specialization.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ABOUT TALENT
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.description.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            About Your Talent
+                        </label>
+
+                        {{ form.description }}
+
+                        <div class="form-text">
+
+                            Tell organizations and other people about
+                            yourself, what you do, what you are capable
+                            of, your goals and what makes your talent
+                            unique.
+
+                        </div>
+
+                        {% for error in form.description.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         EDUCATION
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.education.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Education & Training
+                        </label>
+
+                        {{ form.education }}
+
+                        <div class="form-text">
+
+                            Tell us about your educational background,
+                            professional training, certifications,
+                            courses or other learning experiences.
+
+                        </div>
+
+                        {% for error in form.education.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         INSTITUTION
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.institution.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Institution / Organization
+                        </label>
+
+                        {{ form.institution }}
+
+                        <div class="form-text">
+
+                            Mention a university, research institution,
+                            company, laboratory, training institution
+                            or other relevant organization.
+
+                        </div>
+
+                        {% for error in form.institution.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         SKILLS
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.skills_description.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Skills & Expertise
+                        </label>
+
+                        {{ form.skills_description }}
+
+                        <div class="form-text">
+
+                            Describe the skills you have developed.
+                            Include technical, scientific, analytical,
+                            practical or professional skills.
+
+                        </div>
+
+                        {% for error in form.skills_description.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         PROJECTS
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.projects_description.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Projects & Work
+                        </label>
+
+                        {{ form.projects_description }}
+
+                        <div class="form-text">
+
+                            Tell us about projects, products, systems,
+                            inventions, research or other work you have
+                            created or contributed to.
+
+                        </div>
+
+                        {% for error in form.projects_description.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         RESEARCH
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.research_interests.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Research & Innovation Interests
+                        </label>
+
+                        {{ form.research_interests }}
+
+                        <div class="form-text">
+
+                            What areas of research, innovation,
+                            technology or scientific development
+                            interest you?
+
+                        </div>
+
+                        {% for error in form.research_interests.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         EXPERIENCE
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.years_of_experience.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Years of Experience
+                        </label>
+
+                        {{ form.years_of_experience }}
+
+                        <div class="form-text">
+
+                            Enter the approximate number of years you
+                            have worked, practiced or conducted research
+                            in your area of expertise.
+
+                        </div>
+
+                        {% for error in form.years_of_experience.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ONLINE PRESENCE
+                    ================================================== -->
+
+                    <h5 class="fw-bold mt-5 mb-3">
+                        Online Presence
+                    </h5>
+
+                    <p class="text-muted small">
+
+                        Add links where organizations, recruiters,
+                        collaborators or other people can learn more
+                        about your work.
+
+                        These fields are optional.
+
+                    </p>
+
+
+                    <!-- WEBSITE -->
+
+                    <div class="mb-3">
+
+                        <label
+                            for="{{ form.website.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Personal Website
+                        </label>
+
+                        {{ form.website }}
+
+                        {% for error in form.website.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- LINKEDIN -->
+
+                    <div class="mb-3">
+
+                        <label
+                            for="{{ form.linkedin.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            LinkedIn
+                        </label>
+
+                        {{ form.linkedin }}
+
+                        {% for error in form.linkedin.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- GITHUB -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.github.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            GitHub
+                        </label>
+
+                        {{ form.github }}
+
+                        {% for error in form.github.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         INFORMATION NOTICE
+                    ================================================== -->
+
+                    <div class="alert alert-light border mb-4">
+
+                        <div class="d-flex">
+
+                            <div class="me-3">
+
+                                <i class="bi bi-stars text-success fs-4"></i>
+
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    Your talent is not limited to a label.
+                                </strong>
+
+                                <p class="mb-0 small text-muted">
+
+                                    Science & Technology covers many
+                                    different fields and disciplines.
+
+                                    Tell your story in the way that best
+                                    represents your knowledge, skills,
+                                    experience, projects and ambitions.
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ACTIONS
+                    ================================================== -->
+
+                    <div class="d-flex flex-column flex-md-row gap-2">
+
+                        <button
+                            type="submit"
+                            class="btn btn-success btn-lg flex-grow-1"
+                        >
+
+                            <i class="bi bi-check-circle me-2"></i>
+
+                            Save Science & Technology Profile
+
+                        </button>
+
+                        <a
+                            href="{% url 'talent_dashboard' %}"
+                            class="btn btn-outline-secondary btn-lg"
+                        >
+
+                            Skip for now
+
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             FOOTER MESSAGE
+        ====================================================== -->
+
+        <div class="text-center mt-4">
+
+            <p class="text-muted small mb-0">
+
+                <i class="bi bi-shield-check me-1"></i>
+
+                You can update your Science & Technology information
+                later.
+
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+{% endblock %}

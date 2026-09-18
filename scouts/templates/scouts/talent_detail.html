@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         BACK
+    ====================================================== -->
+
+    <div class="mb-4">
+
+        <a
+            href="{% url 'scout_talent_list' %}"
+            class="btn btn-outline-secondary"
+        >
+            <i class="bi bi-arrow-left me-2"></i>
+            Back to Talents
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         PROFILE
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body p-4">
+
+            <div class="row align-items-center">
+
+                <!-- PROFILE PHOTO -->
+
+                <div class="col-md-3 text-center">
+
+                    {% if talent.profile_photo %}
+
+                        <img
+                            src="{{ talent.profile_photo.url }}"
+                            alt="{{ talent.user.username }}"
+                            class="rounded-circle shadow-sm"
+                            style="
+                                width:180px;
+                                height:180px;
+                                object-fit:cover;
+                            "
+                        >
+
+                    {% else %}
+
+                        <i
+                            class="bi bi-person-circle text-secondary"
+                            style="font-size: 160px;"
+                        ></i>
+
+                    {% endif %}
+
+                </div>
+
+
+                <!-- PROFILE INFORMATION -->
+
+                <div class="col-md-9">
+
+                    <div class="d-flex align-items-center gap-2">
+
+                        <h1 class="fw-bold mb-1">
+
+                            {{ talent.user.get_full_name|default:talent.user.username }}
+
+                        </h1>
+
+                        {% if talent.verified %}
+
+                            <i
+                                class="bi bi-patch-check-fill text-primary fs-4"
+                                title="Verified"
+                            ></i>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <p class="text-muted mb-2">
+                        @{{ talent.user.username }}
+                    </p>
+
+
+                    {% if talent.headline %}
+
+                        <h5 class="mb-3">
+                            {{ talent.headline }}
+                        </h5>
+
+                    {% endif %}
+
+
+                    {% if talent.city or talent.country %}
+
+                        <p class="text-muted">
+
+                            <i class="bi bi-geo-alt me-1"></i>
+
+                            {% if talent.city %}
+                                {{ talent.city }}
+                            {% endif %}
+
+                            {% if talent.city and talent.country %}
+                                ,
+                            {% endif %}
+
+                            {% if talent.country %}
+                                {{ talent.country }}
+                            {% endif %}
+
+                        </p>
+
+                    {% endif %}
+
+
+                    <!-- ACTIONS -->
+
+                    <div class="d-flex gap-2 mt-4">
+
+                        <form
+                            method="POST"
+                            action="{% url 'follow_talent' talent.id %}"
+                        >
+
+                            {% csrf_token %}
+
+                            {% if is_following %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-primary"
+                                >
+                                    <i class="bi bi-person-dash me-2"></i>
+                                    Unfollow
+                                </button>
+
+                            {% else %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary"
+                                >
+                                    <i class="bi bi-person-plus me-2"></i>
+                                    Follow
+                                </button>
+
+                            {% endif %}
+
+                        </form>
+
+
+                        <form
+                            method="POST"
+                            action="{% url 'bookmark_talent' talent.id %}"
+                        >
+
+                            {% csrf_token %}
+
+                            {% if bookmark %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-warning"
+                                >
+                                    <i class="bi bi-bookmark-fill me-2"></i>
+                                    Remove Bookmark
+                                </button>
+
+                            {% else %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-warning"
+                                >
+                                    <i class="bi bi-bookmark me-2"></i>
+                                    Bookmark
+                                </button>
+
+                            {% endif %}
+
+                        </form>
+
+                        <a
+                            href="{% url 'start_conversation' talent.user.id %}"
+                            class="btn btn-outline-success"
+                        >
+                            <i class="bi bi-chat-dots me-2"></i>
+                            Message
+                        </a>
+                        <a
+                            href="{% url 'add_to_shortlist' talent.id %}"
+                            class="btn btn-outline-danger"
+                        >
+                            <i class="bi bi-star me-2"></i>
+                            Shortlist
+                        </a>
+
+                    </div>
+                        <!-- =====================================================
+                            SCOUTING NOTES
+                        ====================================================== -->
+
+                        {% if bookmark %}
+
+                            <div class="card border-0 shadow-sm mt-4">
+
+                                <div class="card-body">
+
+                                    <div class="d-flex justify-content-between
+                                                align-items-center mb-3">
+
+                                        <h5 class="fw-bold mb-0">
+
+                                            <i class="bi bi-journal-text me-2"></i>
+
+                                            Scouting Notes
+
+                                        </h5>
+
+                                        <span class="badge bg-warning text-dark">
+
+                                            <i class="bi bi-bookmark-fill me-1"></i>
+
+                                            Bookmarked
+
+                                        </span>
+
+                                    </div>
+
+
+                                    <p class="text-muted small">
+
+                                        Add private notes about this talent for your
+                                        future scouting and evaluation.
+
+                                    </p>
+
+
+                                    <form
+                                        method="POST"
+                                        action="{% url 'update_bookmark_notes' talent.id %}"
+                                    >
+
+                                        {% csrf_token %}
+
+                                        <textarea
+                                            name="notes"
+                                            class="form-control"
+                                            rows="5"
+                                            placeholder="Write your scouting observations, strengths, concerns, potential, or follow-up notes..."
+                                        >{{ bookmark.notes }}</textarea>
+
+
+                                        <div class="d-flex justify-content-end mt-3">
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-primary"
+                                            >
+
+                                                <i class="bi bi-save me-2"></i>
+
+                                                Save Notes
+
+                                            </button>
+
+                                        </div>
+
+                                    </form>
+
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         BIOGRAPHY
+    ====================================================== -->
+
+    {% if talent.biography %}
+
+        <div class="card border-0 shadow-sm mb-4">
+
+            <div class="card-body p-4">
+
+                <h4 class="fw-bold mb-3">
+                    About
+                </h4>
+
+                <p class="text-muted mb-0">
+                    {{ talent.biography }}
+                </p>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         TALENT INFORMATION
+    ====================================================== -->
+
+    <div class="row g-4">
+
+        {% if talent.domains.all %}
+
+            <div class="col-md-6">
+
+                <div class="card border-0 shadow-sm h-100">
+
+                    <div class="card-body">
+
+                        <h5 class="fw-bold mb-3">
+                            Domains
+                        </h5>
+
+                        {% for domain in talent.domains.all %}
+
+                            <span class="badge bg-primary me-1 mb-1">
+                                {{ domain }}
+                            </span>
+
+                        {% empty %}
+
+                            <p class="text-muted mb-0">
+                                No domains listed.
+                            </p>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+
+        {% if talent.skills.all %}
+
+            <div class="col-md-6">
+
+                <div class="card border-0 shadow-sm h-100">
+
+                    <div class="card-body">
+
+                        <h5 class="fw-bold mb-3">
+                            Skills
+                        </h5>
+
+                        {% for skill in talent.skills.all %}
+
+                            <span class="badge bg-secondary me-1 mb-1">
+                                {{ skill }}
+                            </span>
+
+                        {% empty %}
+
+                            <p class="text-muted mb-0">
+                                No skills listed.
+                            </p>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- =====================================================
+         SCOUTING INFORMATION
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mt-4">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-3">
+                Scouting Activity
+            </h5>
+
+            <p class="text-muted mb-0">
+                Viewing this profile has been recorded in your
+                scouting activity.
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

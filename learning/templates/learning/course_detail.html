@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h1 class="fw-bold mb-1">
+                Certificate
+            </h1>
+
+            <p class="text-muted mb-0">
+                Your Awinlink course completion certificate.
+            </p>
+
+        </div>
+
+
+        <div>
+
+            <a
+                href="{% url 'my_certificates' %}"
+                class="btn btn-outline-secondary"
+            >
+
+                <i class="bi bi-arrow-left me-1"></i>
+
+                My Certificates
+
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         CERTIFICATE
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body p-3 p-md-5">
+
+            <div
+                class="border border-3 rounded p-4 p-md-5 text-center"
+                style="min-height: 600px;"
+            >
+
+                <!-- =================================================
+                     BRAND
+                ================================================== -->
+
+                <div class="mb-4">
+
+                    <div class="fw-bold fs-3">
+                        AWINLINK
+                    </div>
+
+                    <div class="small text-muted">
+                        Talent & Learning Platform
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     AWARD ICON
+                ================================================== -->
+
+                <div class="mb-4">
+
+                    <i
+                        class="bi bi-award-fill text-warning"
+                        style="font-size: 70px;"
+                    ></i>
+
+                </div>
+
+
+                <!-- =================================================
+                     TITLE
+                ================================================== -->
+
+                <h1 class="fw-bold">
+                    Certificate of Completion
+                </h1>
+
+
+                <p class="text-muted mt-3">
+                    This certificate is proudly presented to
+                </p>
+
+
+                <!-- =================================================
+                     LEARNER
+                ================================================== -->
+
+                <h2 class="fw-bold mt-4">
+
+                    {{ enrollment.user.get_full_name|default:enrollment.user.username }}
+
+                </h2>
+
+
+                <div class="mx-auto my-4"
+                     style="max-width: 500px;">
+
+                    <p class="text-muted mb-2">
+                        for successfully completing
+                    </p>
+
+
+                    <!-- =================================================
+                         COURSE
+                    ================================================== -->
+
+                    <h3 class="fw-bold">
+
+                        {{ course.title }}
+
+                    </h3>
+
+                </div>
+
+
+                <!-- =================================================
+                     COMPLETION MESSAGE
+                ================================================== -->
+
+                <p class="text-muted mx-auto"
+                   style="max-width: 650px;">
+
+                    This certificate recognizes the successful completion
+                    of all required lessons in the above course on the
+                    Awinlink Learning platform.
+
+                </p>
+
+
+                <!-- =================================================
+                     CERTIFICATE INFORMATION
+                ================================================== -->
+
+                <div class="row justify-content-center mt-5">
+
+                    <div class="col-md-4 mb-3">
+
+                        <div class="small text-muted">
+                            Certificate ID
+                        </div>
+
+                        <strong>
+                            {{ certificate.certificate_id }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="col-md-4 mb-3">
+
+                        <div class="small text-muted">
+                            Date Issued
+                        </div>
+
+                        <strong>
+                            {{ certificate.issued_at|date:"F d, Y" }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="col-md-4 mb-3">
+
+                        <div class="small text-muted">
+                            Issued By
+                        </div>
+
+                        <strong>
+
+                            {{ course.creator.get_full_name|default:course.creator.username }}
+
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     VERIFIED
+                ================================================== -->
+
+                <div class="mt-4">
+
+                    <span class="badge bg-success px-3 py-2">
+
+                        <i class="bi bi-patch-check-fill me-1"></i>
+
+                        Certificate Verified
+
+                    </span>
+
+                </div>
+
+
+                <!-- =================================================
+                     ACTIONS
+                ================================================== -->
+
+                <div class="mt-5 d-flex justify-content-center gap-2 flex-wrap">
+
+                    {% if certificate.pdf %}
+
+                    <a
+                        href="{{ certificate.pdf.url }}"
+                        target="_blank"
+                        class="btn btn-primary"
+                    >
+
+                        <i class="bi bi-file-earmark-pdf me-1"></i>
+
+                        View Certificate PDF
+
+                    </a>
+
+                    <a
+                        href="{{ certificate.pdf.url }}"
+                        download
+                        class="btn btn-outline-primary"
+                    >
+
+                        <i class="bi bi-download me-1"></i>
+
+                        Download PDF
+
+                    </a>
+
+                    {% endif %}
+
+
+                    <!-- PUBLIC VERIFICATION -->
+
+                    <a
+                        href="{% url 'verify_certificate' certificate.certificate_id %}"
+                        class="btn btn-outline-success"
+                    >
+
+                        <i class="bi bi-shield-check me-1"></i>
+
+                        Verify Certificate
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

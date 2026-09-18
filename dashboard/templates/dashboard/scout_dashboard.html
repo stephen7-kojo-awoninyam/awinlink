@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="mb-4">
+
+        <h1 class="fw-bold">
+            Scout Dashboard
+        </h1>
+
+        <p class="text-muted">
+            Discover, follow and track promising talents.
+        </p>
+
+    </div>
+
+
+    <!-- =====================================================
+         OVERVIEW
+    ====================================================== -->
+
+    <div class="row g-4 mb-5">
+
+        <div class="col-md-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <small class="text-muted">
+                        Talents Viewed
+                    </small>
+
+                    <h2 class="fw-bold">
+                        {{ total_views }}
+                    </h2>
+
+                    <i class="bi bi-eye fs-2 text-info"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <small class="text-muted">
+                        Following
+                    </small>
+
+                    <h2 class="fw-bold">
+                        {{ total_followed }}
+                    </h2>
+
+                    <i class="bi bi-person-plus fs-2 text-primary"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <small class="text-muted">
+                        Bookmarked
+                    </small>
+
+                    <h2 class="fw-bold">
+                        {{ total_bookmarks }}
+                    </h2>
+
+                    <i class="bi bi-bookmark-star fs-2 text-warning"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         ACTIONS
+    ====================================================== -->
+
+    <div class="mb-5">
+
+        <a
+            href="{% url 'scout_talent_list' %}"
+            class="btn btn-primary"
+        >
+
+            <i class="bi bi-search me-2"></i>
+
+            Discover Talents
+
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         RECENT VIEWS
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-4">
+                Recently Viewed Talents
+            </h5>
+
+            {% if recent_views %}
+
+                <div class="list-group list-group-flush">
+
+                    {% for view in recent_views %}
+
+                        <a
+                            href="{% url 'scout_talent_detail' view.talent.id %}"
+                            class="list-group-item list-group-item-action"
+                        >
+
+                            <strong>
+                                {{ view.talent.user.get_full_name|default:view.talent.user.username }}
+                            </strong>
+
+                            <small class="text-muted d-block">
+                                Viewed {{ view.viewed_at|timesince }} ago
+                            </small>
+
+                        </a>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <p class="text-muted mb-0">
+                    You have not viewed any talents yet.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         BOOKMARKS
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-4">
+                Bookmarked Talents
+            </h5>
+
+            {% if recent_bookmarks %}
+
+                <div class="list-group list-group-flush">
+
+                    {% for bookmark in recent_bookmarks %}
+
+                        <a
+                            href="{% url 'scout_talent_detail' bookmark.talent.id %}"
+                            class="list-group-item list-group-item-action"
+                        >
+
+                            <strong>
+                                {{ bookmark.talent.user.get_full_name|default:bookmark.talent.user.username }}
+                            </strong>
+
+                            {% if bookmark.notes %}
+
+                                <small class="text-muted d-block">
+                                    {{ bookmark.notes }}
+                                </small>
+
+                            {% endif %}
+
+                        </a>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <p class="text-muted mb-0">
+                    No bookmarked talents yet.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

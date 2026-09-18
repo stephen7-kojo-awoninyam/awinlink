@@ -1,0 +1,465 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="mb-4">
+
+        <h1 class="fw-bold">
+            Coach Analytics
+        </h1>
+
+        <p class="text-muted mb-0">
+            Track your talent discovery, talent management,
+            and communication activity.
+        </p>
+
+    </div>
+
+
+    <!-- =====================================================
+         TALENT DISCOVERY
+    ====================================================== -->
+
+    <div class="row g-4 mb-5">
+
+        <!-- TOTAL VIEWS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-eye fs-1 text-primary"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Talent Profile Views
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_talent_views }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- UNIQUE TALENTS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-people fs-1 text-success"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Unique Talents Viewed
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.unique_talents_viewed }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- RECENT VIEWS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-calendar3 fs-1 text-warning"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Views Last 30 Days
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.recent_talent_views }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- FOLLOWED -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-person-plus fs-1 text-info"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Talents Following
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_followed_talents }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         TALENT MANAGEMENT
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-5">
+
+        <div class="card-body">
+
+            <h4 class="fw-bold mb-4">
+                Talent Management
+            </h4>
+
+            <div class="row g-4">
+
+                <div class="col-md-4">
+
+                    <div class="p-4 bg-light rounded text-center">
+
+                        <i class="bi bi-bookmark-star fs-2 text-primary"></i>
+
+                        <h6 class="text-muted mt-3">
+                            Saved Talents
+                        </h6>
+
+                        <h3 class="fw-bold">
+                            {{ analytics.total_saved_talents }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-md-4">
+
+                    <div class="p-4 bg-light rounded text-center">
+
+                        <i class="bi bi-journal-text fs-2 text-success"></i>
+
+                        <h6 class="text-muted mt-3">
+                            Talents With Notes
+                        </h6>
+
+                        <h3 class="fw-bold">
+                            {{ analytics.talents_with_notes }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-md-4">
+
+                    <div class="p-4 bg-light rounded text-center">
+
+                        <i class="bi bi-person-check fs-2 text-warning"></i>
+
+                        <h6 class="text-muted mt-3">
+                            Followed Talents
+                        </h6>
+
+                        <h3 class="fw-bold">
+                            {{ analytics.total_followed_talents }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         COMMUNICATION
+    ====================================================== -->
+
+    <div class="row g-4 mb-5">
+
+        <div class="col-md-4">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-chat-dots fs-1 text-primary"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Conversations
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_conversations }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-send fs-1 text-success"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Messages Sent
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.messages_sent }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-clock-history fs-1 text-warning"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Messages Last 30 Days
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.recent_messages }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RECENTLY VIEWED TALENTS
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-5">
+
+        <div class="card-body">
+
+            <h4 class="fw-bold mb-4">
+                Recently Viewed Talents
+            </h4>
+
+            <div class="table-responsive">
+
+                <table class="table align-middle">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Talent</th>
+                            <th>Viewed</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for item in recent_views %}
+
+                        <tr>
+
+                            <td>
+
+                                {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+
+                            </td>
+
+                            <td>
+
+                                {{ item.viewed_at|date:"M d, Y H:i" }}
+
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="2"
+                                class="text-center text-muted py-4"
+                            >
+                                You have not viewed any talent profiles yet.
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RECENTLY SAVED TALENTS
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+
+                <h4 class="fw-bold mb-0">
+                    Recently Saved Talents
+                </h4>
+
+                <a
+                    href="{% url 'saved_talents' %}"
+                    class="btn btn-outline-primary btn-sm"
+                >
+                    View All
+                </a>
+
+            </div>
+
+
+            <div class="table-responsive">
+
+                <table class="table align-middle">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Talent</th>
+                            <th>Notes</th>
+                            <th>Saved</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for item in recent_saved %}
+
+                        <tr>
+
+                            <td class="fw-semibold">
+
+                                {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+
+                            </td>
+
+                            <td>
+
+                                {% if item.notes %}
+
+                                    {{ item.notes|truncatechars:60 }}
+
+                                {% else %}
+
+                                    <span class="text-muted">
+                                        No notes
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+
+                                {{ item.created_at|date:"M d, Y" }}
+
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="3"
+                                class="text-center text-muted py-4"
+                            >
+                                You have not saved any talents yet.
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+Find Talents
+</h2>
+
+
+<!-- Search Filters -->
+
+<div class="card p-4 mb-4">
+
+
+<form method="get">
+
+
+<div class="row">
+
+
+<div class="col-md-4">
+
+
+<input 
+type="text"
+name="q"
+value="{{ request.GET.q }}"
+class="form-control"
+placeholder="Search talent name or headline">
+
+
+</div>
+
+
+
+<div class="col-md-4">
+
+
+<input 
+type="text"
+name="skill"
+value="{{ request.GET.skill }}"
+class="form-control"
+placeholder="Search skill">
+
+
+</div>
+
+
+
+<div class="col-md-4">
+
+
+<input 
+type="text"
+name="country"
+value="{{ request.GET.country }}"
+class="form-control"
+placeholder="Country">
+
+
+</div>
+
+
+</div>
+
+
+<br>
+
+
+<div class="form-check">
+
+
+<input 
+class="form-check-input"
+type="checkbox"
+name="verified"
+value="true"
+id="verifiedCheck">
+
+
+<label class="form-check-label"
+for="verifiedCheck">
+
+Verified talents only
+
+</label>
+
+
+</div>
+
+
+<br>
+
+
+<button class="btn btn-primary">
+
+Search Talents
+
+</button>
+
+
+</form>
+
+
+</div>
+
+
+
+
+
+<hr>
+
+
+
+
+<!-- Talent Results -->
+
+
+<div class="row">
+
+
+{% for talent in talents %}
+
+
+
+<div class="col-md-4">
+
+
+
+<div class="card mb-4 shadow-sm p-3">
+
+
+
+<!-- Profile Image -->
+
+
+<div class="text-center">
+
+
+{% if talent.profile_photo %}
+
+
+<img src="{{ talent.profile_photo.url }}"
+class="rounded-circle"
+width="120"
+height="120">
+
+
+{% endif %}
+
+
+</div>
+
+
+
+
+
+<div class="card-body">
+
+
+<h5>
+
+
+{{ talent.user.get_full_name }}
+
+
+
+{% if talent.verified %}
+
+
+<span class="badge bg-success">
+
+✓ Verified
+
+</span>
+
+
+{% endif %}
+
+
+
+</h5>
+
+
+
+
+
+<p>
+
+
+<strong>
+Headline:
+</strong>
+
+
+{{ talent.headline }}
+
+
+</p>
+
+
+
+
+
+<p>
+
+
+<strong>
+Location:
+</strong>
+
+
+{{ talent.city }}, {{ talent.country }}
+
+
+</p>
+
+
+
+
+
+
+<!-- Domains -->
+
+
+<p>
+
+
+<strong>
+Domains:
+</strong>
+
+
+<br>
+
+
+{% for domain in talent.domains.all %}
+
+
+<span class="badge bg-info">
+
+
+{{ domain.name }}
+
+
+</span>
+
+
+{% empty %}
+
+
+No domains
+
+
+{% endfor %}
+
+
+
+</p>
+
+
+
+
+
+
+<!-- Skills -->
+
+
+<p>
+
+
+<strong>
+Skills:
+</strong>
+
+
+<br>
+
+
+{% for skill in talent.skills.all %}
+
+
+
+<span class="badge bg-primary">
+
+
+{{ skill.name }}
+
+
+</span>
+
+
+
+{% empty %}
+
+
+No skills added
+
+
+{% endfor %}
+
+
+
+</p>
+
+
+
+
+
+
+<div class="d-grid gap-2">
+
+
+<a href="{% url 'talent_profile' talent.id %}"
+class="btn btn-outline-primary">
+
+View Profile
+
+</a>
+
+
+
+{% if talent.id in shortlisted_ids %}
+
+<a class="btn btn-secondary">
+
+⭐ Already Saved
+
+</a>
+
+{% else %}
+
+<a href="{% url 'add_to_shortlist' talent.id %}"
+class="btn btn-warning">
+
+⭐ Save Talent
+
+</a>
+
+{% endif %}
+
+
+
+<button
+    type="button"
+    class="btn btn-success"
+    disabled
+    title="Select an opportunity before inviting this talent"
+>
+    <i class="bi bi-send me-1"></i>
+    Invite Talent
+</button>
+
+
+</div>
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+{% empty %}
+
+
+
+<div class="alert alert-warning">
+
+
+No talents found matching your search.
+
+
+</div>
+
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

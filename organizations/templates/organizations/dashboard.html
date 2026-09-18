@@ -1,0 +1,1681 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<!-- ================================================= -->
+<!-- ORGANIZATION HEADER -->
+<!-- ================================================= -->
+
+<div class="card shadow-sm p-4 mb-4">
+
+
+<div class="row">
+
+
+<div class="col-md-3 text-center">
+
+
+{% if organization.logo %}
+
+<img src="{{ organization.logo.url }}"
+     class="img-fluid rounded-circle"
+     width="140"
+     height="140">
+
+{% endif %}
+
+
+</div>
+
+
+
+<div class="col-md-9">
+
+
+<h2>
+
+{{ organization.name }}
+
+{% if organization.verified %}
+
+<span class="badge bg-success">
+
+✓ Verified
+
+</span>
+
+{% endif %}
+
+</h2>
+
+
+
+<p>
+
+{{ organization.description }}
+
+</p>
+
+
+
+<p>
+
+<strong>
+
+Location:
+
+</strong>
+
+{{ organization.city }}, {{ organization.country }}
+
+</p>
+
+
+
+{% if organization.category %}
+
+<p>
+
+<strong>
+
+Category:
+
+</strong>
+
+{{ organization.category }}
+
+</p>
+
+{% endif %}
+
+
+
+{% if organization.domain %}
+
+<p>
+
+<strong>
+
+Domain:
+
+</strong>
+
+{{ organization.domain }}
+
+</p>
+
+{% endif %}
+
+
+
+<div class="mt-3">
+
+
+<a href="{% url 'edit_organization_profile' %}"
+
+class="btn btn-outline-primary">
+
+Edit Profile
+
+</a>
+
+
+
+<a href="{% url 'create_opportunity' %}"
+
+class="btn btn-success">
+
+Create Opportunity
+
+</a>
+
+
+
+<a href="{% url 'organization_shortlist' %}"
+
+class="btn btn-warning">
+
+⭐ Shortlisted Talents
+
+</a>
+
+
+
+<a href="{% url 'talent_search' %}"
+
+class="btn btn-dark">
+
+Search Talents
+
+</a>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<!-- ================================================= -->
+<!-- STATISTICS CARDS -->
+<!-- ================================================= -->
+
+
+<div class="row mb-4">
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow-sm text-center p-3">
+
+<h6>
+
+Opportunities
+
+</h6>
+
+
+<h2>
+
+{{ total_opportunities }}
+
+</h2>
+
+
+</div>
+
+</div>
+
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow-sm text-center p-3">
+
+<h6>
+
+Applications
+
+</h6>
+
+
+<h2>
+
+{{ total_applications }}
+
+</h2>
+
+
+</div>
+
+</div>
+
+
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow-sm text-center p-3">
+
+<h6>
+
+Invitations
+
+</h6>
+
+
+<h2>
+
+{{ total_invitations }}
+
+</h2>
+
+
+</div>
+
+</div>
+
+
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow-sm text-center p-3">
+
+<h6>
+
+⭐ Favorite Talents
+
+</h6>
+
+
+<h2>
+
+{{ favorite_talents }}
+
+</h2>
+
+
+</div>
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- PROFILE COMPLETION -->
+<!-- ================================================= -->
+
+
+<div class="card shadow-sm p-4 mb-4">
+
+
+<h5>
+
+Organization Profile
+
+</h5>
+
+
+<p>
+
+Improve your organization visibility.
+
+</p>
+
+
+
+<div class="progress">
+
+
+<div class="progress-bar bg-success"
+
+style="width: {{ organization_profile_completion }}%">
+
+
+{{ organization_profile_completion }}%
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- OPPORTUNITY STATUS -->
+<!-- ================================================= -->
+
+
+<div class="row mb-4">
+
+
+
+<div class="col-md-6">
+
+
+<div class="card shadow-sm p-3">
+
+
+<h5>
+
+Opportunity Status
+
+</h5>
+
+
+
+<p>
+
+Active:
+
+<span class="badge bg-success">
+
+{{ active_opportunities }}
+
+</span>
+
+
+</p>
+
+
+
+<p>
+
+Closed:
+
+<span class="badge bg-secondary">
+
+{{ closed_opportunities }}
+
+</span>
+
+
+</p>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="col-md-6">
+
+
+<div class="card shadow-sm p-3">
+
+
+<h5>
+
+Application Status
+
+</h5>
+
+
+
+<p>
+
+Pending:
+
+<span class="badge bg-warning">
+
+{{ pending_applications }}
+
+</span>
+
+
+</p>
+
+
+
+<p>
+
+Accepted:
+
+<span class="badge bg-success">
+
+{{ accepted_applications }}
+
+</span>
+
+
+</p>
+
+
+
+<p>
+
+Rejected:
+
+<span class="badge bg-danger">
+
+{{ rejected_applications }}
+
+</span>
+
+
+</p>
+
+
+
+</div>
+
+
+</div>
+
+
+
+</div>
+<!-- ================================================= -->
+<!-- RECENT APPLICATIONS -->
+<!-- ================================================= -->
+
+
+<div class="card shadow-sm p-4 mb-4">
+
+
+<h4>
+
+📩 Recent Applications
+
+</h4>
+
+
+<hr>
+
+
+
+<table class="table table-hover">
+
+
+<thead>
+
+
+<tr>
+
+<th>
+Talent
+</th>
+
+
+<th>
+Opportunity
+</th>
+
+
+<th>
+Status
+</th>
+
+
+<th>
+Action
+</th>
+
+
+</tr>
+
+
+</thead>
+
+
+
+
+<tbody>
+
+
+
+{% for application in recent_applications %}
+
+
+
+<tr>
+
+
+<td>
+
+
+{{ application.talent.user.get_full_name }}
+
+
+</td>
+
+
+
+
+<td>
+
+
+{{ application.opportunity.title }}
+
+
+</td>
+
+
+
+
+<td>
+
+
+
+{% if application.status == "PENDING" %}
+
+
+<span class="badge bg-warning">
+
+Pending
+
+</span>
+
+
+
+{% elif application.status == "ACCEPTED" %}
+
+
+<span class="badge bg-success">
+
+Accepted
+
+</span>
+
+
+
+{% elif application.status == "REJECTED" %}
+
+
+<span class="badge bg-danger">
+
+Rejected
+
+</span>
+
+
+
+{% endif %}
+
+
+
+</td>
+
+
+
+
+<td>
+
+
+
+<a href="{% url 'organization_applications' %}"
+
+class="btn btn-primary btn-sm">
+
+
+Review
+
+
+</a>
+
+
+
+</td>
+
+
+</tr>
+
+
+
+
+{% empty %}
+
+
+
+<tr>
+
+<td colspan="4"
+
+class="text-center">
+
+
+No applications received yet.
+
+
+</td>
+
+</tr>
+
+
+
+{% endfor %}
+
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- MY OPPORTUNITIES -->
+<!-- ================================================= -->
+
+
+
+<div class="card shadow-sm p-4 mb-4">
+
+
+
+<h4>
+
+🚀 My Opportunities
+
+</h4>
+
+
+<hr>
+
+
+
+
+<table class="table table-striped">
+
+
+
+<thead>
+
+
+<tr>
+
+
+<th>
+Title
+</th>
+
+
+<th>
+Domain
+</th>
+
+
+<th>
+Status
+</th>
+
+
+<th>
+Applications
+</th>
+
+
+<th>
+Action
+</th>
+
+
+</tr>
+
+
+</thead>
+
+
+
+
+<tbody>
+
+
+
+
+{% for opportunity in opportunities %}
+
+
+
+
+<tr>
+
+
+
+<td>
+
+{{ opportunity.title }}
+
+</td>
+
+
+
+
+
+<td>
+
+{{ opportunity.domain }}
+
+</td>
+
+
+
+
+
+<td>
+
+
+
+{% if opportunity.active %}
+
+
+<span class="badge bg-success">
+
+Active
+
+</span>
+
+
+
+{% else %}
+
+
+<span class="badge bg-secondary">
+
+Closed
+
+</span>
+
+
+
+{% endif %}
+
+
+
+</td>
+
+
+
+
+
+<td>
+
+
+{{ opportunity.applications.count }}
+
+
+</td>
+
+
+
+
+
+<td>
+
+
+
+<a href="{% url 'opportunity_recommendations' opportunity.id %}"
+
+class="btn btn-success btn-sm">
+
+
+🤖 Find AI Talents
+
+
+</a>
+
+
+
+</td>
+
+
+
+</tr>
+
+
+
+
+{% empty %}
+
+
+
+
+<tr>
+
+
+<td colspan="5"
+
+class="text-center">
+
+
+No opportunities created yet.
+
+
+
+</td>
+
+
+</tr>
+
+
+
+
+{% endfor %}
+
+
+
+
+</tbody>
+
+
+</table>
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- AI RECOMMENDED TALENTS -->
+<!-- ================================================= -->
+
+
+
+<div class="card shadow-sm p-4 mb-4">
+
+
+
+<div class="d-flex justify-content-between">
+
+
+<h4>
+
+🎯 AI Recommended Talents
+
+</h4>
+
+
+
+<span class="badge bg-primary">
+
+{{ recommended_talents|length }} Matches
+
+</span>
+
+
+
+</div>
+
+
+
+
+<hr>
+
+
+
+
+<div class="row">
+
+
+
+
+
+{% for item in recommended_talents %}
+
+
+
+
+
+<div class="col-md-4 mb-4">
+
+
+
+<div class="card h-100 shadow-sm p-3">
+
+
+
+
+
+<div class="text-center">
+
+
+
+{% if item.talent.profile_photo %}
+
+
+
+<img src="{{ item.talent.profile_photo.url }}"
+
+class="rounded-circle"
+
+width="100"
+
+height="100">
+
+
+
+{% endif %}
+
+
+
+</div>
+
+
+
+
+
+<h5 class="mt-3 text-center">
+
+
+{{ item.talent.user.get_full_name }}
+
+
+</h5>
+
+
+
+
+
+{% if item.talent.verified %}
+
+
+
+<div class="text-center">
+
+
+<span class="badge bg-success">
+
+✓ Verified Talent
+
+</span>
+
+
+</div>
+
+
+
+{% endif %}
+
+
+
+
+
+<p>
+
+
+<strong>
+
+Headline:
+
+</strong>
+
+
+<br>
+
+
+{{ item.talent.headline }}
+
+
+
+</p>
+
+
+
+
+
+<p>
+
+
+<strong>
+
+Location:
+
+</strong>
+
+
+<br>
+
+
+{{ item.talent.city }},
+
+{{ item.talent.country }}
+
+
+
+</p>
+
+
+
+
+
+<p>
+
+
+<strong>
+
+Matched Opportunity:
+
+</strong>
+
+
+<br>
+
+
+{{ item.opportunity.title }}
+
+
+
+</p>
+
+
+
+
+
+<h4 class="text-success text-center">
+
+
+{{ item.score }}% Match
+
+
+</h4>
+
+
+
+
+<h6>
+
+Why AI Recommended:
+
+</h6>
+
+
+
+
+<ul>
+
+
+{% for reason in item.reasons %}
+
+
+
+<li>
+
+{{ reason }}
+
+</li>
+
+
+
+{% empty %}
+
+
+
+<li>
+
+Skills, domain, experience and profile strength match.
+
+</li>
+
+
+
+{% endfor %}
+
+
+</ul>
+
+
+
+
+
+
+<div class="d-grid gap-2">
+
+
+
+
+
+<a href="{% url 'talent_profile' item.talent.id %}"
+
+class="btn btn-primary btn-sm">
+
+
+View Profile
+
+
+</a>
+
+<a
+    href="{% url 'start_conversation' item.talent.id item.opportunity.id %}"
+    class="btn btn-primary btn-sm"
+>
+    💬 Message Talent
+</a>
+
+
+
+<a href="{% url 'add_to_shortlist' item.talent.id %}"
+
+class="btn btn-warning btn-sm">
+
+
+⭐ Add To Shortlist
+
+
+</a>
+
+
+
+
+
+<a href="{% url 'invite_talent' item.talent.id item.opportunity.id %}"
+
+class="btn btn-success btn-sm">
+
+
+📩 Invite Talent
+
+
+</a>
+
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+{% empty %}
+
+
+
+
+<div class="alert alert-info">
+
+
+No AI recommendations available.
+
+Create active opportunities to receive matches.
+
+
+</div>
+
+
+
+
+{% endfor %}
+
+
+
+
+</div>
+
+
+
+
+</div>
+<!-- ================================================= -->
+<!-- NOTIFICATIONS -->
+<!-- ================================================= -->
+
+
+<div class="card shadow-sm p-4 mb-4">
+
+
+<h4>
+
+🔔 Notifications
+
+</h4>
+
+
+<hr>
+
+
+
+<div class="list-group">
+
+
+
+{% for notification in notifications %}
+
+
+
+<div class="list-group-item">
+
+
+<div class="d-flex justify-content-between">
+
+
+<strong>
+
+{{ notification.notification_type }}
+
+</strong>
+
+
+
+<small>
+
+{{ notification.created_at }}
+
+</small>
+
+
+</div>
+
+
+
+<p class="mb-0">
+
+{{ notification.message }}
+
+</p>
+
+
+
+</div>
+
+
+
+{% empty %}
+
+
+
+<div class="alert alert-info">
+
+
+No notifications available.
+
+
+</div>
+
+
+
+{% endfor %}
+
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- ANALYTICS -->
+<!-- ================================================= -->
+
+
+<div class="row mb-4">
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card shadow-sm text-center p-4">
+
+
+<h5>
+
+👁 Profile Views
+
+</h5>
+
+
+
+<h2>
+
+{{ total_talent_views }}
+
+</h2>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card shadow-sm text-center p-4">
+
+
+<h5>
+
+📩 Invitations Sent
+
+</h5>
+
+
+
+<h2>
+
+{{ total_invitations }}
+
+</h2>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card shadow-sm text-center p-4">
+
+
+<h5>
+
+✅ Acceptance Rate
+
+</h5>
+
+
+
+<h2>
+
+{{ acceptance_rate }}%
+
+</h2>
+
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- POPULAR OPPORTUNITIES -->
+<!-- ================================================= -->
+
+
+
+<div class="card shadow-sm p-4 mb-5">
+
+
+<h4>
+
+🏆 Popular Opportunities
+
+</h4>
+
+
+<hr>
+
+
+
+<table class="table table-hover">
+
+
+
+<thead>
+
+
+<tr>
+
+
+<th>
+
+Opportunity
+
+</th>
+
+
+
+<th>
+
+Applications
+
+</th>
+
+
+
+</tr>
+
+
+
+</thead>
+
+
+
+
+
+<tbody>
+
+
+
+{% for opportunity in top_opportunities %}
+
+
+
+
+<tr>
+
+
+<td>
+
+{{ opportunity.title }}
+
+</td>
+
+
+
+<td>
+
+
+<span class="badge bg-primary">
+
+
+{{ opportunity.application_count }}
+
+
+</span>
+
+
+
+</td>
+
+
+</tr>
+
+
+
+
+
+{% empty %}
+
+
+
+
+<tr>
+
+
+<td colspan="2"
+
+class="text-center">
+
+
+No opportunities available.
+
+
+
+</td>
+
+
+</tr>
+
+
+
+
+{% endfor %}
+
+
+
+
+</tbody>
+
+
+
+</table>
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- ================================================= -->
+<!-- QUICK ACTIONS -->
+<!-- ================================================= -->
+
+
+
+<div class="card shadow-sm p-4 mb-5">
+
+
+<h4>
+
+⚡ Quick Actions
+
+</h4>
+
+
+
+<hr>
+
+
+
+<a href="{% url 'create_opportunity' %}"
+
+class="btn btn-success me-2">
+
+
+Create Opportunity
+
+
+</a>
+
+
+
+
+
+<a href="{% url 'talent_search' %}"
+
+class="btn btn-dark me-2">
+
+
+Search Talents
+
+
+</a>
+
+<a href="{% url 'organization_events' %}">
+
+My Events
+
+</a>
+
+
+
+<a href="{% url 'organization_shortlist' %}"
+
+class="btn btn-warning me-2">
+
+
+⭐ Shortlist
+
+
+</a>
+
+
+
+
+
+<a href="{% url 'conversation_list' %}"
+
+class="btn btn-primary">
+
+
+💬 Messages
+
+
+{% if unread_message_count > 0 %}
+
+
+<span class="badge bg-danger">
+
+
+{{ unread_message_count }}
+
+
+</span>
+
+
+{% endif %}
+
+
+
+</a>
+
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+
+{% endblock %}

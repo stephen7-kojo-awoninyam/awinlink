@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- HEADER -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h1 class="fw-bold mb-1">
+                Followed Talents
+            </h1>
+
+            <p class="text-muted mb-0">
+                Talents you are currently following.
+            </p>
+
+        </div>
+
+        <a
+            href="{% url 'scout_talent_list' %}"
+            class="btn btn-primary"
+        >
+            <i class="bi bi-search me-2"></i>
+            Discover Talents
+        </a>
+
+    </div>
+
+
+    {% if followed_talents %}
+
+        <div class="row g-4">
+
+            {% for follow in followed_talents %}
+
+                <div class="col-md-6 col-lg-4">
+
+                    <div class="card border-0 shadow-sm h-100">
+
+                        <!-- PROFILE PHOTO -->
+
+                        {% if follow.talent.profile_photo %}
+
+                            <img
+                                src="{{ follow.talent.profile_photo.url }}"
+                                class="card-img-top"
+                                alt="{{ follow.talent.user.username }}"
+                                style="
+                                    height:220px;
+                                    object-fit:cover;
+                                "
+                            >
+
+                        {% else %}
+
+                            <div
+                                class="bg-light d-flex
+                                       align-items-center
+                                       justify-content-center"
+                                style="height:220px;"
+                            >
+
+                                <i
+                                    class="bi bi-person-circle
+                                           text-secondary"
+                                    style="font-size:80px;"
+                                ></i>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <div class="card-body">
+
+                            <!-- NAME -->
+
+                            <h5 class="fw-bold mb-1">
+
+                                {{ follow.talent.user.get_full_name|default:follow.talent.user.username }}
+
+                                {% if follow.talent.verified %}
+
+                                    <i
+                                        class="bi bi-patch-check-fill
+                                               text-primary"
+                                        title="Verified"
+                                    ></i>
+
+                                {% endif %}
+
+                            </h5>
+
+
+                            <p class="text-muted small mb-2">
+                                @{{ follow.talent.user.username }}
+                            </p>
+
+
+                            <!-- HEADLINE -->
+
+                            {% if follow.talent.headline %}
+
+                                <p class="mb-2">
+                                    {{ follow.talent.headline }}
+                                </p>
+
+                            {% endif %}
+
+
+                            <!-- LOCATION -->
+
+                            {% if follow.talent.city or follow.talent.country %}
+
+                                <p class="text-muted small mb-3">
+
+                                    <i class="bi bi-geo-alt me-1"></i>
+
+                                    {% if follow.talent.city %}
+                                        {{ follow.talent.city }}
+                                    {% endif %}
+
+                                    {% if follow.talent.city and follow.talent.country %}
+                                        ,
+                                    {% endif %}
+
+                                    {% if follow.talent.country %}
+                                        {{ follow.talent.country }}
+                                    {% endif %}
+
+                                </p>
+
+                            {% endif %}
+
+
+                            <!-- FOLLOW DATE -->
+
+                            <p class="small text-muted mb-3">
+
+                                <i class="bi bi-person-plus me-1"></i>
+
+                                Following since
+                                {{ follow.created_at|date:"M d, Y" }}
+
+                            </p>
+
+
+                            <!-- ACTIONS -->
+
+                            <div class="d-flex gap-2">
+
+                                <a
+                                    href="{% url 'scout_talent_detail' follow.talent.id %}"
+                                    class="btn btn-primary flex-grow-1"
+                                >
+                                    <i class="bi bi-person-lines-fill me-1"></i>
+                                    View Profile
+                                </a>
+
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'follow_talent' follow.talent.id %}"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-outline-primary"
+                                        title="Unfollow talent"
+                                    >
+                                        <i class="bi bi-person-dash"></i>
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <!-- EMPTY STATE -->
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <i
+                    class="bi bi-person-plus
+                           text-muted"
+                    style="font-size:60px;"
+                ></i>
+
+                <h4 class="fw-bold mt-3">
+                    No Followed Talents
+                </h4>
+
+                <p class="text-muted">
+                    You are not following any talents yet.
+                    Discover promising talents and follow them
+                    to keep track of their profiles.
+                </p>
+
+                <a
+                    href="{% url 'scout_talent_list' %}"
+                    class="btn btn-primary"
+                >
+                    <i class="bi bi-search me-2"></i>
+                    Discover Talents
+                </a>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

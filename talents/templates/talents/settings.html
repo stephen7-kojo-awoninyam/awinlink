@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+
+            <h2 class="mb-4">
+                ⚙️ Profile Settings
+            </h2>
+
+            <p class="text-muted">
+                Manage your availability and profile visibility.
+            </p>
+
+            <form method="post">
+
+                {% csrf_token %}
+
+                <!-- ============================== -->
+                <!-- AVAILABILITY -->
+                <!-- ============================== -->
+
+                <div class="mb-4">
+
+                    <h5>
+                        Availability
+                    </h5>
+
+                    <p class="text-muted small">
+                        Let organizations know whether you are available
+                        for opportunities.
+                    </p>
+
+                    <select
+                        name="availability_status"
+                        class="form-select"
+                    >
+
+                        <option
+                            value="AVAILABLE"
+                            {% if profile.availability_status == "AVAILABLE" %}
+                                selected
+                            {% endif %}
+                        >
+                            Available
+                        </option>
+
+                        <option
+                            value="BUSY"
+                            {% if profile.availability_status == "BUSY" %}
+                                selected
+                            {% endif %}
+                        >
+                            Currently Busy
+                        </option>
+
+                        <option
+                            value="NOT_LOOKING"
+                            {% if profile.availability_status == "NOT_LOOKING" %}
+                                selected
+                            {% endif %}
+                        >
+                            Not Looking
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- ============================== -->
+                <!-- PROFILE VISIBILITY -->
+                <!-- ============================== -->
+
+                <div class="mb-4">
+
+                    <h5>
+                        Profile Visibility
+                    </h5>
+
+                    <p class="text-muted small">
+                        Choose who can view your talent profile.
+                    </p>
+
+                    <select
+                        name="profile_visibility"
+                        class="form-select"
+                    >
+
+                        <option
+                            value="PUBLIC"
+                            {% if profile.profile_visibility == "PUBLIC" %}
+                                selected
+                            {% endif %}
+                        >
+                            Public
+                        </option>
+
+                        <option
+                            value="ORGANIZATIONS"
+                            {% if profile.profile_visibility == "ORGANIZATIONS" %}
+                                selected
+                            {% endif %}
+                        >
+                            Organizations Only
+                        </option>
+
+                        <option
+                            value="PRIVATE"
+                            {% if profile.profile_visibility == "PRIVATE" %}
+                                selected
+                            {% endif %}
+                        >
+                            Private
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- ============================== -->
+                <!-- SAVE -->
+                <!-- ============================== -->
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    💾 Save Settings
+                </button>
+
+                <a
+                    href="{% url 'talent_dashboard' %}"
+                    class="btn btn-outline-secondary"
+                >
+                    Cancel
+                </a>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

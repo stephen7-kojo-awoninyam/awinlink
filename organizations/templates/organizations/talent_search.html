@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+Discover Talents 🔍
+</h2>
+
+
+<form method="get">
+
+
+<input 
+type="text"
+name="q"
+class="form-control"
+placeholder="Search skill, talent, country">
+
+
+<br>
+
+
+<select name="experience"
+class="form-control">
+
+
+<option value="">
+Experience Level
+</option>
+
+
+<option value="BEGINNER">
+Beginner
+</option>
+
+
+<option value="INTERMEDIATE">
+Intermediate
+</option>
+
+
+<option value="EXPERT">
+Expert
+</option>
+
+
+</select>
+
+
+<br>
+
+
+<label>
+
+<input 
+type="checkbox"
+name="verified"
+value="true">
+
+Verified talents only
+
+</label>
+
+
+<br><br>
+
+
+<button class="btn btn-primary">
+
+Search
+
+</button>
+
+
+</form>
+
+
+
+<hr>
+
+
+
+<div class="row">
+
+
+{% for talent in talents %}
+
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3 mb-3 text-center">
+
+
+{% if talent.profile_photo %}
+
+
+<img src="{{ talent.profile_photo.url }}"
+
+class="rounded-circle mx-auto"
+
+width="100">
+
+
+{% endif %}
+
+
+
+<h5>
+
+{{ talent.user.get_full_name }}
+
+</h5>
+
+
+
+<p>
+
+{{ talent.headline }}
+
+</p>
+
+
+
+<p>
+
+{{ talent.country }}
+
+</p>
+
+
+
+{% if talent.verified %}
+
+<span class="badge bg-success">
+
+Verified
+
+</span>
+
+{% endif %}
+
+
+
+
+<a href="{% url 'talent_profile' talent.id %}"
+
+class="btn btn-primary mt-3">
+
+View Profile
+
+</a>
+
+
+
+</div>
+
+
+</div>
+
+
+
+{% empty %}
+
+
+<p>
+No talents found.
+</p>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+</div>
+
+
+{% endblock %}

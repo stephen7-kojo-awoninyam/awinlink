@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- HEADER -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h1 class="fw-bold mb-1">
+                Bookmarked Talents
+            </h1>
+
+            <p class="text-muted mb-0">
+                Talents you saved for future scouting and review.
+            </p>
+
+        </div>
+
+        <a
+            href="{% url 'scout_talent_list' %}"
+            class="btn btn-primary"
+        >
+            <i class="bi bi-search me-2"></i>
+            Discover Talents
+        </a>
+
+    </div>
+
+
+    <!-- RESULTS -->
+
+    {% if bookmarks %}
+
+        <div class="row g-4">
+
+            {% for bookmark in bookmarks %}
+
+                <div class="col-md-6 col-lg-4">
+
+                    <div class="card border-0 shadow-sm h-100">
+
+                        <!-- PHOTO -->
+
+                        {% if bookmark.talent.profile_photo %}
+
+                            <img
+                                src="{{ bookmark.talent.profile_photo.url }}"
+                                class="card-img-top"
+                                alt="{{ bookmark.talent.user.username }}"
+                                style="
+                                    height:220px;
+                                    object-fit:cover;
+                                "
+                            >
+
+                        {% else %}
+
+                            <div
+                                class="bg-light d-flex
+                                       align-items-center
+                                       justify-content-center"
+                                style="height:220px;"
+                            >
+
+                                <i
+                                    class="bi bi-person-circle
+                                           text-secondary"
+                                    style="font-size:80px;"
+                                ></i>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <div class="card-body">
+
+                            <!-- NAME -->
+
+                            <h5 class="fw-bold mb-1">
+
+                                {{ bookmark.talent.user.get_full_name|default:bookmark.talent.user.username }}
+
+                                {% if bookmark.talent.verified %}
+
+                                    <i
+                                        class="bi bi-patch-check-fill
+                                               text-primary"
+                                        title="Verified"
+                                    ></i>
+
+                                {% endif %}
+
+                            </h5>
+
+
+                            <p class="text-muted small mb-2">
+                                @{{ bookmark.talent.user.username }}
+                            </p>
+
+
+                            <!-- HEADLINE -->
+
+                            {% if bookmark.talent.headline %}
+
+                                <p class="mb-2">
+                                    {{ bookmark.talent.headline }}
+                                </p>
+
+                            {% endif %}
+
+
+                            <!-- LOCATION -->
+
+                            {% if bookmark.talent.city or bookmark.talent.country %}
+
+                                <p class="text-muted small">
+
+                                    <i class="bi bi-geo-alt me-1"></i>
+
+                                    {% if bookmark.talent.city %}
+                                        {{ bookmark.talent.city }}
+                                    {% endif %}
+
+                                    {% if bookmark.talent.city and bookmark.talent.country %}
+                                        ,
+                                    {% endif %}
+
+                                    {% if bookmark.talent.country %}
+                                        {{ bookmark.talent.country }}
+                                    {% endif %}
+
+                                </p>
+
+                            {% endif %}
+
+
+                            <!-- NOTES -->
+
+                            <div class="mt-3">
+
+                                <small class="text-muted d-block mb-1">
+                                    Scouting Notes
+                                </small>
+
+                                {% if bookmark.notes %}
+
+                                    <div class="bg-light rounded p-2 small">
+                                        {{ bookmark.notes }}
+                                    </div>
+
+                                {% else %}
+
+                                    <span class="text-muted small">
+                                        No notes added.
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <!-- ACTIONS -->
+
+                            <div class="d-flex gap-2 mt-4">
+
+                                <a
+                                    href="{% url 'scout_talent_detail' bookmark.talent.id %}"
+                                    class="btn btn-primary flex-grow-1"
+                                >
+                                    <i class="bi bi-person-lines-fill me-1"></i>
+                                    View Profile
+                                </a>
+
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'bookmark_talent' bookmark.talent.id %}"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-outline-warning"
+                                        title="Remove bookmark"
+                                    >
+                                        <i class="bi bi-bookmark-x"></i>
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <!-- EMPTY STATE -->
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <i
+                    class="bi bi-bookmark
+                           text-muted"
+                    style="font-size:60px;"
+                ></i>
+
+                <h4 class="fw-bold mt-3">
+                    No Bookmarked Talents
+                </h4>
+
+                <p class="text-muted">
+                    You haven't bookmarked any talents yet.
+                    Start discovering talents and save promising
+                    profiles for later review.
+                </p>
+
+                <a
+                    href="{% url 'scout_talent_list' %}"
+                    class="btn btn-primary"
+                >
+                    <i class="bi bi-search me-2"></i>
+                    Discover Talents
+                </a>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

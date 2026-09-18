@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h1 class="fw-bold mb-1">
+                Course Progress
+            </h1>
+
+            <p class="text-muted mb-0">
+                {{ course.title }}
+            </p>
+
+        </div>
+
+        <a
+            href="{% url 'course_detail' course.slug %}"
+            class="btn btn-outline-primary"
+        >
+
+            <i class="bi bi-arrow-left me-1"></i>
+
+            Back to Course
+
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         PROGRESS SUMMARY
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body p-4">
+
+            <div class="row align-items-center">
+
+                <div class="col-md-8">
+
+                    <h5 class="fw-bold mb-3">
+                        Your Progress
+                    </h5>
+
+
+                    <div
+                        class="progress"
+                        style="height: 20px;"
+                    >
+
+                        <div
+                            class="progress-bar
+                            {% if progress_percentage == 100 %}
+                                bg-success
+                            {% else %}
+                                bg-primary
+                            {% endif %}"
+                            role="progressbar"
+                            style="width: {{ progress_percentage }}%;"
+                            aria-valuenow="{{ progress_percentage }}"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                        >
+
+                            {{ progress_percentage }}%
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-md-4 text-md-end mt-4 mt-md-0">
+
+                    <div class="display-6 fw-bold">
+
+                        {{ completed_lessons }}/{{ total_lessons }}
+
+                    </div>
+
+                    <div class="text-muted">
+
+                        Lessons Completed
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         COURSE COMPLETION
+    ====================================================== -->
+
+    {% if enrollment.completed %}
+
+    <div class="alert alert-success shadow-sm">
+
+        <div class="d-flex align-items-center">
+
+            <i class="bi bi-check-circle-fill fs-3 me-3"></i>
+
+            <div>
+
+                <strong>
+                    Congratulations!
+                </strong>
+
+                <div>
+                    You have completed this course.
+                </div>
+
+                {% if enrollment.completed_at %}
+
+                <small class="text-muted">
+
+                    Completed:
+                    {{ enrollment.completed_at|date:"M d, Y" }}
+
+                </small>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {% elif progress_percentage > 0 %}
+
+    <div class="alert alert-info">
+
+        <i class="bi bi-info-circle me-1"></i>
+
+        Keep going! You are making good progress through this course.
+
+    </div>
+
+
+    {% else %}
+
+    <div class="alert alert-light border">
+
+        <i class="bi bi-book me-1"></i>
+
+        You haven't completed any lessons yet.
+        Start your first lesson below.
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         LESSON LIST
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-header bg-white py-3">
+
+            <h5 class="fw-bold mb-0">
+
+                <i class="bi bi-list-check me-1"></i>
+
+                Course Lessons
+
+            </h5>
+
+        </div>
+
+
+        <div class="list-group list-group-flush">
+
+            {% for lesson in lessons %}
+
+            <div class="list-group-item py-3">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <!-- =================================================
+                         LESSON INFORMATION
+                    ================================================== -->
+
+                    <div class="d-flex align-items-center">
+
+                        <!-- LESSON STATUS -->
+
+                        {% if lesson.progress and lesson.progress.completed %}
+
+                        <span
+                            class="rounded-circle bg-success text-white
+                            d-flex align-items-center justify-content-center
+                            me-3"
+                            style="width:36px;height:36px;"
+                        >
+
+                            <i class="bi bi-check"></i>
+
+                        </span>
+
+                        {% else %}
+
+                        <span
+                            class="rounded-circle bg-light text-muted
+                            d-flex align-items-center justify-content-center
+                            me-3"
+                            style="width:36px;height:36px;"
+                        >
+
+                            {{ lesson.order }}
+
+                        </span>
+
+                        {% endif %}
+
+
+                        <!-- LESSON TITLE -->
+
+                        <div>
+
+                            <div class="fw-semibold">
+
+                                {{ lesson.title }}
+
+                            </div>
+
+
+                            {% if lesson.duration %}
+
+                            <small class="text-muted">
+
+                                {{ lesson.duration }} minutes
+
+                            </small>
+
+                            {% endif %}
+
+
+                            <!-- COMPLETION STATUS -->
+
+                            {% if lesson.progress and lesson.progress.completed %}
+
+                            <div class="small text-success mt-1">
+
+                                <i class="bi bi-check-circle me-1"></i>
+
+                                Completed
+
+                            </div>
+
+                            {% else %}
+
+                            <div class="small text-muted mt-1">
+
+                                <i class="bi bi-circle me-1"></i>
+
+                                Not completed
+
+                            </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         OPEN LESSON
+                    ================================================== -->
+
+                    <a
+                        href="{% url 'lesson_detail' lesson.id %}"
+                        class="btn btn-sm btn-outline-primary"
+                    >
+
+                        <i class="bi bi-play-circle me-1"></i>
+
+                        {% if lesson.progress and lesson.progress.completed %}
+                            Review
+                        {% else %}
+                            Open
+                        {% endif %}
+
+                    </a>
+
+                </div>
+
+            </div>
+
+
+            {% empty %}
+
+            <div class="p-4 text-center text-muted">
+
+                <i class="bi bi-book fs-2"></i>
+
+                <p class="mt-2 mb-0">
+
+                    No lessons have been added to this course yet.
+
+                </p>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         BOTTOM ACTION
+    ====================================================== -->
+
+    {% if not enrollment.completed and lessons %}
+
+    <div class="text-center mt-4">
+
+        <a
+            href="{% url 'lesson_detail' lessons.0.id %}"
+            class="btn btn-primary"
+        >
+
+            <i class="bi bi-play-circle me-1"></i>
+
+            Continue Learning
+
+        </a>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- =====================================================
+         COMPLETED COURSE ACTION
+    ====================================================== -->
+
+    {% if enrollment.completed %}
+
+    <div class="text-center mt-4">
+
+        <a
+            href="{% url 'course_detail' course.slug %}"
+            class="btn btn-success"
+        >
+
+            <i class="bi bi-check-circle me-1"></i>
+
+            Return to Course
+
+        </a>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

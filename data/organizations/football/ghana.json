@@ -1,0 +1,45 @@
+[
+    {
+        "name": "Asante Kotoko SC",
+        "country": "Ghana",
+        "city": "Kumasi",
+        "website": "https://www.asantekotoko.com",
+        "description": "One of Ghana's most successful football clubs.",
+        "founded_year": 1935,
+        "level": "PROFESSIONAL",
+        "league": "Ghana Premier League"
+    },
+
+    {
+        "name": "Hearts of Oak SC",
+        "country": "Ghana",
+        "city": "Accra",
+        "website": "https://www.accraheartsofoak.com",
+        "description": "Historic Ghanaian football club based in Accra.",
+        "founded_year": 1911,
+        "level": "PROFESSIONAL",
+        "league": "Ghana Premier League"
+    },
+
+    {
+        "name": "Right to Dream Academy",
+        "country": "Ghana",
+        "city": "Akosombo",
+        "website": "",
+        "description": "Football academy developing young talents.",
+        "founded_year": 1999,
+        "level": "ACADEMY",
+        "league": ""
+    },
+
+    {
+        "name": "Dreams FC",
+        "country": "Ghana",
+        "city": "Accra",
+        "website": "",
+        "description": "Ghanaian professional football club.",
+        "founded_year": 2009,
+        "level": "PROFESSIONAL",
+        "league": "Ghana Premier League"
+    }
+]

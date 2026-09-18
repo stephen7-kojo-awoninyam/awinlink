@@ -1,0 +1,532 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+
+    <div class="mb-4">
+
+        <h1 class="fw-bold mb-1">
+            📊 Talent Analytics
+        </h1>
+
+        <p class="text-muted mb-0">
+            Track your talent profile performance, applications,
+            recommendations and visibility on Awinlink.
+        </p>
+
+    </div>
+
+
+    {% if talent %}
+
+    <!-- =====================================================
+         TALENT SCORE
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body p-4">
+
+            <div class="row align-items-center">
+
+                <div class="col-md-8">
+
+                    <h4 class="fw-bold">
+                        Talent Score
+                    </h4>
+
+                    <p class="text-muted mb-0">
+                        Your overall Awinlink talent performance score.
+                    </p>
+
+                </div>
+
+                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+
+                    <span class="display-4 fw-bold text-success">
+                        {{ score.overall|floatformat:1 }}
+                    </span>
+
+                    <span class="text-muted fs-5">
+                        / 100
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <hr>
+
+
+            <!-- SCORE BREAKDOWN -->
+
+            <div class="row text-center g-3">
+
+                <div class="col-6 col-md">
+
+                    <div class="p-3 bg-light rounded">
+
+                        <h5 class="fw-bold mb-1">
+                            {{ score.physical|floatformat:1 }}
+                        </h5>
+
+                        <small class="text-muted">
+                            Physical
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-6 col-md">
+
+                    <div class="p-3 bg-light rounded">
+
+                        <h5 class="fw-bold mb-1">
+                            {{ score.performance|floatformat:1 }}
+                        </h5>
+
+                        <small class="text-muted">
+                            Performance
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-6 col-md">
+
+                    <div class="p-3 bg-light rounded">
+
+                        <h5 class="fw-bold mb-1">
+                            {{ score.achievements|floatformat:1 }}
+                        </h5>
+
+                        <small class="text-muted">
+                            Achievements
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-6 col-md">
+
+                    <div class="p-3 bg-light rounded">
+
+                        <h5 class="fw-bold mb-1">
+                            {{ score.experience|floatformat:1 }}
+                        </h5>
+
+                        <small class="text-muted">
+                            Experience
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-6 col-md">
+
+                    <div class="p-3 bg-light rounded">
+
+                        <h5 class="fw-bold mb-1">
+                            {{ score.verification|floatformat:1 }}
+                        </h5>
+
+                        <small class="text-muted">
+                            Verification
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MAIN ANALYTICS
+    ====================================================== -->
+
+    <div class="row g-4 mb-4">
+
+
+        <!-- PROFILE VIEWS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <i class="bi bi-eye fs-2 text-primary"></i>
+
+                    <h2 class="fw-bold mt-3">
+                        {{ analytics.profile_views }}
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        Profile Views
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- APPLICATIONS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <i class="bi bi-send fs-2 text-success"></i>
+
+                    <h2 class="fw-bold mt-3">
+                        {{ analytics.total_applications }}
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        Applications
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ORGANIZATIONS / RECOMMENDATIONS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <i class="bi bi-stars fs-2 text-warning"></i>
+
+                    <h2 class="fw-bold mt-3">
+                        {{ analytics.total_recommendations }}
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        AI Recommendations
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- SUCCESS RATE -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <i class="bi bi-graph-up-arrow fs-2 text-info"></i>
+
+                    <h2 class="fw-bold mt-3">
+                        {{ analytics.success_rate }}%
+                    </h2>
+
+                    <p class="text-muted mb-0">
+                        Application Success
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         APPLICATION PERFORMANCE
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body p-4">
+
+            <h4 class="fw-bold mb-4">
+                Application Performance
+            </h4>
+
+
+            <div class="row text-center g-4">
+
+
+                <!-- PENDING -->
+
+                <div class="col-6 col-md-3">
+
+                    <div class="p-3 border rounded">
+
+                        <h3 class="fw-bold text-warning">
+
+                            {{ analytics.pending_applications }}
+
+                        </h3>
+
+                        <span class="badge bg-warning text-dark">
+
+                            Pending
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- REVIEWING -->
+
+                <div class="col-6 col-md-3">
+
+                    <div class="p-3 border rounded">
+
+                        <h3 class="fw-bold text-info">
+
+                            {{ analytics.reviewing_applications }}
+
+                        </h3>
+
+                        <span class="badge bg-info">
+
+                            Reviewing
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ACCEPTED -->
+
+                <div class="col-6 col-md-3">
+
+                    <div class="p-3 border rounded">
+
+                        <h3 class="fw-bold text-success">
+
+                            {{ analytics.accepted_applications }}
+
+                        </h3>
+
+                        <span class="badge bg-success">
+
+                            Accepted
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- REJECTED -->
+
+                <div class="col-6 col-md-3">
+
+                    <div class="p-3 border rounded">
+
+                        <h3 class="fw-bold text-danger">
+
+                            {{ analytics.rejected_applications }}
+
+                        </h3>
+
+                        <span class="badge bg-danger">
+
+                            Rejected
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         AI OPPORTUNITY MATCHES
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+
+                <div>
+
+                    <h4 class="fw-bold mb-1">
+                        🎯 AI Opportunity Matches
+                    </h4>
+
+                    <p class="text-muted mb-0">
+                        Your recommendation performance on Awinlink.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <div class="p-4 bg-light rounded">
+
+                        <small class="text-muted d-block">
+                            Total Recommendations
+                        </small>
+
+                        <h2 class="fw-bold text-primary mb-0">
+
+                            {{ analytics.total_recommendations }}
+
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-md-6 mt-3 mt-md-0">
+
+                    <div class="p-4 bg-light rounded">
+
+                        <small class="text-muted d-block">
+                            Average Match Score
+                        </small>
+
+                        <h2 class="fw-bold text-success mb-0">
+
+                            {{ analytics.average_recommendation_score }}%
+
+                        </h2>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PROFILE VISIBILITY
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body p-4">
+
+            <h4 class="fw-bold">
+                Profile Visibility
+            </h4>
+
+            <p class="text-muted">
+                Organizations have viewed your talent profile
+                {{ analytics.profile_views }} time{{ analytics.profile_views|pluralize }}.
+            </p>
+
+
+            {% if analytics.profile_views > 0 %}
+
+                <div class="alert alert-success mb-0">
+
+                    <i class="bi bi-check-circle-fill me-2"></i>
+
+                    Your profile is getting visibility from organizations.
+
+                </div>
+
+            {% else %}
+
+                <div class="alert alert-info mb-0">
+
+                    <i class="bi bi-info-circle-fill me-2"></i>
+
+                    No organizations have viewed your profile yet.
+                    Keep improving your profile and portfolio.
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    {% else %}
+
+    <!-- =====================================================
+         NO TALENT PROFILE
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body text-center py-5">
+
+            <i class="bi bi-person-x fs-1 text-muted"></i>
+
+            <h4 class="fw-bold mt-3">
+                Talent Profile Not Found
+            </h4>
+
+            <p class="text-muted">
+                Create your talent profile to start seeing analytics.
+            </p>
+
+        </div>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

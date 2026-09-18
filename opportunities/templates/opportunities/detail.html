@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- ========================================= -->
+    <!-- OPPORTUNITY HEADER -->
+    <!-- ========================================= -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <div class="d-flex justify-content-between align-items-start">
+
+                <div>
+
+                    <h2 class="mb-2">
+                        {{ opportunity.title }}
+                    </h2>
+
+                    <h5 class="text-muted">
+                        {{ opportunity.organization.name }}
+
+                        {% if opportunity.organization.verified %}
+
+                            <span class="badge bg-success">
+                                ✓ Verified
+                            </span>
+
+                        {% endif %}
+
+                    </h5>
+
+                </div>
+
+
+                {% if opportunity.active %}
+
+                    <span class="badge bg-success">
+                        Active
+                    </span>
+
+                {% else %}
+
+                    <span class="badge bg-secondary">
+                        Closed
+                    </span>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- OPPORTUNITY INFORMATION -->
+    <!-- ========================================= -->
+
+    <div class="row">
+
+        <!-- ===================================== -->
+        <!-- MAIN CONTENT -->
+        <!-- ===================================== -->
+
+        <div class="col-md-8">
+
+            <!-- DESCRIPTION -->
+
+            <div class="card shadow-sm mb-4">
+
+                <div class="card-body">
+
+                    <h4>
+                        About This Opportunity
+                    </h4>
+
+                    <hr>
+
+                    <p>
+                        {{ opportunity.description }}
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- REQUIRED SKILLS -->
+
+            <div class="card shadow-sm mb-4">
+
+                <div class="card-body">
+
+                    <h4>
+                        Required Skills
+                    </h4>
+
+                    <hr>
+
+                    {% for skill in opportunity.skills.all %}
+
+                        <span class="badge bg-primary me-1 mb-2">
+                            {{ skill.name }}
+                        </span>
+
+                    {% empty %}
+
+                        <p class="text-muted">
+                            No specific skills listed.
+                        </p>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+
+            <!-- REQUIREMENTS -->
+
+            <div class="card shadow-sm mb-4">
+
+                <div class="card-body">
+
+                    <h4>
+                        Requirements
+                    </h4>
+
+                    <hr>
+
+                    {% for requirement in opportunity.requirements.all %}
+
+                        <div class="mb-3">
+
+                            <strong>
+                                {{ requirement.skill.name }}
+                            </strong>
+
+                            <br>
+
+                            <small class="text-muted">
+
+                                Importance:
+
+                                {% if requirement.importance == 5 %}
+                                    ⭐⭐⭐⭐⭐
+                                {% elif requirement.importance == 4 %}
+                                    ⭐⭐⭐⭐
+                                {% elif requirement.importance == 3 %}
+                                    ⭐⭐⭐
+                                {% elif requirement.importance == 2 %}
+                                    ⭐⭐
+                                {% else %}
+                                    ⭐
+                                {% endif %}
+
+                            </small>
+
+                        </div>
+
+                    {% empty %}
+
+                        <p class="text-muted">
+                            No additional requirements specified.
+                        </p>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ===================================== -->
+        <!-- SIDEBAR -->
+        <!-- ===================================== -->
+
+        <div class="col-md-4">
+
+
+            <!-- OPPORTUNITY DETAILS -->
+
+            <div class="card shadow-sm mb-4">
+
+                <div class="card-body">
+
+                    <h5>
+                        Opportunity Information
+                    </h5>
+
+                    <hr>
+
+                    <p>
+                        <strong>Type:</strong>
+                        {{ opportunity.get_opportunity_type_display }}
+                    </p>
+
+                    <p>
+                        <strong>Domain:</strong>
+                        {{ opportunity.domain.name }}
+                    </p>
+
+                    <p>
+                        <strong>Experience:</strong>
+                        {{ opportunity.get_experience_level_display }}
+                    </p>
+
+                    <p>
+                        <strong>Work Type:</strong>
+                        {{ opportunity.get_work_type_display }}
+                    </p>
+
+                    {% if opportunity.location %}
+
+                        <p>
+                            <strong>Location:</strong>
+                            📍 {{ opportunity.location }}
+                        </p>
+
+                    {% endif %}
+
+                    {% if opportunity.deadline %}
+
+                        <p>
+                            <strong>Deadline:</strong>
+                            📅 {{ opportunity.deadline }}
+                        </p>
+
+                    {% endif %}
+
+                    <p>
+                        <strong>Posted:</strong>
+                        {{ opportunity.created_at|date:"M d, Y" }}
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- ORGANIZATION -->
+
+            <div class="card shadow-sm mb-4">
+
+                <div class="card-body">
+
+                    <h5>
+                        Organization
+                    </h5>
+
+                    <hr>
+
+                    <h6>
+                        {{ opportunity.organization.name }}
+                    </h6>
+
+                    {% if opportunity.organization.verified %}
+
+                        <span class="badge bg-success">
+                            ✓ Verified Organization
+                        </span>
+
+                    {% endif %}
+
+                    {% if opportunity.organization.description %}
+
+                        <p class="mt-3 text-muted">
+                            {{ opportunity.organization.description|truncatewords:25 }}
+                        </p>
+
+                    {% endif %}
+
+                    <a
+                        href="{% url 'organization_profile' opportunity.organization.id %}"
+                        class="btn btn-outline-primary btn-sm"
+                    >
+                        View Organization
+                    </a>
+
+                </div>
+
+            </div>
+
+
+            <!-- ================================= -->
+            <!-- ACTIONS -->
+            <!-- ================================= -->
+
+            {% if user.is_authenticated %}
+
+                <div class="card shadow-sm">
+
+                    <div class="card-body">
+
+                        <h5>
+                            Actions
+                        </h5>
+
+                        <hr>
+
+
+                        {% if not opportunity.active %}
+
+                            <div class="alert alert-secondary mb-3">
+
+                                This opportunity is currently closed.
+
+                            </div>
+
+
+                        {% elif opportunity.deadline and opportunity.deadline < today %}
+
+                            <div class="alert alert-danger mb-3">
+
+                                The application deadline has passed.
+
+                            </div>
+
+
+                        {% elif user.talent_profile %}
+
+
+                            {% if application %}
+
+                                <div class="alert alert-info">
+
+                                    <strong>
+                                        You already applied for this opportunity.
+                                    </strong>
+
+                                    <br>
+
+                                    Status:
+
+                                    {% if application.status == "PENDING" %}
+
+                                        <span class="badge bg-warning">
+                                            Pending
+                                        </span>
+
+                                    {% elif application.status == "REVIEWING" %}
+
+                                        <span class="badge bg-primary">
+                                            Reviewing
+                                        </span>
+
+                                    {% elif application.status == "ACCEPTED" %}
+
+                                        <span class="badge bg-success">
+                                            Accepted
+                                        </span>
+
+                                    {% elif application.status == "REJECTED" %}
+
+                                        <span class="badge bg-danger">
+                                            Rejected
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                            {% else %}
+
+                                <form
+                                    method="post"
+                                    action="{% url 'apply_opportunity' opportunity.id %}"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <div class="mb-3">
+
+                                        <label class="form-label">
+                                            Application Message
+                                        </label>
+
+                                        <textarea
+                                            name="message"
+                                            class="form-control"
+                                            rows="5"
+                                            placeholder="Tell the organization why you are a good fit..."
+                                        ></textarea>
+
+                                    </div>
+
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-success w-100 mb-2"
+                                    >
+                                        📩 Apply Now
+                                    </button>
+
+                                </form>
+
+                            {% endif %}
+
+
+                            <a
+                                href="{% url 'recommended_opportunities' %}"
+                                class="btn btn-outline-primary w-100"
+                            >
+                                🤖 View AI Recommendations
+                            </a>
+
+
+                        {% else %}
+
+                            <div class="alert alert-warning">
+
+                                You need a talent profile before you can apply.
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+            {% else %}
+
+                <div class="card shadow-sm">
+
+                    <div class="card-body text-center">
+
+                        <h5>
+                            Interested in this opportunity?
+                        </h5>
+
+                        <p class="text-muted">
+                            Login to your Awinlink account to apply.
+                        </p>
+
+                        <a
+                            href="{% url 'login' %}"
+                            class="btn btn-primary w-100"
+                        >
+                            Login
+                        </a>
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

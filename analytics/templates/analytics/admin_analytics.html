@@ -1,0 +1,727 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         PAGE HEADER
+    ====================================================== -->
+
+    <div class="mb-4">
+
+        <h1 class="fw-bold">
+            Admin Analytics
+        </h1>
+
+        <p class="text-muted mb-0">
+            Monitor Awinlink platform activity and performance.
+        </p>
+
+    </div>
+
+
+    <!-- =====================================================
+         PLATFORM OVERVIEW
+    ====================================================== -->
+
+    <div class="row g-4 mb-5">
+
+        <!-- USERS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-people fs-1 text-primary"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Total Users
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_users }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- TALENTS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-person-badge fs-1 text-success"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Talents
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_talents }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ORGANIZATIONS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-building fs-1 text-warning"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Organizations
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_organizations }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- OPPORTUNITIES -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-briefcase fs-1 text-danger"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Opportunities
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_opportunities }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         OPPORTUNITIES
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-5">
+
+        <div class="card-body">
+
+            <h4 class="fw-bold mb-4">
+                Opportunity Activity
+            </h4>
+
+            <div class="row g-4">
+
+                <div class="col-md-6">
+
+                    <div class="p-4 bg-light rounded">
+
+                        <small class="text-muted">
+                            Active Opportunities
+                        </small>
+
+                        <h3 class="fw-bold text-success mt-2">
+                            {{ analytics.active_opportunities }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <div class="p-4 bg-light rounded">
+
+                        <small class="text-muted">
+                            Total Opportunities
+                        </small>
+
+                        <h3 class="fw-bold mt-2">
+                            {{ analytics.total_opportunities }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         APPLICATION ANALYTICS
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-5">
+
+        <div class="card-body">
+
+            <h4 class="fw-bold mb-4">
+                Application Performance
+            </h4>
+
+            <div class="row g-4">
+
+                <!-- TOTAL -->
+
+                <div class="col-md-4 col-lg-2">
+
+                    <div class="text-center">
+
+                        <small class="text-muted">
+                            Total
+                        </small>
+
+                        <h3 class="fw-bold">
+                            {{ analytics.total_applications }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PENDING -->
+
+                <div class="col-md-4 col-lg-2">
+
+                    <div class="text-center">
+
+                        <small class="text-muted">
+                            Pending
+                        </small>
+
+                        <h3 class="fw-bold text-warning">
+                            {{ analytics.pending_applications }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <!-- REVIEWING -->
+
+                <div class="col-md-4 col-lg-2">
+
+                    <div class="text-center">
+
+                        <small class="text-muted">
+                            Reviewing
+                        </small>
+
+                        <h3 class="fw-bold text-info">
+                            {{ analytics.reviewing_applications }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ACCEPTED -->
+
+                <div class="col-md-4 col-lg-2">
+
+                    <div class="text-center">
+
+                        <small class="text-muted">
+                            Accepted
+                        </small>
+
+                        <h3 class="fw-bold text-success">
+                            {{ analytics.accepted_applications }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <!-- REJECTED -->
+
+                <div class="col-md-4 col-lg-2">
+
+                    <div class="text-center">
+
+                        <small class="text-muted">
+                            Rejected
+                        </small>
+
+                        <h3 class="fw-bold text-danger">
+                            {{ analytics.rejected_applications }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SUCCESS RATE -->
+
+                <div class="col-md-4 col-lg-2">
+
+                    <div class="text-center">
+
+                        <small class="text-muted">
+                            Success Rate
+                        </small>
+
+                        <h3 class="fw-bold text-success">
+                            {{ analytics.application_success_rate }}%
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         TALENT / AI ANALYTICS
+    ====================================================== -->
+
+    <div class="row g-4 mb-5">
+
+        <!-- PROFILE VIEWS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-eye fs-1 text-primary"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Profile Views
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_profile_views }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- RECOMMENDATIONS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-stars fs-1 text-warning"></i>
+
+                    <h6 class="text-muted mt-3">
+                        AI Recommendations
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_recommendations }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- SHORTLISTS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-bookmark-star fs-1 text-danger"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Shortlists
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_shortlists }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- TALENT SCORE -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-graph-up-arrow fs-1 text-success"></i>
+
+                    <h6 class="text-muted mt-3">
+                        Average Talent Score
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.average_talent_score }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RECENT USERS
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-5">
+
+        <div class="card-body">
+
+            <h4 class="fw-bold mb-4">
+                Recent Users
+            </h4>
+
+            <div class="table-responsive">
+
+                <table class="table align-middle">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>User</th>
+
+                            <th>Username</th>
+
+                            <th>Role</th>
+
+                            <th>Joined</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for user in recent_users %}
+
+                        <tr>
+
+                            <td>
+                                {{ user.get_full_name|default:user.username }}
+                            </td>
+
+                            <td>
+                                {{ user.username }}
+                            </td>
+
+                            <td>
+
+                                <span class="badge bg-secondary">
+
+                                    {{ user.role }}
+
+                                </span>
+
+                            </td>
+
+                            <td>
+                                {{ user.date_joined|date:"M d, Y" }}
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="4"
+                                class="text-center text-muted py-4"
+                            >
+                                No users found.
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RECENT OPPORTUNITIES
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-5">
+
+        <div class="card-body">
+
+            <h4 class="fw-bold mb-4">
+                Recent Opportunities
+            </h4>
+
+            <div class="table-responsive">
+
+                <table class="table align-middle">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Opportunity</th>
+
+                            <th>Organization</th>
+
+                            <th>Type</th>
+
+                            <th>Status</th>
+
+                            <th>Created</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for opportunity in recent_opportunities %}
+
+                        <tr>
+
+                            <td class="fw-semibold">
+                                {{ opportunity.title }}
+                            </td>
+
+                            <td>
+                                {{ opportunity.organization.name }}
+                            </td>
+
+                            <td>
+                                {{ opportunity.get_opportunity_type_display }}
+                            </td>
+
+                            <td>
+
+                                {% if opportunity.active %}
+
+                                <span class="badge bg-success">
+                                    Active
+                                </span>
+
+                                {% else %}
+
+                                <span class="badge bg-secondary">
+                                    Inactive
+                                </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+                                {{ opportunity.created_at|date:"M d, Y" }}
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="5"
+                                class="text-center text-muted py-4"
+                            >
+                                No opportunities found.
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RECENT APPLICATIONS
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body">
+
+            <h4 class="fw-bold mb-4">
+                Recent Applications
+            </h4>
+
+            <div class="table-responsive">
+
+                <table class="table align-middle">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Talent</th>
+
+                            <th>Opportunity</th>
+
+                            <th>Status</th>
+
+                            <th>Date</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for application in recent_applications %}
+
+                        <tr>
+
+                            <td>
+                                {{ application.talent.user.get_full_name|default:application.talent.user.username }}
+                            </td>
+
+                            <td>
+                                {{ application.opportunity.title }}
+                            </td>
+
+                            <td>
+
+                                {% if application.status == "ACCEPTED" %}
+
+                                <span class="badge bg-success">
+                                    Accepted
+                                </span>
+
+                                {% elif application.status == "REJECTED" %}
+
+                                <span class="badge bg-danger">
+                                    Rejected
+                                </span>
+
+                                {% elif application.status == "REVIEWING" %}
+
+                                <span class="badge bg-info">
+                                    Reviewing
+                                </span>
+
+                                {% else %}
+
+                                <span class="badge bg-warning text-dark">
+                                    Pending
+                                </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+                                {{ application.created_at|date:"M d, Y" }}
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="4"
+                                class="text-center text-muted py-4"
+                            >
+                                No applications found.
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

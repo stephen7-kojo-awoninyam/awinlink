@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8">
+
+            <!-- HEADER -->
+
+            <div class="mb-4">
+
+                <a
+                    href="{% url 'manage_quiz' quiz.id %}"
+                    class="text-decoration-none"
+                >
+
+                    <i class="bi bi-arrow-left me-1"></i>
+
+                    Back to Quiz
+
+                </a>
+
+                <h1 class="fw-bold mt-3 mb-1">
+                    Add Question
+                </h1>
+
+                <p class="text-muted mb-0">
+
+                    {{ quiz.title }}
+
+                </p>
+
+            </div>
+
+
+            <!-- FORM -->
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body p-4">
+
+                    <form method="POST">
+
+                        {% csrf_token %}
+
+
+                        <!-- QUESTION -->
+
+                        <div class="mb-4">
+
+                            <label
+                                for="question"
+                                class="form-label fw-semibold"
+                            >
+
+                                Question
+
+                            </label>
+
+                            <textarea
+                                name="question"
+                                id="question"
+                                class="form-control"
+                                rows="4"
+                                placeholder="Enter your question..."
+                                required
+                            ></textarea>
+
+                        </div>
+
+
+                        <!-- OPTION A -->
+
+                        <div class="mb-3">
+
+                            <label
+                                for="option_a"
+                                class="form-label fw-semibold"
+                            >
+
+                                Option A
+
+                            </label>
+
+                            <input
+                                type="text"
+                                name="option_a"
+                                id="option_a"
+                                class="form-control"
+                                placeholder="Enter option A"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- OPTION B -->
+
+                        <div class="mb-3">
+
+                            <label
+                                for="option_b"
+                                class="form-label fw-semibold"
+                            >
+
+                                Option B
+
+                            </label>
+
+                            <input
+                                type="text"
+                                name="option_b"
+                                id="option_b"
+                                class="form-control"
+                                placeholder="Enter option B"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- OPTION C -->
+
+                        <div class="mb-3">
+
+                            <label
+                                for="option_c"
+                                class="form-label fw-semibold"
+                            >
+
+                                Option C
+
+                            </label>
+
+                            <input
+                                type="text"
+                                name="option_c"
+                                id="option_c"
+                                class="form-control"
+                                placeholder="Enter option C"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- OPTION D -->
+
+                        <div class="mb-4">
+
+                            <label
+                                for="option_d"
+                                class="form-label fw-semibold"
+                            >
+
+                                Option D
+
+                            </label>
+
+                            <input
+                                type="text"
+                                name="option_d"
+                                id="option_d"
+                                class="form-control"
+                                placeholder="Enter option D"
+                                required
+                            >
+
+                        </div>
+
+
+                        <!-- CORRECT ANSWER -->
+
+                        <div class="mb-4">
+
+                            <label
+                                for="correct_answer"
+                                class="form-label fw-semibold"
+                            >
+
+                                Correct Answer
+
+                            </label>
+
+                            <select
+                                name="correct_answer"
+                                id="correct_answer"
+                                class="form-select"
+                                required
+                            >
+
+                                <option value="">
+                                    Select correct answer
+                                </option>
+
+                                <option value="A">
+                                    A
+                                </option>
+
+                                <option value="B">
+                                    B
+                                </option>
+
+                                <option value="C">
+                                    C
+                                </option>
+
+                                <option value="D">
+                                    D
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- ACTIONS -->
+
+                        <div class="d-flex gap-2">
+
+                            <a
+                                href="{% url 'manage_quiz' quiz.id %}"
+                                class="btn btn-outline-secondary"
+                            >
+
+                                Cancel
+
+                            </a>
+
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                            >
+
+                                <i class="bi bi-plus-circle me-1"></i>
+
+                                Add Question
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h3>
+Notes for 
+{{ shortlist.talent.user.get_full_name }}
+</h3>
+
+
+
+<form method="post">
+
+{% csrf_token %}
+
+
+<div class="mb-3">
+
+
+<label class="form-label">
+
+Recruiter Notes
+
+</label>
+
+
+<textarea 
+name="notes"
+class="form-control"
+rows="6">
+
+{{ shortlist.notes }}
+
+</textarea>
+
+
+</div>
+
+
+
+<button class="btn btn-primary">
+
+Save Notes
+
+</button>
+
+
+<a href="{% url 'organization_shortlist' %}"
+class="btn btn-secondary">
+
+Cancel
+
+</a>
+
+
+
+</form>
+
+
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,318 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-9">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body p-5">
+
+                    <h2 class="fw-bold mb-1">
+                        Edit Coach Profile
+                    </h2>
+
+                    <p class="text-muted mb-4">
+                        Build your professional coaching profile.
+                    </p>
+
+
+                    <form
+                        method="POST"
+                        enctype="multipart/form-data"
+                    >
+
+                        {% csrf_token %}
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Headline
+                            </label>
+
+                            <input
+                                type="text"
+                                name="headline"
+                                class="form-control"
+                                value="{{ profile.headline }}"
+                                placeholder="e.g. Professional Football Coach"
+                            >
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Biography
+                            </label>
+
+                            <textarea
+                                name="biography"
+                                class="form-control"
+                                rows="5"
+                                placeholder="Tell talents about your coaching experience..."
+                            >{{ profile.biography }}</textarea>
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Specialization
+                            </label>
+
+                            <input
+                                type="text"
+                                name="specialization"
+                                class="form-control"
+                                value="{{ profile.specialization }}"
+                                placeholder="e.g. Youth Development, Fitness, Tactical Coaching"
+                            >
+
+                        </div>
+
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    Experience Level
+                                </label>
+
+                                <select
+                                    name="experience_level"
+                                    class="form-select"
+                                >
+                                    {% for value, label in experience_levels %}
+
+                                    <option
+                                        value="{{ value }}"
+                                        {% if profile.experience_level == value %}selected{% endif %}
+                                    >
+                                        {{ label }}
+                                    </option>
+
+                                    {% endfor %}
+
+                                </select>
+
+                            </div>
+
+
+                            <div class="col-md-6 mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    Years of Experience
+                                </label>
+
+                                <input
+                                    type="number"
+                                    name="years_of_experience"
+                                    class="form-control"
+                                    min="0"
+                                    value="{{ profile.years_of_experience }}"
+                                >
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Sport
+                            </label>
+
+                            <select
+                                name="sport"
+                                class="form-select"
+                            >
+
+                                <option value="">
+                                    Select Sport
+                                </option>
+
+                                {% for sport in sports %}
+
+                                <option
+                                    value="{{ sport.id }}"
+                                    {% if profile.sport_id == sport.id %}selected{% endif %}
+                                >
+                                    {{ sport.name }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Organization
+                            </label>
+
+                            <select
+                                name="organization"
+                                class="form-select"
+                            >
+
+                                <option value="">
+                                    Independent Coach
+                                </option>
+
+                                {% for organization in organizations %}
+
+                                <option
+                                    value="{{ organization.id }}"
+                                    {% if profile.organization_id == organization.id %}selected{% endif %}
+                                >
+                                    {{ organization.name }}
+                                </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    Country
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="country"
+                                    class="form-control"
+                                    value="{{ profile.country }}"
+                                >
+
+                            </div>
+
+
+                            <div class="col-md-6 mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    City
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="city"
+                                    class="form-control"
+                                    value="{{ profile.city }}"
+                                >
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Certifications
+                            </label>
+
+                            <textarea
+                                name="certifications"
+                                class="form-control"
+                                rows="4"
+                                placeholder="List your coaching certifications and qualifications"
+                            >{{ profile.certifications }}</textarea>
+
+                        </div>
+
+
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    Profile Photo
+                                </label>
+
+                                <input
+                                    type="file"
+                                    name="profile_photo"
+                                    class="form-control"
+                                    accept="image/*"
+                                >
+
+                            </div>
+
+
+                            <div class="col-md-6 mb-3">
+
+                                <label class="form-label fw-semibold">
+                                    Cover Photo
+                                </label>
+
+                                <input
+                                    type="file"
+                                    name="cover_photo"
+                                    class="form-control"
+                                    accept="image/*"
+                                >
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="d-flex gap-2 mt-4">
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                            >
+
+                                <i class="bi bi-check-circle me-1"></i>
+
+                                Save Profile
+
+                            </button>
+
+
+                            <a
+                                href="{% url 'coach_profile' %}"
+                                class="btn btn-outline-secondary"
+                            >
+
+                                Cancel
+
+                            </a>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+

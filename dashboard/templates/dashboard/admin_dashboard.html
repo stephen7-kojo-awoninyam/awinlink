@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h1>
+
+Admin Dashboard
+
+</h1>
+
+
+<hr>
+
+
+
+<div class="row">
+
+
+<div class="col-md-4">
+
+<div class="card p-4 text-center">
+
+<h5>
+
+Total Users
+
+</h5>
+
+<h2>
+
+{{ total_users }}
+
+</h2>
+
+</div>
+
+</div>
+
+
+
+<div class="col-md-4">
+
+<div class="card p-4 text-center">
+
+<h5>
+
+Talents
+
+</h5>
+
+<h2>
+
+{{ total_talents }}
+
+</h2>
+
+</div>
+
+</div>
+
+
+
+<div class="col-md-4">
+
+<div class="card p-4 text-center">
+
+<h5>
+
+Organizations
+
+</h5>
+
+<h2>
+
+{{ total_organizations }}
+
+</h2>
+
+</div>
+
+</div>
+
+
+</div>
+
+
+
+
+<div class="row mt-4">
+
+
+<div class="col-md-4">
+
+<div class="card p-4 text-center">
+
+<h5>
+
+Opportunities
+
+</h5>
+
+<h2>
+
+{{ total_opportunities }}
+
+</h2>
+
+</div>
+
+</div>
+
+
+
+
+<div class="col-md-4">
+
+<div class="card p-4 text-center">
+
+<h5>
+
+Applications
+
+</h5>
+
+<h2>
+
+{{ total_applications }}
+
+</h2>
+
+</div>
+
+</div>
+
+
+
+
+<div class="col-md-4">
+
+<div class="card p-4 text-center">
+
+<h5>
+
+Pending Verification
+
+</h5>
+
+<h2>
+
+{{ pending_verifications }}
+
+</h2>
+
+</div>
+
+</div>
+
+
+</div>
+
+<a href="{% url 'user_management' %}"
+
+class="btn btn-dark">
+
+Manage Users
+
+</a>
+
+<a href="{% url 'talent_management' %}"
+
+class="btn btn-primary">
+
+Manage Talents
+
+</a>
+
+
+<a href="{% url 'organization_management' %}"
+
+class="btn btn-success">
+
+Manage Organizations
+
+</a>
+
+<a href="{% url 'admin_reports' %}"
+
+class="btn btn-info">
+
+📊 Reports & Analytics
+
+</a>
+
+</div>
+
+
+
+{% endblock %}

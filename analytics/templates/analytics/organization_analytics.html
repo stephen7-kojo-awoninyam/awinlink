@@ -1,0 +1,1434 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h1 class="fw-bold mb-1">
+                Organization Analytics
+            </h1>
+
+            <p class="text-muted mb-0">
+                Recruitment performance and talent discovery insights
+                for {{ organization.name }}.
+            </p>
+        </div>
+
+        <div>
+            <span class="badge bg-primary fs-6">
+                {{ organization.name }}
+            </span>
+        </div>
+
+    </div>
+
+
+    {% if not organization %}
+
+        <div class="alert alert-warning">
+
+            <i class="bi bi-exclamation-circle me-2"></i>
+
+            No organization profile is associated with your account.
+
+        </div>
+
+    {% else %}
+
+
+    <!-- =====================================================
+         OVERVIEW
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        Overview
+    </h4>
+
+    <div class="row g-4 mb-5">
+
+        <!-- TOTAL OPPORTUNITIES -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+                            <small class="text-muted">
+                                Opportunities
+                            </small>
+
+                            <h2 class="fw-bold mb-0">
+                                {{ analytics.total_opportunities }}
+                            </h2>
+                        </div>
+
+                        <i class="bi bi-briefcase fs-2 text-primary"></i>
+
+                    </div>
+
+                    <div class="mt-3">
+
+                        <span class="badge bg-success">
+                            {{ analytics.active_opportunities }} Active
+                        </span>
+
+                        <span class="badge bg-secondary">
+                            {{ analytics.inactive_opportunities }} Inactive
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- APPLICATIONS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+                            <small class="text-muted">
+                                Applications
+                            </small>
+
+                            <h2 class="fw-bold mb-0">
+                                {{ analytics.total_applications }}
+                            </h2>
+                        </div>
+
+                        <i class="bi bi-file-earmark-text fs-2 text-primary"></i>
+
+                    </div>
+
+                    <p class="small text-muted mt-3 mb-0">
+                        {{ analytics.unique_talents }}
+                        unique talents
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- SHORTLISTED -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+                            <small class="text-muted">
+                                Shortlisted
+                            </small>
+
+                            <h2 class="fw-bold mb-0">
+                                {{ analytics.total_shortlisted }}
+                            </h2>
+                        </div>
+
+                        <i class="bi bi-star fs-2 text-warning"></i>
+
+                    </div>
+
+                    <p class="small text-muted mt-3 mb-0">
+                        {{ analytics.starred_talents }}
+                        starred talents
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- PROFILE VIEWS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+                            <small class="text-muted">
+                                Talent Views
+                            </small>
+
+                            <h2 class="fw-bold mb-0">
+                                {{ analytics.total_profile_views }}
+                            </h2>
+                        </div>
+
+                        <i class="bi bi-eye fs-2 text-info"></i>
+
+                    </div>
+
+                    <p class="small text-muted mt-3 mb-0">
+                        {{ analytics.unique_profiles_viewed }}
+                        unique profiles
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RECRUITMENT PERFORMANCE
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        Recruitment Performance
+    </h4>
+
+    <div class="row g-4 mb-5">
+
+        <!-- PENDING -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-hourglass-split fs-2 text-warning"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Pending
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.pending_applications }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- REVIEWING -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-search fs-2 text-primary"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Reviewing
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.reviewing_applications }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ACCEPTED -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-check-circle fs-2 text-success"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Accepted
+                    </h6>
+
+                    <h2 class="fw-bold text-success">
+                        {{ analytics.accepted_applications }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- REJECTED -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-x-circle fs-2 text-danger"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Rejected
+                    </h6>
+
+                    <h2 class="fw-bold text-danger">
+                        {{ analytics.rejected_applications }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SUCCESS / RESPONSE
+    ====================================================== -->
+
+    <div class="row g-4 mb-5">
+
+        <div class="col-md-6">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold">
+                        Application Success Rate
+                    </h5>
+
+                    <div class="d-flex align-items-center mt-3">
+
+                        <div
+                            class="progress flex-grow-1"
+                            style="height: 12px;"
+                        >
+
+                            <div
+                                class="progress-bar bg-success"
+                                role="progressbar"
+                                style="width: {{ analytics.success_rate }}%;"
+                            ></div>
+
+                        </div>
+
+                        <strong class="ms-3">
+                            {{ analytics.success_rate }}%
+                        </strong>
+
+                    </div>
+
+                    <p class="small text-muted mt-3 mb-0">
+                        Percentage of applications that resulted
+                        in an accepted application.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-6">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold">
+                        Application Response Rate
+                    </h5>
+
+                    <div class="d-flex align-items-center mt-3">
+
+                        <div
+                            class="progress flex-grow-1"
+                            style="height: 12px;"
+                        >
+
+                            <div
+                                class="progress-bar bg-primary"
+                                role="progressbar"
+                                style="width: {{ analytics.response_rate }}%;"
+                            ></div>
+
+                        </div>
+
+                        <strong class="ms-3">
+                            {{ analytics.response_rate }}%
+                        </strong>
+
+                    </div>
+
+                    <p class="small text-muted mt-3 mb-0">
+                        Percentage of applications that have been
+                        accepted or rejected.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SHORTLISTING
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        Talent Shortlisting
+    </h4>
+
+    <div class="row g-4 mb-5">
+
+        <div class="col-md-4">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-bookmark-check fs-2 text-primary"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Shortlisted Talents
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_shortlisted }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-star-fill fs-2 text-warning"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Starred Talents
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.starred_talents }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-4">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-percent fs-2 text-success"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Shortlist Rate
+                    </h6>
+
+                    <h2 class="fw-bold text-success">
+                        {{ analytics.shortlist_rate }}%
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         AI MATCHING
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        AI Talent Matching
+    </h4>
+
+    <div class="row g-4 mb-5">
+
+        <!-- TOTAL RECOMMENDATIONS -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-cpu fs-2 text-primary"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Recommendations
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.total_recommendations }}
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- AVERAGE MATCH -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-bullseye fs-2 text-success"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Average Match
+                    </h6>
+
+                    <h2 class="fw-bold text-success">
+                        {{ analytics.average_match_score }}%
+                    </h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- STRONG MATCHES -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-lightning fs-2 text-warning"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Strong Matches
+                    </h6>
+
+                    <h2 class="fw-bold">
+                        {{ analytics.strong_matches }}
+                    </h2>
+
+                    <small class="text-muted">
+                        70%+
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- EXCELLENT MATCHES -->
+
+        <div class="col-md-6 col-lg-3">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center">
+
+                    <i class="bi bi-award fs-2 text-success"></i>
+
+                    <h6 class="text-muted mt-2">
+                        Excellent Matches
+                    </h6>
+
+                    <h2 class="fw-bold text-success">
+                        {{ analytics.excellent_matches }}
+                    </h2>
+
+                    <small class="text-muted">
+                        80%+
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         TALENT DISCOVERY
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        Talent Discovery
+    </h4>
+
+    <div class="row g-4 mb-5">
+
+        <div class="col-md-6">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+
+                            <small class="text-muted">
+                                Total Profile Views
+                            </small>
+
+                            <h2 class="fw-bold">
+                                {{ analytics.total_profile_views }}
+                            </h2>
+
+                        </div>
+
+                        <i class="bi bi-eye fs-1 text-info"></i>
+
+                    </div>
+
+                    <p class="text-muted small mb-0">
+                        Total talent profiles viewed by your organization.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-6">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+
+                            <small class="text-muted">
+                                Unique Profiles Viewed
+                            </small>
+
+                            <h2 class="fw-bold">
+                                {{ analytics.unique_profiles_viewed }}
+                            </h2>
+
+                        </div>
+
+                        <i class="bi bi-people fs-1 text-primary"></i>
+
+                    </div>
+
+                    <p class="text-muted small mb-0">
+                        Number of different talents your organization
+                        has viewed.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <!-- =====================================================
+     TOP DISCOVERED TALENTS
+====================================================== -->
+
+<h4 class="fw-bold mb-3">
+    Top Recommended Talents
+</h4>
+
+<div class="card border-0 shadow-sm mb-5">
+
+    <div class="card-body">
+
+        {% if top_discovered_talents %}
+
+            <div class="table-responsive">
+
+                <table class="table align-middle mb-0">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Talent</th>
+
+                            <th>AI Match</th>
+
+                            <th>Recommendations</th>
+
+                            <th>Talent Score</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for talent in top_discovered_talents %}
+
+                            <tr>
+
+                                <td>
+
+                                    <div class="fw-bold">
+
+                                        {% if talent.user.get_full_name %}
+
+                                            {{ talent.user.get_full_name }}
+
+                                        {% else %}
+
+                                            {{ talent.user.username }}
+
+                                        {% endif %}
+
+                                    </div>
+
+                                    {% if talent.headline %}
+
+                                        <small class="text-muted">
+
+                                            {{ talent.headline }}
+
+                                        </small>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="badge bg-success">
+
+                                        {{ talent.average_match_score }}%
+
+                                    </span>
+
+                                </td>
+
+
+                                <td>
+
+                                    {{ talent.recommendation_count }}
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if talent.talent_score %}
+
+                                        <strong>
+
+                                            {{ talent.talent_score.overall_score }}
+
+                                        </strong>
+
+                                    {% else %}
+
+                                        <span class="text-muted">
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <p class="text-muted mb-0">
+
+                No recommended talents yet.
+
+            </p>
+
+        {% endif %}
+
+    </div>
+
+</div>
+<!-- =====================================================
+     MOST VIEWED TALENTS
+====================================================== -->
+
+<h4 class="fw-bold mb-3">
+    Most Viewed Talents
+</h4>
+
+<div class="card border-0 shadow-sm mb-5">
+
+    <div class="card-body">
+
+        {% if most_viewed_talents %}
+
+            <div class="table-responsive">
+
+                <table class="table align-middle mb-0">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Talent</th>
+
+                            <th>Profile Views</th>
+
+                            <th>Talent Score</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for talent in most_viewed_talents %}
+
+                            <tr>
+
+                                <td>
+
+                                    <div class="fw-bold">
+
+                                        {% if talent.user.get_full_name %}
+
+                                            {{ talent.user.get_full_name }}
+
+                                        {% else %}
+
+                                            {{ talent.user.username }}
+
+                                        {% endif %}
+
+                                    </div>
+
+                                    {% if talent.headline %}
+
+                                        <small class="text-muted">
+
+                                            {{ talent.headline }}
+
+                                        </small>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    <span class="badge bg-info">
+
+                                        {{ talent.view_count }}
+
+                                    </span>
+
+                                </td>
+
+
+                                <td>
+
+                                    {% if talent.talent_score %}
+
+                                        <strong>
+
+                                            {{ talent.talent_score.overall_score }}
+
+                                        </strong>
+
+                                    {% else %}
+
+                                        <span class="text-muted">
+                                            —
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <p class="text-muted mb-0">
+
+                Your organization has not viewed any talent profiles yet.
+
+            </p>
+
+        {% endif %}
+
+    </div>
+
+</div>
+<!-- =====================================================
+     APPLICATION PIPELINE CHART
+====================================================== -->
+
+<h4 class="fw-bold mb-3">
+    Application Pipeline
+</h4>
+
+<div class="card border-0 shadow-sm mb-5">
+
+    <div class="card-body">
+
+        <div style="height: 320px;">
+
+            <canvas id="applicationPipelineChart"></canvas>
+
+        </div>
+
+    </div>
+
+</div>
+
+    <!-- =====================================================
+     RECENT RECRUITMENT ACTIVITY
+====================================================== -->
+
+<h4 class="fw-bold mb-3">
+    Recent Recruitment Activity
+</h4>
+
+<div class="row g-4 mb-5">
+
+    <!-- RECENT APPLICATIONS -->
+
+    <div class="col-lg-7">
+
+        <div class="card border-0 shadow-sm h-100">
+
+            <div class="card-body">
+
+                <h5 class="fw-bold mb-4">
+                    Recent Applications
+                </h5>
+
+                {% if recent_applications %}
+
+                    <div class="list-group list-group-flush">
+
+                        {% for application in recent_applications %}
+
+                            <div class="list-group-item px-0">
+
+                                <div class="d-flex justify-content-between align-items-start">
+
+                                    <div>
+
+                                        <h6 class="fw-bold mb-1">
+
+                                            {% if application.talent.user.get_full_name %}
+                                                {{ application.talent.user.get_full_name }}
+                                            {% else %}
+                                                {{ application.talent.user.username }}
+                                            {% endif %}
+
+                                        </h6>
+
+                                        <small class="text-muted">
+
+                                            {{ application.opportunity.title }}
+
+                                        </small>
+
+                                    </div>
+
+                                    <span class="badge
+                                        {% if application.status == 'ACCEPTED' %}
+                                            bg-success
+                                        {% elif application.status == 'REJECTED' %}
+                                            bg-danger
+                                        {% elif application.status == 'REVIEWING' %}
+                                            bg-primary
+                                        {% else %}
+                                            bg-warning text-dark
+                                        {% endif %}
+                                    ">
+
+                                        {{ application.status }}
+
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="text-muted mb-0">
+                        No applications yet.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- RECENT AI RECOMMENDATIONS -->
+
+    <div class="col-lg-5">
+
+        <div class="card border-0 shadow-sm h-100">
+
+            <div class="card-body">
+
+                <h5 class="fw-bold mb-4">
+                    Recent AI Matches
+                </h5>
+
+                {% if recent_recommendations %}
+
+                    <div class="list-group list-group-flush">
+
+                        {% for recommendation in recent_recommendations %}
+
+                            <div class="list-group-item px-0">
+
+                                <div class="d-flex justify-content-between">
+
+                                    <div>
+
+                                        <h6 class="fw-bold mb-1">
+
+                                            {% if recommendation.talent.user.get_full_name %}
+                                                {{ recommendation.talent.user.get_full_name }}
+                                            {% else %}
+                                                {{ recommendation.talent.user.username }}
+                                            {% endif %}
+
+                                        </h6>
+
+                                        {% if recommendation.opportunity %}
+
+                                            <small class="text-muted">
+                                                {{ recommendation.opportunity.title }}
+                                            </small>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                    <span class="badge bg-success">
+
+                                        {{ recommendation.score }}%
+
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="text-muted mb-0">
+                        No AI recommendations yet.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- =====================================================
+     RECENT APPLICATIONS
+====================================================== -->
+
+<h4 class="fw-bold mb-3">
+    Recent Applications
+</h4>
+
+<div class="card border-0 shadow-sm mb-5">
+
+    <div class="card-body">
+
+        {% if recent_applications %}
+
+            <div class="table-responsive">
+
+                <table class="table align-middle mb-0">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Talent</th>
+                            <th>Opportunity</th>
+                            <th>Status</th>
+                            <th>Date</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for application in recent_applications %}
+
+                            <tr>
+
+                                <td>
+
+                                    {% if application.talent.user.get_full_name %}
+
+                                        {{ application.talent.user.get_full_name }}
+
+                                    {% else %}
+
+                                        {{ application.talent.user.username }}
+
+                                    {% endif %}
+
+                                </td>
+
+                                <td>
+
+                                    {{ application.opportunity.title }}
+
+                                </td>
+
+                                <td>
+
+                                    {% if application.status == "ACCEPTED" %}
+
+                                        <span class="badge bg-success">
+                                            Accepted
+                                        </span>
+
+                                    {% elif application.status == "REJECTED" %}
+
+                                        <span class="badge bg-danger">
+                                            Rejected
+                                        </span>
+
+                                    {% elif application.status == "REVIEWING" %}
+
+                                        <span class="badge bg-primary">
+                                            Reviewing
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="badge bg-warning text-dark">
+                                            Pending
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+                                <td>
+
+                                    <small class="text-muted">
+
+                                        {{ application.created_at|date:"M d, Y" }}
+
+                                    </small>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="text-center py-4">
+
+                <i class="bi bi-inbox fs-1 text-muted"></i>
+
+                <p class="text-muted mt-2 mb-0">
+
+                    No applications yet.
+
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+    <!-- =====================================================
+         SUMMARY
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-3">
+                Recruitment Summary
+            </h5>
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <p class="mb-2">
+                        <strong>
+                            Opportunities:
+                        </strong>
+
+                        {{ analytics.total_opportunities }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>
+                            Applications:
+                        </strong>
+
+                        {{ analytics.total_applications }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>
+                            Unique Talents:
+                        </strong>
+
+                        {{ analytics.unique_talents }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>
+                            Shortlisted:
+                        </strong>
+
+                        {{ analytics.total_shortlisted }}
+                    </p>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <p class="mb-2">
+                        <strong>
+                            Success Rate:
+                        </strong>
+
+                        {{ analytics.success_rate }}%
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>
+                            Response Rate:
+                        </strong>
+
+                        {{ analytics.response_rate }}%
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>
+                            Average AI Match:
+                        </strong>
+
+                        {{ analytics.average_match_score }}%
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>
+                            Talent Profiles Viewed:
+                        </strong>
+
+                        {{ analytics.unique_profiles_viewed }}
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+    const applicationPipeline = document.getElementById(
+        "applicationPipelineChart"
+    );
+
+    new Chart(
+        applicationPipeline,
+        {
+            type: "bar",
+
+            data: {
+
+                labels: [
+                    "Pending",
+                    "Reviewing",
+                    "Accepted",
+                    "Rejected"
+                ],
+
+                datasets: [
+
+                    {
+                        label: "Applications",
+
+                        data: [
+                            {{ analytics.pending_applications }},
+                            {{ analytics.reviewing_applications }},
+                            {{ analytics.accepted_applications }},
+                            {{ analytics.rejected_applications }}
+                        ]
+                    }
+
+                ]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                plugins: {
+
+                    legend: {
+                        display: false
+                    }
+
+                },
+
+                scales: {
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        ticks: {
+                            precision: 0
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+    );
+
+</script>

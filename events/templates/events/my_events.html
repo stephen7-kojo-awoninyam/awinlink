@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2 class="mb-4">
+My Events
+</h2>
+
+
+
+{% for registration in registrations %}
+
+
+
+<div class="card shadow-sm mb-4">
+
+
+<div class="row g-0">
+
+
+
+<div class="col-md-4">
+
+
+{% if registration.event.image %}
+
+<img src="{{ registration.event.image.url }}"
+class="img-fluid rounded-start"
+style="height:200px;width:100%;object-fit:cover;">
+
+{% endif %}
+
+
+
+</div>
+
+
+
+
+
+<div class="col-md-8">
+
+
+<div class="card-body">
+
+
+
+<h4>
+
+{{ registration.event.title }}
+
+</h4>
+
+
+
+<p>
+
+🏢
+
+{{ registration.event.organizer.name }}
+
+</p>
+
+
+
+<p>
+
+📅
+
+{{ registration.event.start_date }}
+
+</p>
+
+
+
+<p>
+
+🎯
+
+{{ registration.event.get_event_type_display }}
+
+</p>
+
+
+
+
+<span class="badge bg-success">
+
+{{ registration.get_status_display }}
+
+</span>
+
+
+
+
+<div class="mt-3">
+
+
+<a href="{% url 'event_detail' registration.event.id %}"
+
+class="btn btn-primary btn-sm">
+
+View Event
+
+</a>
+
+
+
+<a href="{% url 'cancel_registration' registration.event.id %}"
+
+class="btn btn-danger btn-sm">
+
+Cancel
+
+</a>
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+{% empty %}
+
+
+
+<div class="alert alert-info">
+
+You have not joined any events yet.
+
+</div>
+
+
+
+{% endfor %}
+
+
+
+
+</div>
+
+
+
+{% endblock %}

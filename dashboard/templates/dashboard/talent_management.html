@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+Talent Management
+</h2>
+
+
+<table class="table table-striped">
+
+
+<tr>
+
+<th>
+Name
+</th>
+
+<th>
+Country
+</th>
+
+<th>
+Verified
+</th>
+
+<th>
+Status
+</th>
+
+<th>
+Action
+</th>
+
+
+</tr>
+
+
+{% for talent in talents %}
+
+
+<tr>
+
+
+<td>
+
+{{ talent.user.get_full_name }}
+
+</td>
+
+
+<td>
+
+{{ talent.country }}
+
+</td>
+
+
+<td>
+
+{% if talent.verified %}
+
+<span class="badge bg-success">
+Verified
+</span>
+
+{% else %}
+
+<span class="badge bg-secondary">
+Not Verified
+</span>
+
+{% endif %}
+
+
+</td>
+
+
+<td>
+
+{% if talent.user.is_active %}
+
+Active
+
+{% else %}
+
+Disabled
+
+{% endif %}
+
+
+</td>
+
+
+<td>
+
+
+<a href="{% url 'toggle_talent_status' talent.id %}"
+
+class="btn btn-warning btn-sm">
+
+Toggle
+
+</a>
+
+
+</td>
+
+
+</tr>
+
+
+{% endfor %}
+
+
+</table>
+
+
+</div>
+
+
+{% endblock %}

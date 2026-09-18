@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- ========================================= -->
+    <!-- PAGE HEADER -->
+    <!-- ========================================= -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <h2>
+            💬 Messages
+        </h2>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- CONVERSATIONS -->
+    <!-- ========================================= -->
+
+    {% for conversation in conversations %}
+
+        <div class="card shadow-sm mb-3">
+
+            <div class="card-body">
+
+                <div class="row align-items-center">
+
+
+                    <!-- ================================= -->
+                    <!-- PARTICIPANT PROFILE -->
+                    <!-- ================================= -->
+
+                    <div class="col-md-1 text-center">
+
+                        {% if conversation.other_participant %}
+
+                            {% if conversation.other_participant.user.talent_profile.profile_photo %}
+
+                                <img
+                                    src="{{ conversation.other_participant.user.talent_profile.profile_photo.url }}"
+                                    alt="Profile"
+                                    class="rounded-circle"
+                                    style="
+                                        width:60px;
+                                        height:60px;
+                                        object-fit:cover;
+                                    "
+                                >
+
+                            {% elif conversation.other_participant.user.organization.logo %}
+
+                                <img
+                                    src="{{ conversation.other_participant.user.organization.logo.url }}"
+                                    alt="Organization"
+                                    class="rounded-circle"
+                                    style="
+                                        width:60px;
+                                        height:60px;
+                                        object-fit:cover;
+                                    "
+                                >
+
+                            {% else %}
+
+                                <div
+                                    class="
+                                        rounded-circle
+                                        bg-secondary
+                                        text-white
+                                        d-flex
+                                        align-items-center
+                                        justify-content-center
+                                    "
+                                    style="
+                                        width:60px;
+                                        height:60px;
+                                    "
+                                >
+                                    👤
+                                </div>
+
+                            {% endif %}
+
+                        {% else %}
+
+                            <div
+                                class="
+                                    rounded-circle
+                                    bg-secondary
+                                    text-white
+                                    d-flex
+                                    align-items-center
+                                    justify-content-center
+                                "
+                                style="
+                                    width:60px;
+                                    height:60px;
+                                "
+                            >
+                                👤
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- ================================= -->
+                    <!-- CONVERSATION INFORMATION -->
+                    <!-- ================================= -->
+
+                    <div class="col-md-8">
+
+
+                        <!-- ============================== -->
+                        <!-- PARTICIPANT NAME -->
+                        <!-- ============================== -->
+
+                                        <h5 class="mb-1">
+
+                                            {% if conversation.other_participant %}
+
+                                                {{ conversation.other_participant.user.get_full_name }}
+
+                                                {% if conversation.participant_role %}
+
+                                                    <span class="badge bg-secondary">
+
+                                                        {{ conversation.participant_role }}
+
+                                                    </span>
+
+                                                {% endif %}
+
+                                            {% else %}
+
+                                                Unknown User
+
+                                            {% endif %}
+
+                                        </h5>
+
+                        <!-- ============================== -->
+                        <!-- OPPORTUNITY -->
+                        <!-- ============================== -->
+
+                        {% if conversation.opportunity %}
+
+                            <small class="text-muted">
+
+                                Opportunity:
+                                {{ conversation.opportunity.title }}
+
+                            </small>
+
+                        {% endif %}
+
+
+                        <!-- ============================== -->
+                        <!-- LAST MESSAGE -->
+                        <!-- ============================== -->
+
+                        <p class="mb-1 mt-2 text-muted">
+
+                            {% if conversation.last_message %}
+
+
+                                {% if conversation.last_message.sender == request.user %}
+
+                                    <strong>
+                                        You:
+                                    </strong>
+
+                                {% endif %}
+
+
+                                {% if conversation.last_message.content %}
+
+                                    {{ conversation.last_message.content|truncatewords:12 }}
+
+
+                                {% elif conversation.last_message.image %}
+
+                                    🖼️ Image
+
+
+                                {% elif conversation.last_message.video %}
+
+                                    🎥 Video
+
+
+                                {% elif conversation.last_message.file %}
+
+                                    📎 File
+
+
+                                {% else %}
+
+                                    Message
+
+                                {% endif %}
+
+
+                            {% else %}
+
+                                No messages yet.
+
+                            {% endif %}
+
+                        </p>
+
+                    </div>
+
+
+                    <!-- ================================= -->
+                    <!-- TIME + UNREAD -->
+                    <!-- ================================= -->
+
+                    <div class="col-md-3 text-md-end">
+
+
+                        {% if conversation.last_message %}
+
+                            <small class="text-muted d-block">
+
+                                {{ conversation.last_message.created_at }}
+
+                            </small>
+
+                        {% endif %}
+
+
+                        {% if conversation.unread_count > 0 %}
+
+                            <span class="badge bg-danger mt-2">
+
+                                {{ conversation.unread_count }}
+
+                                unread
+
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================= -->
+                <!-- OPEN CHAT -->
+                <!-- ================================= -->
+
+                <div class="mt-3">
+
+                    <a
+                        href="{% url 'messaging:conversation' conversation.id %}"
+                        class="btn btn-primary btn-sm"
+                    >
+
+                        💬 Open Chat
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    {% empty %}
+
+
+        <!-- ================================= -->
+        <!-- NO CONVERSATIONS -->
+        <!-- ================================= -->
+
+        <div class="alert alert-info">
+
+            <h5>
+                No conversations yet.
+            </h5>
+
+            <p class="mb-0">
+
+                Start connecting with other Awinlink users
+                to begin a conversation.
+
+            </p>
+
+        </div>
+
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

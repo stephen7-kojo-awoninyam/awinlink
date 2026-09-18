@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- ============================== -->
+    <!-- HEADER -->
+    <!-- ============================== -->
+
+    <div class="mb-4">
+
+        <h2>
+            🔎 Discover Opportunities
+        </h2>
+
+        <p class="text-muted">
+            Find jobs, trials, scholarships, auditions,
+            competitions and other opportunities.
+        </p>
+
+    </div>
+
+
+    <!-- ============================== -->
+    <!-- SEARCH & FILTERS -->
+    <!-- ============================== -->
+
+    <div class="card shadow-sm p-4 mb-4">
+
+        <form method="GET">
+
+            <div class="row g-3">
+
+                <!-- SEARCH -->
+
+                <div class="col-md-6">
+
+                    <label class="form-label">
+                        Search
+                    </label>
+
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ search }}"
+                        class="form-control"
+                        placeholder="Search opportunities..."
+                    >
+
+                </div>
+
+
+                <!-- DOMAIN -->
+
+                <div class="col-md-6">
+
+                    <label class="form-label">
+                        Domain
+                    </label>
+
+                    <select
+                        name="domain"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All Domains
+                        </option>
+
+                        {% for item in domains %}
+
+                            <option
+                                value="{{ item.id }}"
+                                {% if selected_domain == item.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+
+                                {{ item.name }}
+
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <!-- OPPORTUNITY TYPE -->
+
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        Opportunity Type
+                    </label>
+
+                    <select
+                        name="opportunity_type"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All Types
+                        </option>
+
+                        {% for value, label in opportunity_types %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if selected_opportunity_type == value %}
+                                    selected
+                                {% endif %}
+                            >
+
+                                {{ label }}
+
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <!-- EXPERIENCE -->
+
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        Experience
+                    </label>
+
+                    <select
+                        name="experience_level"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All Levels
+                        </option>
+
+                        {% for value, label in experience_levels %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if selected_experience_level == value %}
+                                    selected
+                                {% endif %}
+                            >
+
+                                {{ label }}
+
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <!-- WORK TYPE -->
+
+                <div class="col-md-4">
+
+                    <label class="form-label">
+                        Work Type
+                    </label>
+
+                    <select
+                        name="work_type"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All Work Types
+                        </option>
+
+                        {% for value, label in work_types %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if selected_work_type == value %}
+                                    selected
+                                {% endif %}
+                            >
+
+                                {{ label }}
+
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <!-- LOCATION -->
+
+                <div class="col-md-8">
+
+                    <label class="form-label">
+                        Location
+                    </label>
+
+                    <input
+                        type="text"
+                        name="location"
+                        value="{{ location }}"
+                        class="form-control"
+                        placeholder="e.g. Accra, Ghana"
+                    >
+
+                </div>
+
+
+                <!-- BUTTONS -->
+
+                <div class="col-md-4 d-flex align-items-end">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary me-2"
+                    >
+
+                        🔎 Search
+
+                    </button>
+
+                    <a
+                        href="{% url 'opportunity_list' %}"
+                        class="btn btn-outline-secondary"
+                    >
+
+                        Reset
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+    <!-- ============================== -->
+    <!-- RESULTS -->
+    <!-- ============================== -->
+
+    <div class="d-flex justify-content-between mb-3">
+
+        <h4>
+            Available Opportunities
+        </h4>
+
+        <span class="badge bg-primary">
+            {{ opportunities|length }} Found
+        </span>
+
+    </div>
+
+
+    <div class="row">
+
+        {% for opportunity in opportunities %}
+
+            <div class="col-md-6 col-lg-4 mb-4">
+
+                <div class="card h-100 shadow-sm">
+
+                    <div class="card-body">
+
+                        <!-- ORGANIZATION -->
+
+                        <small class="text-muted">
+
+                            {{ opportunity.organization.name }}
+
+                            {% if opportunity.organization.verified %}
+
+                                <span class="text-success">
+                                    ✓
+                                </span>
+
+                            {% endif %}
+
+                        </small>
+
+
+                        <!-- TITLE -->
+
+                        <h5 class="mt-2">
+
+                            {{ opportunity.title }}
+
+                        </h5>
+
+
+                        <!-- TYPE -->
+
+                        <span class="badge bg-primary">
+
+                            {{ opportunity.get_opportunity_type_display }}
+
+                        </span>
+
+
+                        <!-- DOMAIN -->
+
+                        <span class="badge bg-secondary">
+
+                            {{ opportunity.domain.name }}
+
+                        </span>
+
+
+                        <!-- DESCRIPTION -->
+
+                        <p class="mt-3">
+
+                            {{ opportunity.description|truncatewords:20 }}
+
+                        </p>
+
+
+                        <!-- EXPERIENCE -->
+
+                        <p class="mb-1">
+
+                            <strong>
+                                Experience:
+                            </strong>
+
+                            {{ opportunity.get_experience_level_display }}
+
+                        </p>
+
+
+                        <!-- WORK TYPE -->
+
+                        <p class="mb-1">
+
+                            <strong>
+                                Work Type:
+                            </strong>
+
+                            {{ opportunity.get_work_type_display }}
+
+                        </p>
+
+
+                        <!-- LOCATION -->
+
+                        {% if opportunity.location %}
+
+                            <p class="mb-1">
+
+                                📍 {{ opportunity.location }}
+
+                            </p>
+
+                        {% endif %}
+
+
+                        <!-- DEADLINE -->
+
+                        {% if opportunity.deadline %}
+
+                            <p class="text-danger">
+
+                                Deadline:
+                                {{ opportunity.deadline }}
+
+                            </p>
+
+                        {% endif %}
+
+
+                        <!-- SKILLS -->
+
+                        {% if opportunity.skills.all %}
+
+                            <div class="mb-3">
+
+                                {% for skill in opportunity.skills.all %}
+
+                                    <span class="badge bg-light text-dark">
+
+                                        {{ skill.name }}
+
+                                    </span>
+
+                                {% endfor %}
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <!-- ACTION -->
+
+                        <div class="d-grid">
+
+                            <a
+                                href="{% url 'opportunity_detail' opportunity.id %}"
+                                class="btn btn-primary"
+                            >
+
+                                View Opportunity
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        {% empty %}
+
+            <div class="alert alert-info">
+
+                <h5>
+                    No opportunities found.
+                </h5>
+
+                <p class="mb-0">
+
+                    Try changing your search or filters.
+
+                </p>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

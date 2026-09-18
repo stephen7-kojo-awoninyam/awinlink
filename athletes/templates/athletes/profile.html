@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<div class="container">
+
+
+<div class="card">
+
+    {% if profile.cover_photo %}
+
+    <img src="{{ profile.cover_photo.url }}"
+         class="card-img-top"
+         height="250">
+
+    {% endif %}
+
+
+    <div class="card-body">
+
+
+        {% if profile.profile_photo %}
+
+        <img src="{{ profile.profile_photo.url }}"
+             width="150"
+             class="rounded-circle">
+
+        {% endif %}
+
+
+        <h2>
+            {{ profile.user.get_full_name }}
+        </h2>
+
+
+        <p>
+            Sport:
+            {{ profile.sport }}
+        </p>
+
+
+        <p>
+            Category:
+            {{ profile.category }}
+        </p>
+
+
+        <p>
+            Country:
+            {{ profile.nationality }}
+        </p>
+
+
+        <p>
+            Experience:
+            {{ profile.experience_level }}
+        </p>
+
+
+        <p>
+            {{ profile.biography }}
+        </p>
+
+
+    </div>
+
+</div>
+
+
+</div>
+<hr>
+
+<h3>
+Achievements
+</h3>
+
+
+{% for achievement in profile.achievements.all %}
+
+<p>
+🏆 {{ achievement.title }}
+({{ achievement.year }})
+</p>
+
+{% empty %}
+
+<p>
+No achievements added yet.
+</p>
+
+{% endfor %}
+
+<hr>
+
+<h3>
+Performance
+</h3>
+
+
+{% for performance in profile.user.athleteperformance_set.all %}
+
+<p>
+
+{{ performance.metric.name }}:
+
+{{ performance.value }}
+
+{{ performance.metric.unit }}
+
+</p>
+
+
+{% empty %}
+
+<p>
+No performance records available.
+</p>
+
+
+{% endfor %}
+
+<hr>
+
+<h3>
+Media Gallery
+</h3>
+
+
+{% for item in profile.media.all %}
+
+<div>
+
+<h5>
+{{ item.title }}
+</h5>
+
+
+{% if item.media_type == "IMAGE" %}
+
+<img src="{{ item.file.url }}"
+width="300">
+
+
+{% else %}
+
+<video width="400" controls>
+
+<source src="{{ item.file.url }}">
+
+</video>
+
+
+{% endif %}
+
+
+<p>
+{{ item.description }}
+</p>
+
+</div>
+
+
+{% empty %}
+
+<p>
+No media uploaded yet.
+</p>
+
+
+{% endfor %}
+
+{% endblock %}

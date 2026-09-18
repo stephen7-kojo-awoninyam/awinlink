@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+⭐ Shortlisted Talents
+</h2>
+
+
+<hr>
+
+
+
+<div class="row">
+
+
+{% for item in shortlisted %}
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3 mb-3">
+
+
+<h4>
+
+{{ item.talent.user.get_full_name }}
+
+</h4>
+
+
+
+<p>
+
+{{ item.talent.headline }}
+
+</p>
+
+
+
+<p>
+
+{{ item.talent.country }}
+
+</p>
+
+
+
+{% if item.talent.verified %}
+
+<span class="badge bg-success">
+
+Verified
+
+</span>
+
+{% endif %}
+
+
+
+<br><br>
+
+
+
+<a href="{% url 'talent_profile' item.talent.id %}"
+
+class="btn btn-primary">
+
+View Profile
+
+</a>
+
+
+
+<a href="{% url 'talent_search' %}"
+
+class="btn btn-outline-secondary">
+
+Back Search
+
+</a>
+
+
+
+</div>
+
+
+</div>
+
+
+
+{% empty %}
+
+
+<p>
+
+No shortlisted talents yet.
+
+</p>
+
+
+{% endfor %}
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

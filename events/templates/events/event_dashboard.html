@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+
+{{event.title}} Dashboard
+
+</h2>
+
+
+<div class="row mt-4">
+
+
+<div class="col-md-3">
+
+<div class="card shadow p-3">
+
+<h5>
+Registrations
+</h5>
+
+<h2>
+
+{{total_registrations}}
+
+</h2>
+
+</div>
+
+</div>
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow p-3">
+
+<h5>
+Approved
+</h5>
+
+<h2>
+
+{{approved}}
+
+</h2>
+
+</div>
+
+</div>
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow p-3">
+
+<h5>
+Attended
+</h5>
+
+<h2>
+
+{{attended}}
+
+</h2>
+
+</div>
+
+</div>
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow p-3">
+
+<h5>
+Certificates
+</h5>
+
+<h2>
+
+{{certificates}}
+
+</h2>
+
+</div>
+
+</div>
+
+
+</div>
+
+
+
+<div class="card shadow p-4 mt-4">
+
+
+<h4>
+Attendance Rate
+</h4>
+
+
+<h2>
+
+{{attendance_rate}} %
+
+</h2>
+
+
+</div>
+
+
+
+<div class="card shadow p-4 mt-4">
+
+
+<h4>
+Average Rating
+</h4>
+
+
+<h2>
+
+{% if average_rating %}
+
+{{average_rating|floatformat:1}} ⭐
+
+{% else %}
+
+No ratings yet
+
+{% endif %}
+
+
+</h2>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

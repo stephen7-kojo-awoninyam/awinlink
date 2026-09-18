@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+
+<div class="row justify-content-center">
+
+    <div class="col-lg-8">
+
+        <!-- PAGE HEADER -->
+
+        <div class="text-center mb-4">
+
+            <div class="mb-3">
+
+                <i
+                    class="bi bi-shield-check text-success"
+                    style="font-size: 60px;"
+                ></i>
+
+            </div>
+
+            <h2 class="fw-bold">
+                Certificate Verification
+            </h2>
+
+            <p class="text-muted">
+                This certificate has been successfully verified.
+            </p>
+
+        </div>
+
+
+        <!-- CERTIFICATE CARD -->
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body p-5">
+
+                <!-- VERIFIED -->
+
+                <div class="text-center mb-4">
+
+                    <i
+                        class="bi bi-patch-check-fill text-success"
+                        style="font-size: 70px;"
+                    ></i>
+
+                    <h1 class="fw-bold mt-3 mb-2">
+                        Certificate Verified
+                    </h1>
+
+                    <p class="text-muted">
+                        This certificate is valid and was issued by
+                        <strong>Awinlink</strong>.
+                    </p>
+
+                </div>
+
+
+                <!-- CERTIFICATE DETAILS -->
+
+                <div class="border rounded p-4 mb-4">
+
+                    <!-- CERTIFICATE ID -->
+
+                    <div class="mb-3">
+
+                        <small class="text-muted d-block">
+                            Certificate ID
+                        </small>
+
+                        <strong class="fs-5">
+                            {{ certificate.certificate_id }}
+                        </strong>
+
+                    </div>
+
+
+                    <!-- LEARNER -->
+
+                    <div class="mb-3">
+
+                        <small class="text-muted d-block">
+                            Learner
+                        </small>
+
+                        <strong>
+                            {{ learner.get_full_name|default:learner.username }}
+                        </strong>
+
+                    </div>
+
+
+                    <!-- COURSE -->
+
+                    <div class="mb-3">
+
+                        <small class="text-muted d-block">
+                            Course
+                        </small>
+
+                        <strong>
+                            {{ course.title }}
+                        </strong>
+
+                    </div>
+
+
+                    <!-- COURSE CREATOR -->
+
+                    <div class="mb-3">
+
+                        <small class="text-muted d-block">
+                            Course Creator
+                        </small>
+
+                        <strong>
+                            {{ course.creator.get_full_name|default:course.creator.username }}
+                        </strong>
+
+                    </div>
+
+
+                    <!-- ISSUE DATE -->
+
+                    <div>
+
+                        <small class="text-muted d-block">
+                            Date Issued
+                        </small>
+
+                        <strong>
+                            {{ certificate.issued_at|date:"F d, Y" }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <!-- VALID STATUS -->
+
+                <div class="alert alert-success text-center">
+
+                    <i class="bi bi-check-circle-fill me-2"></i>
+
+                    <strong>
+                        Valid Certificate
+                    </strong>
+
+                    <div class="small mt-1">
+
+                        This certificate confirms that
+                        <strong>
+                            {{ learner.get_full_name|default:learner.username }}
+                        </strong>
+                        successfully completed
+
+                        <strong>
+                            {{ course.title }}
+                        </strong>.
+
+                    </div>
+
+                </div>
+
+
+                <!-- PDF -->
+
+                {% if certificate.pdf %}
+
+                <div class="text-center mt-4">
+
+                    <a
+                        href="{{ certificate.pdf.url }}"
+                        target="_blank"
+                        class="btn btn-primary"
+                    >
+
+                        <i class="bi bi-file-earmark-pdf me-1"></i>
+
+                        View Certificate PDF
+
+                    </a>
+
+                </div>
+
+                {% endif %}
+
+
+                <!-- VERIFY ANOTHER -->
+
+                <div class="text-center mt-4">
+
+                    <a
+                        href="{% url 'verify_certificate_search' %}"
+                        class="btn btn-outline-secondary"
+                    >
+
+                        <i class="bi bi-search me-1"></i>
+
+                        Verify Another Certificate
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+{% endblock %}

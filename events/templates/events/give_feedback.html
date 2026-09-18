@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<div class="card shadow p-4">
+
+
+<h3>
+
+Feedback for {{event.title}}
+
+</h3>
+
+
+
+<form method="POST">
+
+{% csrf_token %}
+
+
+{{form.as_p}}
+
+
+
+<button class="btn btn-success">
+
+Submit Feedback
+
+</button>
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

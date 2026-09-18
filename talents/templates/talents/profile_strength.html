@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+    Profile Completion
+</h2>
+
+
+<hr>
+
+
+
+{% if profile_exists %}
+
+
+
+<h3>
+
+{{ strength }}%
+
+</h3>
+
+
+
+
+<div class="progress">
+
+
+<div class="progress-bar"
+
+style="width: {{ strength }}%">
+
+{{ strength }}%
+
+</div>
+
+
+</div>
+
+
+
+<br>
+
+
+
+
+<div class="card p-3 shadow">
+
+
+<h5>
+    Profile Checklist
+</h5>
+
+
+
+<ul class="list-group">
+
+
+
+<li class="list-group-item">
+
+{% if talent.profile_photo %}
+✅
+{% else %}
+❌
+{% endif %}
+
+Profile Photo
+
+</li>
+
+
+
+
+
+<li class="list-group-item">
+
+{% if talent.biography %}
+✅
+{% else %}
+❌
+{% endif %}
+
+Biography
+
+</li>
+
+
+
+
+
+<li class="list-group-item">
+
+{% if talent.country %}
+✅
+{% else %}
+❌
+{% endif %}
+
+Country
+
+</li>
+
+
+
+
+
+<li class="list-group-item">
+
+{% if talent.skills.exists %}
+✅
+{% else %}
+❌
+{% endif %}
+
+Skills
+
+</li>
+
+
+
+
+
+<li class="list-group-item">
+
+{% if talent.domains.exists %}
+✅
+{% else %}
+❌
+{% endif %}
+
+Domains
+
+</li>
+
+
+
+
+
+<li class="list-group-item">
+
+{% if talent.portfolio_items.exists %}
+✅
+{% else %}
+❌
+{% endif %}
+
+Portfolio
+
+</li>
+
+
+
+
+
+<li class="list-group-item">
+
+{% if talent.experiences.exists %}
+✅
+{% else %}
+❌
+{% endif %}
+
+Experience
+
+</li>
+
+
+
+
+
+<li class="list-group-item">
+
+{% if talent.achievements.exists %}
+✅
+{% else %}
+❌
+{% endif %}
+
+Achievements
+
+</li>
+
+
+
+</ul>
+
+
+</div>
+
+
+
+{% else %}
+
+
+
+<div class="alert alert-info mt-4">
+
+
+<h4>
+    No Profile Strength Available
+</h4>
+
+
+<p>
+You have not created a talent profile yet.
+Complete your profile to generate your profile strength score.
+</p>
+
+
+
+<a href="{% url 'edit_profile' %}"
+
+class="btn btn-primary">
+
+Complete Profile
+
+</a>
+
+
+
+</div>
+
+
+
+{% endif %}
+
+
+
+</div>
+
+
+{% endblock %}

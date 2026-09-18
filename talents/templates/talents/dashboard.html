@@ -1,0 +1,1105 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+```
+<!-- ========================================= -->
+<!-- PROFILE HEADER -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <div class="row align-items-center">
+
+            <!-- PROFILE PHOTO -->
+
+            <div class="col-md-2 text-center">
+
+                {% if talent.profile_photo %}
+
+                    <img
+                        src="{{ talent.profile_photo.url }}"
+                        class="rounded-circle"
+                        style="
+                            width:120px;
+                            height:120px;
+                            object-fit:cover;
+                        "
+                        alt="Profile"
+                    >
+
+                {% else %}
+
+                    <div
+                        class="rounded-circle bg-secondary text-white
+                               d-flex align-items-center justify-content-center mx-auto"
+                        style="
+                            width:120px;
+                            height:120px;
+                            font-size:40px;
+                        "
+                    >
+                        👤
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- PROFILE INFORMATION -->
+
+            <div class="col-md-7">
+
+                <h2 class="mb-1">
+
+                    {{ talent.user.get_full_name }}
+
+                    {% if talent.verified %}
+
+                        <span class="badge bg-success">
+                            ✓ Verified
+                        </span>
+
+                    {% endif %}
+
+                </h2>
+
+
+                <p class="text-muted mb-2">
+
+                    {{ talent.headline }}
+
+                </p>
+
+
+                <p>
+
+                    📍 {{ talent.city }}, {{ talent.country }}
+
+                </p>
+
+
+                <div>
+
+                    {% for skill in talent.skills.all %}
+
+                        <span class="badge bg-primary me-1">
+                            {{ skill.name }}
+                        </span>
+
+                    {% empty %}
+
+                        <span class="text-muted">
+                            No skills added yet.
+                        </span>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+
+            <!-- ACTIONS -->
+
+            <div class="col-md-3">
+
+                <a
+                    href="{% url 'edit_talent_profile' %}"
+                    class="btn btn-outline-primary w-100 mb-2"
+                >
+                    Edit Profile
+                </a>
+
+
+                <a
+                    href="{% url 'opportunity_list' %}"
+                    class="btn btn-success w-100 mb-2"
+                >
+                    🔎 Discover Opportunities
+                </a>
+
+
+                <a
+                    href="{% url 'conversation_list' %}"
+                    class="btn btn-primary w-100"
+                >
+                    💬 Messages
+
+                    {% if unread_message_count > 0 %}
+
+                        <span class="badge bg-danger">
+                            {{ unread_message_count }}
+                        </span>
+
+                    {% endif %}
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- PROFILE STRENGTH -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between">
+
+            <h5>
+                Profile Strength
+            </h5>
+
+            <strong>
+                {{ profile_strength }}%
+            </strong>
+
+        </div>
+
+
+        <div class="progress mt-2">
+
+            <div
+                class="progress-bar bg-success"
+                style="width: {{ profile_strength }}%"
+            >
+                {{ profile_strength }}%
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- QUICK STATISTICS -->
+<!-- ========================================= -->
+
+<div class="row mb-4">
+
+    <div class="col-md-3 mb-3">
+
+        <div class="card shadow-sm text-center p-3">
+
+            <h6>
+                Applications
+            </h6>
+
+            <h2>
+                {{ total_applications }}
+            </h2>
+
+            <a href="{% url 'my_applications' %}">
+                View Applications
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-md-3 mb-3">
+
+        <div class="card shadow-sm text-center p-3">
+
+            <h6>
+                Pending
+            </h6>
+
+            <h2 class="text-warning">
+                {{ pending_applications }}
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-md-3 mb-3">
+
+        <div class="card shadow-sm text-center p-3">
+
+            <h6>
+                Accepted
+            </h6>
+
+            <h2 class="text-success">
+                {{ accepted_applications }}
+            </h2>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-md-3 mb-3">
+
+        <div class="card shadow-sm text-center p-3">
+
+            <h6>
+                Certificates
+            </h6>
+
+            <h2>
+                {{ certificate_count }}
+            </h2>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- SKILLS & DOMAINS -->
+<!-- ========================================= -->
+
+<div class="row mb-4">
+
+    <div class="col-md-6">
+
+        <div class="card shadow-sm h-100">
+
+            <div class="card-body">
+
+                <h5>
+                    🛠 Skills
+                </h5>
+
+                <hr>
+
+                {% for skill in talent.skills.all %}
+
+                    <span class="badge bg-primary me-1 mb-1">
+                        {{ skill.name }}
+                    </span>
+
+                {% empty %}
+
+                    <p class="text-muted">
+                        No skills added yet.
+                    </p>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="col-md-6">
+
+        <div class="card shadow-sm h-100">
+
+            <div class="card-body">
+
+                <h5>
+                    🎯 Domains
+                </h5>
+
+                <hr>
+
+                {% for domain in talent.domains.all %}
+
+                    <span class="badge bg-secondary me-1 mb-1">
+                        {{ domain.name }}
+                    </span>
+
+                {% empty %}
+
+                    <p class="text-muted">
+                        No domains added yet.
+                    </p>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- VERIFICATION -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <h5>
+            Profile Verification
+        </h5>
+
+        <hr>
+
+        {% if talent.verified %}
+
+            <div class="alert alert-success mb-0">
+                Your profile is verified ✅
+            </div>
+
+        {% else %}
+
+            <div class="alert alert-warning">
+
+                Your profile is not verified yet.
+
+            </div>
+
+                <a
+                    href="{% url 'request_verification' %}"
+                    class="btn btn-outline-primary"
+                >
+                    Request Verification
+                </a>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- AI RECOMMENDED OPPORTUNITIES -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between align-items-center">
+
+            <div>
+
+                <h4>
+                    🤖 AI Recommended Opportunities
+                </h4>
+
+                <p class="text-muted mb-0">
+                    Opportunities matched to your skills,
+                    domains and profile.
+                </p>
+
+            </div>
+
+
+            <a
+                href="{% url 'recommended_opportunities' %}"
+                class="btn btn-outline-primary"
+            >
+                View All
+            </a>
+
+        </div>
+
+        <hr>
+
+
+        <div class="row">
+
+            {% for item in recommended_opportunities %}
+
+                <div class="col-md-4 mb-3">
+
+                    <div class="card h-100 border">
+
+                        <div class="card-body">
+
+                            <h5>
+                                {{ item.opportunity.title }}
+                            </h5>
+
+
+                            <p class="text-muted">
+
+                                {{ item.opportunity.organization.name }}
+
+                            </p>
+
+
+                            <p>
+
+                                <strong>
+                                    Domain:
+                                </strong>
+
+                                {{ item.opportunity.domain }}
+
+                            </p>
+
+
+                            <h4 class="text-success">
+
+                                {{ item.score }}% Match
+
+                            </h4>
+
+
+                            <a
+                                href="{% url 'opportunity_detail' item.opportunity.id %}"
+                                class="btn btn-primary btn-sm w-100"
+                            >
+                                View Opportunity
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% empty %}
+
+                <div class="alert alert-info">
+
+                    No recommended opportunities available yet.
+
+                    <br><br>
+
+                    Complete your profile, add skills and domains
+                    to improve recommendations.
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- MY APPLICATIONS -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between">
+
+            <h4>
+                📄 My Applications
+            </h4>
+
+            <a
+                href="{% url 'my_applications' %}"
+                class="btn btn-outline-primary btn-sm"
+            >
+                View All
+            </a>
+
+        </div>
+
+        <hr>
+
+
+        {% for application in recent_applications %}
+
+            <div class="border-bottom py-3">
+
+                <div class="d-flex justify-content-between">
+
+                    <div>
+
+                        <h5>
+                            {{ application.opportunity.title }}
+                        </h5>
+
+                        <p class="text-muted mb-1">
+
+                            {{ application.opportunity.organization.name }}
+
+                        </p>
+
+                        <small>
+
+                            Applied:
+                            {{ application.created_at|date:"M d, Y" }}
+
+                        </small>
+
+                    </div>
+
+
+                    <div>
+
+                        {% if application.status == "ACCEPTED" %}
+
+                            <span class="badge bg-success">
+                                Accepted
+                            </span>
+
+                        {% elif application.status == "REJECTED" %}
+
+                            <span class="badge bg-danger">
+                                Rejected
+                            </span>
+
+                        {% elif application.status == "REVIEWING" %}
+
+                            <span class="badge bg-info">
+                                Reviewing
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge bg-warning">
+                                Pending
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% empty %}
+
+            <p class="text-muted">
+                No applications yet.
+            </p>
+
+            <a
+                href="{% url 'opportunity_list' %}"
+                class="btn btn-success"
+            >
+                🔎 Find Opportunities
+            </a>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- INVITATIONS -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <h4>
+            📩 Invitations
+        </h4>
+
+        <hr>
+
+
+        {% for invitation in invitations %}
+
+            <div class="border-bottom py-3">
+
+                <h5>
+                    {{ invitation.organization.name }}
+                </h5>
+
+                <p>
+                    {{ invitation.opportunity.title }}
+                </p>
+
+
+                {% if invitation.status == "PENDING" %}
+
+                    <span class="badge bg-warning">
+                        Pending
+                    </span>
+
+                    <div class="mt-2">
+
+                        <a
+                            href="#"
+                            class="btn btn-success btn-sm"
+                        >
+                            Accept & Start Chat
+                        </a>
+
+                        <a
+                            href="#"
+                            class="btn btn-danger btn-sm"
+                        >
+                            Decline
+                        </a>
+
+                    </div>
+
+                {% else %}
+
+                    <span class="badge bg-secondary">
+                        {{ invitation.status }}
+                    </span>
+
+                {% endif %}
+
+            </div>
+
+        {% empty %}
+
+            <p class="text-muted">
+                No invitations received.
+            </p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- MESSAGES -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between">
+
+            <h4>
+                💬 Recent Conversations
+            </h4>
+
+            <a
+                href="{% url 'conversation_list' %}"
+                class="btn btn-outline-primary btn-sm"
+            >
+                View Messages
+            </a>
+
+        </div>
+
+        <hr>
+
+
+        {% for conversation in conversations|slice:":5" %}
+
+            <div class="border-bottom py-3">
+
+                <div class="d-flex justify-content-between">
+
+                    <div>
+
+                        {% for participant in conversation.other_participants %}
+
+                            <strong>
+
+                                {{ participant.user.get_full_name|default:participant.user.username }}
+
+                            </strong>
+
+                            {% if participant.user.role %}
+
+                                <span class="badge bg-secondary">
+
+                                    {{ participant.user.role }}
+
+                                </span>
+
+                            {% endif %}
+
+                        {% empty %}
+
+                            <strong>
+                                Conversation
+                            </strong>
+
+                        {% endfor %}
+
+
+                        {% if conversation.opportunity %}
+
+                            <p class="text-muted mb-1">
+
+                                Opportunity:
+                                {{ conversation.opportunity.title }}
+
+                            </p>
+
+                        {% endif %}
+
+
+                        {% if conversation.last_message %}
+
+                            <p class="mb-0 text-muted">
+
+                                {{ conversation.last_message.content|truncatewords:12 }}
+
+                            </p>
+
+                        {% else %}
+
+                            <p class="mb-0 text-muted">
+                                No messages yet.
+                            </p>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div>
+
+                        {% if conversation.unread_count > 0 %}
+
+                            <span class="badge bg-danger">
+
+                                {{ conversation.unread_count }}
+
+                            </span>
+
+                        {% endif %}
+
+
+                        <a
+                            href="{% url 'conversation' conversation.id %}"
+                            class="btn btn-primary btn-sm mt-2"
+                        >
+                            Open Chat
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% empty %}
+
+            <p class="text-muted">
+                No conversations yet.
+            </p>
+
+            <a
+                href="{% url 'conversation_list' %}"
+                class="btn btn-primary"
+            >
+                💬 Messages
+            </a>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- NOTIFICATIONS -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <h4>
+            🔔 Notifications
+        </h4>
+
+        <hr>
+
+
+        {% for notification in notifications %}
+
+            <div class="border-bottom py-3">
+
+                <strong>
+                    {{ notification.notification_type }}
+                </strong>
+
+                <p class="mb-1">
+                    {{ notification.message }}
+                </p>
+
+                <small class="text-muted">
+
+                    {{ notification.created_at }}
+
+                </small>
+
+            </div>
+
+        {% empty %}
+
+            <p class="text-muted">
+                No notifications.
+            </p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- EXPERIENCE -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between">
+
+            <h4>
+                💼 Experience
+            </h4>
+
+            <a
+                href="#"
+                class="btn btn-success btn-sm"
+            >
+                + Add Experience
+            </a>
+
+        </div>
+
+        <hr>
+
+
+        {% for experience in talent.experiences.all %}
+
+            <div class="border-bottom py-3">
+
+                <h5>
+                    {{ experience.role }}
+                </h5>
+
+                <strong>
+                    {{ experience.company }}
+                </strong>
+
+                <p>
+                    {{ experience.description }}
+                </p>
+
+                <small>
+
+                    {{ experience.start_date }}
+
+                    -
+
+                    {% if experience.currently_working %}
+
+                        Present
+
+                    {% else %}
+
+                        {{ experience.end_date }}
+
+                    {% endif %}
+
+                </small>
+
+
+                <div class="mt-2">
+
+                    <a
+                        href="#"
+                        class="btn btn-outline-primary btn-sm"
+                    >
+                        Edit
+                    </a>
+
+                    <a
+                        href="#"
+                        class="btn btn-outline-danger btn-sm"
+                    >
+                        Delete
+                    </a>
+
+                </div>
+
+            </div>
+
+        {% empty %}
+
+            <p class="text-muted">
+                No experience added yet.
+            </p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- CERTIFICATIONS -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between">
+
+            <h4>
+                📜 Certifications
+            </h4>
+
+            <a
+                href="#"
+                class="btn btn-success btn-sm"
+            >
+                + Add Certification
+            </a>
+
+        </div>
+
+        <hr>
+
+
+        {% for certificate in talent.certifications.all %}
+
+            <div class="border-bottom py-3">
+
+                <h5>
+                    {{ certificate.name }}
+                </h5>
+
+                <p>
+                    {{ certificate.issuing_organization }}
+                </p>
+
+                <small>
+                    {{ certificate.issue_date }}
+                </small>
+
+
+                {% if certificate.certificate_file %}
+
+                    <div class="mt-2">
+
+                        <a
+                            href="{{ certificate.certificate_file.url }}"
+                            target="_blank"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            View Certificate
+                        </a>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        {% empty %}
+
+            <p class="text-muted">
+                No certifications added yet.
+            </p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- ACHIEVEMENTS -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm mb-5">
+
+    <div class="card-body">
+
+        <div class="d-flex justify-content-between">
+
+            <h4>
+                🏆 Achievements
+            </h4>
+
+            <a
+                href="#"
+                class="btn btn-success btn-sm"
+            >
+                + Add Achievement
+            </a>
+
+        </div>
+
+        <hr>
+
+
+        {% for achievement in talent.achievements.all %}
+
+            <div class="border-bottom py-3">
+
+                {% if achievement.image %}
+
+                    <img
+                        src="{{ achievement.image.url }}"
+                        class="img-fluid rounded mb-2"
+                        style="max-width:200px;"
+                        alt="Achievement"
+                    >
+
+                {% endif %}
+
+
+                <h5>
+                    {{ achievement.title }}
+                </h5>
+
+                <p>
+                    {{ achievement.description }}
+                </p>
+
+                <small>
+                    {{ achievement.date_received }}
+                </small>
+
+            </div>
+
+        {% empty %}
+
+            <p class="text-muted">
+                No achievements added yet.
+            </p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+```
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+Organization Management
+</h2>
+
+
+
+<table class="table table-striped">
+
+
+<tr>
+
+<th>
+Organization
+</th>
+
+<th>
+Country
+</th>
+
+<th>
+Status
+</th>
+
+<th>
+Action
+</th>
+
+
+</tr>
+
+
+
+{% for organization in organizations %}
+
+
+<tr>
+
+
+<td>
+
+{{ organization.name }}
+
+</td>
+
+
+
+<td>
+
+{{ organization.country }}
+
+</td>
+
+
+
+<td>
+
+{% if organization.user.is_active %}
+
+Active
+
+{% else %}
+
+Disabled
+
+{% endif %}
+
+</td>
+
+
+
+<td>
+
+
+<a href="{% url 'toggle_organization_status' organization.id %}"
+
+class="btn btn-warning btn-sm">
+
+Toggle
+
+</a>
+
+
+</td>
+
+
+
+</tr>
+
+
+{% endfor %}
+
+
+</table>
+
+
+</div>
+
+
+{% endblock %}

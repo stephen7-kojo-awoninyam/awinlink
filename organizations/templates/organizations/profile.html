@@ -1,0 +1,757 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+
+<!-- ================================= -->
+<!-- ORGANIZATION HEADER -->
+<!-- ================================= -->
+
+ <div class="card">
+
+
+{% if organization.cover_photo %}
+
+<img src="{{ organization.cover_photo.url }}"
+class="w-100"
+height="250">
+
+{% endif %}
+
+
+
+<div class="card-body">
+
+
+{% if organization.logo %}
+    <img src="{{ organization.logo.url }}"
+         width="120"
+         height="120"
+         class="rounded-circle"
+         style="object-fit: cover;">
+{% else %}
+    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center"
+         style="width:120px; height:120px; font-size:40px;">
+        🏢
+    </div>
+{% endif %}
+
+
+<h2>
+
+{{ organization.name }}
+
+{% if organization.verified %}
+
+<span class="badge bg-success">
+
+✓ Verified
+
+</span>
+
+{% endif %}
+
+</h2>
+
+
+
+<p>
+
+{{ organization.description }}
+
+</p>
+
+
+<p>
+
+Followers:
+
+{{ organization.organization_followers.count }}
+
+</p>
+
+
+<a href="{% url 'follow_organization' organization.id %}"
+
+class="btn btn-primary">
+
+Follow
+
+</a>
+
+
+</div>
+
+</div>
+
+
+<div class="card shadow p-4">
+
+
+<div class="row">
+
+
+
+<div class="col-md-3 text-center">
+
+
+{% if organization.logo %}
+
+
+<img src="{{ organization.logo.url }}"
+class="img-fluid rounded-circle"
+width="150"
+height="150">
+
+
+{% endif %}
+
+
+
+</div>
+
+
+
+
+
+<div class="col-md-9">
+
+
+
+<h2>
+
+
+{{ organization.name }}
+
+
+
+{% if organization.verified %}
+
+<span class="badge bg-success">
+
+✓ Verified
+
+</span>
+
+{% endif %}
+
+
+
+{% if organization.official %}
+
+<span class="badge bg-primary">
+
+Official
+
+</span>
+
+{% endif %}
+
+
+
+</h2>
+
+
+
+
+
+<p>
+
+{{ organization.description }}
+
+</p>
+
+
+
+
+
+<p>
+
+<strong>
+Category:
+</strong>
+
+{{ organization.category }}
+
+</p>
+
+
+
+
+
+<p>
+
+<strong>
+Domain:
+</strong>
+
+{{ organization.domain }}
+
+</p>
+
+
+
+
+
+<p>
+
+<strong>
+Location:
+</strong>
+
+{{ organization.city }},
+{{ organization.country }}
+
+</p>
+
+
+
+
+
+
+{% if organization.website %}
+
+
+<p>
+
+<strong>
+Website:
+</strong>
+
+
+<a href="{{ organization.website }}"
+target="_blank">
+
+{{ organization.website }}
+
+</a>
+
+
+</p>
+
+
+{% endif %}
+
+
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- ================================= -->
+<!-- ORGANIZATION DETAILS -->
+<!-- ================================= -->
+
+
+
+<div class="row mt-4">
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card text-center p-3">
+
+
+<h5>
+
+Level
+
+</h5>
+
+
+<h4>
+
+{{ organization.level }}
+
+</h4>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card text-center p-3">
+
+
+<h5>
+
+Founded
+
+</h5>
+
+
+<h4>
+
+{{ organization.founded_year }}
+
+</h4>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="col-md-4">
+
+
+<div class="card text-center p-3">
+
+
+<h5>
+
+Organization Size
+
+</h5>
+
+
+<h4>
+
+{{ organization.organization_size }}
+
+</h4>
+
+
+</div>
+
+
+</div>
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- ================================= -->
+<!-- SPORTS PROFILE -->
+<!-- ================================= -->
+
+
+
+{% if organization.sports_profile %}
+
+
+
+<div class="card mt-4 p-4">
+
+
+
+<h3>
+
+⚽ Sports Profile
+
+</h3>
+
+
+
+
+
+<p>
+
+<strong>
+Sport:
+</strong>
+
+{{ organization.sports_profile.sport }}
+
+</p>
+
+
+
+
+
+<p>
+
+<strong>
+League:
+</strong>
+
+{{ organization.sports_profile.league }}
+
+</p>
+
+
+
+
+
+<p>
+
+<strong>
+Competition Level:
+</strong>
+
+{{ organization.sports_profile.level }}
+
+</p>
+
+
+
+
+
+{% if organization.sports_profile.nickname %}
+
+
+<p>
+
+<strong>
+Nickname:
+</strong>
+
+{{ organization.sports_profile.nickname }}
+
+</p>
+
+
+{% endif %}
+
+
+
+
+
+
+{% if organization.sports_profile.colors %}
+
+
+<p>
+
+<strong>
+Club Colors:
+</strong>
+
+{{ organization.sports_profile.colors }}
+
+</p>
+
+
+{% endif %}
+
+
+
+
+
+{% if organization.sports_profile.stadium %}
+
+
+<p>
+
+<strong>
+Stadium:
+</strong>
+
+{{ organization.sports_profile.stadium }}
+
+</p>
+
+
+{% endif %}
+
+
+
+
+</div>
+
+
+
+{% endif %}
+
+
+
+
+
+
+
+
+
+<!-- ================================= -->
+<!-- ACTIVE OPPORTUNITIES -->
+<!-- ================================= -->
+
+
+
+<div class="card mt-4 p-4">
+
+
+<h3>
+
+🚀 Active Opportunities
+
+</h3>
+
+
+
+
+
+{% for opportunity in opportunities %}
+
+
+
+<div class="border rounded p-3 mb-3">
+
+
+
+
+
+<h5>
+
+{{ opportunity.title }}
+
+</h5>
+
+
+
+
+
+<p>
+
+{{ opportunity.description|truncatewords:40 }}
+
+</p>
+
+
+
+
+
+<p>
+
+<strong>
+Domain:
+</strong>
+
+{{ opportunity.domain }}
+
+</p>
+
+
+
+
+
+
+<a href="{% url 'opportunity_detail' opportunity.id %}"
+
+class="btn btn-primary">
+
+View Opportunity
+
+</a>
+
+
+
+
+</div>
+
+
+
+
+
+{% empty %}
+
+
+
+<p>
+
+No active opportunities available.
+
+</p>
+
+
+
+{% endfor %}
+
+
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+<!-- ================================= -->
+<!-- SIMILAR ORGANIZATIONS -->
+<!-- ================================= -->
+
+
+
+{% if similar_organizations %}
+
+
+
+<div class="card mt-4 p-4">
+
+
+
+<h3>
+
+Similar Organizations
+
+</h3>
+
+
+
+
+<div class="row">
+
+
+
+
+
+{% for org in similar_organizations %}
+
+
+
+
+<div class="col-md-4">
+
+
+
+<div class="card p-3 shadow-sm">
+
+
+
+<h5>
+
+{{ org.name }}
+
+</h5>
+
+
+
+<p>
+
+{{ org.country }}
+
+</p>
+
+
+
+<a href="{% url 'organization_profile' org.id %}"
+
+class="btn btn-outline-primary">
+
+View Profile
+
+</a>
+
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+{% endfor %}
+
+
+
+
+
+</div>
+
+
+</div>
+
+
+
+{% endif %}
+
+
+<p>
+
+<strong>
+Followers:
+</strong>
+
+{{ followers }}
+
+</p>
+
+
+{% if user.talent_profile %}
+
+
+<a href="{% url 'follow_organization' organization.id %}"
+
+class="btn btn-success">
+
+Follow Organization
+
+</a>
+
+
+<a href="{% url 'unfollow_organization' organization.id %}"
+
+class="btn btn-danger">
+
+Unfollow
+
+</a>
+
+
+{% endif %}
+
+<a href="{% url 'follow_organization' organization.id %}"
+class="btn btn-success">
+
+Follow Organization
+
+</a>
+
+</div>
+
+
+{% endblock %}

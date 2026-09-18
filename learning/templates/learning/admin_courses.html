@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Learning Administration</h2>
+            <p class="text-muted mb-0">
+                Review courses submitted by coaches.
+            </p>
+        </div>
+
+        <span class="badge bg-warning text-dark fs-6">
+            {{ courses|length }} Pending
+        </span>
+    </div>
+
+
+    {% if courses %}
+
+        <div class="card shadow-sm border-0">
+
+            <div class="card-body p-0">
+
+                <div class="table-responsive">
+
+                    <table class="table table-hover align-middle mb-0">
+
+                        <thead class="table-light">
+
+                            <tr>
+                                <th>Course</th>
+                                <th>Creator</th>
+                                <th>Category</th>
+                                <th>Submitted</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            {% for course in courses %}
+
+                                <tr>
+
+                                    <td>
+
+                                        <div class="fw-semibold">
+                                            {{ course.title }}
+                                        </div>
+
+                                        {% if course.short_description %}
+                                            <small class="text-muted">
+                                                {{ course.short_description|truncatechars:80 }}
+                                            </small>
+                                        {% endif %}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        {{ course.creator.get_full_name|default:course.creator.username }}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        {% if course.category %}
+                                            {{ course.category.name }}
+                                        {% else %}
+                                            <span class="text-muted">
+                                                No category
+                                            </span>
+                                        {% endif %}
+
+                                    </td>
+
+
+                                    <td>
+
+                                        <small class="text-muted">
+                                            {{ course.created_at|date:"M d, Y" }}
+                                        </small>
+
+                                    </td>
+
+
+                                    <td class="text-end">
+
+                                        <a
+                                            href="{% url 'admin_course_detail' course.id %}"
+                                            class="btn btn-primary btn-sm"
+                                        >
+                                            Review
+                                        </a>
+
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    {% else %}
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <div class="mb-3">
+                    <i class="bi bi-check-circle fs-1 text-success"></i>
+                </div>
+
+                <h4 class="fw-bold">
+                    No pending courses
+                </h4>
+
+                <p class="text-muted mb-0">
+                    There are currently no courses waiting for approval.
+                </p>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

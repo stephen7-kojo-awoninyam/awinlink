@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h1 class="fw-bold mb-1">
+                Discover Talents
+            </h1>
+
+            <p class="text-muted mb-0">
+                Search and discover promising talents on Awinlink.
+            </p>
+
+        </div>
+
+        <a
+            href="{% url 'scout_dashboard' %}"
+            class="btn btn-outline-primary"
+        >
+            <i class="bi bi-speedometer2 me-2"></i>
+            Dashboard
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         SEARCH
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <form method="GET">
+
+                <div class="row g-2">
+
+                    <div class="col-md-10">
+
+                        <input
+                            type="text"
+                            name="q"
+                            value="{{ query }}"
+                            class="form-control"
+                            placeholder="Search by name, username or headline..."
+                        >
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100"
+                        >
+                            <i class="bi bi-search me-2"></i>
+                            Search
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RESULTS
+    ====================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h5 class="fw-bold mb-0">
+            Talent Profiles
+        </h5>
+
+        <span class="text-muted small">
+            {{ talents|length }} result{{ talents|length|pluralize }}
+        </span>
+
+    </div>
+
+
+    {% if talents %}
+
+        <div class="row g-4">
+
+            {% for talent in talents %}
+
+                <div class="col-md-6 col-lg-4">
+
+                    <div class="card border-0 shadow-sm h-100">
+
+                        {% if talent.profile_photo %}
+
+                            <img
+                                src="{{ talent.profile_photo.url }}"
+                                class="card-img-top"
+                                alt="{{ talent.user.username }}"
+                                style="
+                                    height: 220px;
+                                    object-fit: cover;
+                                "
+                            >
+
+                        {% else %}
+
+                            <div
+                                class="bg-light d-flex align-items-center justify-content-center"
+                                style="height: 220px;"
+                            >
+
+                                <i class="bi bi-person-circle text-secondary"
+                                   style="font-size: 80px;">
+                                </i>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <div class="card-body">
+
+                            <div class="d-flex justify-content-between align-items-start">
+
+                                <div>
+
+                                    <h5 class="fw-bold mb-1">
+
+                                        {{ talent.user.get_full_name|default:talent.user.username }}
+
+                                        {% if talent.verified %}
+
+                                            <i
+                                                class="bi bi-patch-check-fill text-primary"
+                                                title="Verified"
+                                            ></i>
+
+                                        {% endif %}
+
+                                    </h5>
+
+                                    <p class="text-muted small mb-2">
+                                        @{{ talent.user.username }}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            {% if talent.headline %}
+
+                                <p class="mb-2">
+                                    {{ talent.headline }}
+                                </p>
+
+                            {% endif %}
+
+
+                            {% if talent.country or talent.city %}
+
+                                <p class="text-muted small mb-3">
+
+                                    <i class="bi bi-geo-alt me-1"></i>
+
+                                    {% if talent.city %}
+                                        {{ talent.city }},
+                                    {% endif %}
+
+                                    {% if talent.country %}
+                                        {{ talent.country }}
+                                    {% endif %}
+
+                                </p>
+
+                            {% endif %}
+
+
+                            <a
+                                href="{% url 'scout_talent_detail' talent.id %}"
+                                class="btn btn-primary w-100"
+                            >
+                                <i class="bi bi-person-lines-fill me-2"></i>
+                                View Profile
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <i
+                    class="bi bi-search text-muted"
+                    style="font-size: 50px;"
+                ></i>
+
+                <h5 class="fw-bold mt-3">
+                    No talents found
+                </h5>
+
+                {% if query %}
+
+                    <p class="text-muted">
+                        No talent profiles matched
+                        "<strong>{{ query }}</strong>".
+                    </p>
+
+                    <a
+                        href="{% url 'scout_talent_list' %}"
+                        class="btn btn-outline-primary"
+                    >
+                        Clear Search
+                    </a>
+
+                {% else %}
+
+                    <p class="text-muted">
+                        There are currently no talent profiles available.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<div class="card p-4">
+
+
+<h3>
+Add Achievement 🏆
+</h3>
+
+
+<form method="POST"
+enctype="multipart/form-data">
+
+
+{% csrf_token %}
+
+
+{{ form.as_p }}
+
+
+<button class="btn btn-success">
+
+Save Achievement
+
+</button>
+
+
+<a href="{% url 'talent_dashboard' %}"
+class="btn btn-secondary">
+
+Cancel
+
+</a>
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

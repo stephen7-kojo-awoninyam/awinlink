@@ -1,0 +1,405 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- HEADER -->
+
+    <div class="mb-4">
+
+        <h1 class="fw-bold">
+            Talent Directory
+        </h1>
+
+        <p class="text-muted">
+            Discover talented people and explore their professional profiles.
+        </p>
+
+    </div>
+
+
+    <!-- SEARCH & FILTERS -->
+
+    <div class="card border-0 shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <form method="GET">
+
+                <div class="row g-3">
+
+                    <div class="col-lg-5">
+
+                        <label class="form-label">
+                            Search
+                        </label>
+
+                        <input
+                            type="text"
+                            name="search"
+                            class="form-control"
+                            placeholder="Search talents..."
+                            value="{{ search }}"
+                        >
+
+                    </div>
+
+
+                    <div class="col-lg-3">
+
+                        <label class="form-label">
+                            Sport
+                        </label>
+
+                        <select
+                            name="sport"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                All Sports
+                            </option>
+
+                            {% for sport in sports %}
+
+                            <option
+                                value="{{ sport.id }}"
+                                {% if selected_sport == sport.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ sport.name }}
+                            </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-lg-2">
+
+                        <label class="form-label">
+                            Experience
+                        </label>
+
+                        <select
+                            name="experience_level"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                All
+                            </option>
+
+                            {% for value, label in experience_levels %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if selected_experience == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-lg-2 d-flex align-items-end">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100"
+                        >
+
+                            <i class="bi bi-search me-1"></i>
+
+                            Search
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- TALENTS -->
+
+    <div class="row g-4">
+
+        {% for talent in talents %}
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <!-- PROFILE IMAGE -->
+
+                {% if talent.profile_photo %}
+
+                <img
+                    src="{{ talent.profile_photo.url }}"
+                    class="card-img-top"
+                    style="height:220px; object-fit:cover;"
+                    alt="{{ talent.user.get_full_name }}"
+                >
+
+                {% else %}
+
+                <div
+                    class="bg-light d-flex align-items-center justify-content-center"
+                    style="height:220px;"
+                >
+
+                    <i class="bi bi-person-circle fs-1 text-muted"></i>
+
+                </div>
+
+                {% endif %}
+
+
+                <div class="card-body d-flex flex-column">
+
+                    <h5 class="fw-bold mb-1">
+
+                        {{ talent.user.get_full_name|default:talent.user.username }}
+
+                        {% if talent.verified %}
+
+                        <i class="bi bi-patch-check-fill text-primary"></i>
+
+                        {% endif %}
+
+                    </h5>
+
+
+                    {% if talent.headline %}
+
+                    <p class="text-muted mb-2">
+                        {{ talent.headline }}
+                    </p>
+
+                    {% endif %}
+
+
+                    {% if talent.country or talent.city %}
+
+                    <p class="small text-muted mb-2">
+
+                        <i class="bi bi-geo-alt me-1"></i>
+
+                        {% if talent.city %}
+                            {{ talent.city }},
+                        {% endif %}
+
+                        {{ talent.country }}
+
+                    </p>
+
+                    {% endif %}
+
+
+                    <div class="mb-3">
+
+                        {% if talent.experience_level %}
+
+                        <span class="badge bg-light text-dark border">
+
+                            {{ talent.get_experience_level_display }}
+
+                        </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                            <div class="mt-auto">
+
+                            
+                            <!-- VIEW PROFILE -->
+
+                            <a
+                                href="{% url 'coach_view_talent' talent.id %}"
+                                class="btn btn-primary w-100"
+                            >
+
+                                <i class="bi bi-person me-1"></i>
+
+                                View Profile
+
+                            </a>
+
+
+                            <!-- MESSAGE -->
+
+                            <a
+                                href="{% url 'start_coach_conversation' talent.id %}"
+                                class="btn btn-outline-primary w-100 mt-2"
+                            >
+
+                                <i class="bi bi-chat-dots me-1"></i>
+
+                                Message Talent
+
+                            </a>
+
+
+                            <!-- SAVE -->
+
+                            {% if talent.id in saved_talent_ids %}
+
+                            <form
+                                method="POST"
+                                action="{% url 'unsave_talent' talent.id %}"
+                                class="mt-2"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-danger w-100"
+                                >
+
+                                    <i class="bi bi-bookmark-x me-1"></i>
+
+                                    Remove Saved
+
+                                </button>
+
+                            </form>
+
+                            {% else %}
+
+                            <form
+                                method="POST"
+                                action="{% url 'save_talent' talent.id %}"
+                                class="mt-2"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-warning w-100"
+                                >
+
+                                    <i class="bi bi-bookmark me-1"></i>
+
+                                    Save Talent
+
+                                </button>
+
+                            </form>
+
+                            {% endif %}
+
+
+                            <!-- FOLLOW -->
+
+                            {% if talent.id in followed_talent_ids %}
+
+                            <form
+                                method="POST"
+                                action="{% url 'unfollow_talent' talent.id %}"
+                                class="mt-2"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-secondary w-100"
+                                >
+
+                                    <i class="bi bi-person-dash me-1"></i>
+
+                                    Unfollow
+
+                                </button>
+
+                            </form>
+
+                            {% else %}
+
+                            <form
+                                method="POST"
+                                action="{% url 'follow_talent' talent.id %}"
+                                class="mt-2"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-success w-100"
+                                >
+
+                                    <i class="bi bi-person-plus me-1"></i>
+
+                                    Follow Talent
+
+                                </button>
+
+                            </form>
+
+                            {% endif %}
+                            
+
+                            </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        {% empty %}
+
+        <div class="col-12">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center py-5">
+
+                    <i class="bi bi-people fs-1 text-muted"></i>
+
+                    <h4 class="fw-bold mt-3">
+                        No talents found
+                    </h4>
+
+                    <p class="text-muted">
+                        Try changing your search or filters.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}
+

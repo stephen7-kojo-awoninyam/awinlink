@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h1 class="fw-bold">
+                Learning Center
+            </h1>
+
+            <p class="text-muted mb-0">
+                Learn new skills, improve your expertise, and grow your talent.
+            </p>
+        </div>
+
+        <div>
+            <a href="{% url 'course_list' %}"
+               class="btn btn-primary">
+                Browse Courses
+            </a>
+        </div>
+
+    </div>
+
+
+    <!-- CATEGORIES -->
+
+    <h4 class="fw-bold mb-3">
+        Explore Categories
+    </h4>
+
+    <div class="row g-3 mb-5">
+
+        {% for category in categories %}
+
+        <div class="col-md-4 col-lg-3">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="mb-3">
+
+                        {% if category.icon %}
+                            <i class="{{ category.icon }} fs-2"></i>
+                        {% else %}
+                            <i class="bi bi-book fs-2"></i>
+                        {% endif %}
+
+                    </div>
+
+                    <h5 class="fw-bold">
+                        {{ category.name }}
+                    </h5>
+
+                    <p class="text-muted small">
+                        {{ category.description|truncatewords:15 }}
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% empty %}
+
+        <div class="col-12">
+
+            <div class="alert alert-light border">
+                No learning categories available yet.
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+
+    <!-- FEATURED COURSES -->
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <h4 class="fw-bold mb-0">
+            Featured Courses
+        </h4>
+
+        <a href="{% url 'course_list' %}"
+           class="text-decoration-none">
+            View all
+        </a>
+
+    </div>
+
+
+    <div class="row g-4">
+
+        {% for course in courses %}
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100 overflow-hidden">
+
+                {% if course.thumbnail %}
+
+                <img src="{{ course.thumbnail.url }}"
+                     class="card-img-top"
+                     style="height:200px; object-fit:cover;">
+
+                {% else %}
+
+                <div class="bg-light d-flex align-items-center justify-content-center"
+                     style="height:200px;">
+
+                    <i class="bi bi-book fs-1 text-muted"></i>
+
+                </div>
+
+                {% endif %}
+
+
+                <div class="card-body">
+
+                    <span class="badge bg-primary mb-2">
+                        {{ course.level|title }}
+                    </span>
+
+                    <h5 class="fw-bold">
+                        {{ course.title }}
+                    </h5>
+
+                    <p class="text-muted small">
+                        {{ course.description|truncatewords:20 }}
+                    </p>
+
+                    <div class="small text-muted mb-3">
+
+                        <i class="bi bi-clock"></i>
+                        {{ course.duration }} minutes
+
+                        {% if course.is_free %}
+
+                            <span class="badge bg-success ms-2">
+                                Free
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+                    <a href="{% url 'course_detail' course.slug %}"
+                       class="btn btn-outline-primary w-100">
+
+                        View Course
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% empty %}
+
+        <div class="col-12">
+
+            <div class="alert alert-light border">
+                No courses are available yet.
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+
+    <!-- MY COURSES -->
+
+    {% if enrolled_courses %}
+
+    <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+
+        <h4 class="fw-bold mb-0">
+            Continue Learning
+        </h4>
+
+        <a href="{% url 'my_courses' %}">
+            My Courses
+        </a>
+
+    </div>
+
+
+    <div class="row g-3">
+
+        {% for enrollment in enrolled_courses %}
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold">
+                        {{ enrollment.course.title }}
+                    </h5>
+
+                    {% if enrollment.completed %}
+
+                        <span class="badge bg-success">
+                            Completed
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge bg-warning text-dark">
+                            In Progress
+                        </span>
+
+                    {% endif %}
+
+                    <div class="mt-3">
+
+                        <a href="{% url 'course_detail' enrollment.course.slug %}"
+                           class="btn btn-primary btn-sm">
+
+                            Continue
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}
+Sports Talent Profile | Awinlink
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+
+<div class="row justify-content-center">
+
+    <div class="col-lg-9">
+
+        <!-- =====================================================
+             HEADER
+        ====================================================== -->
+
+        <div class="text-center mb-5">
+
+            <div class="mb-3">
+
+                <div class="rounded-circle bg-primary bg-opacity-10
+                            d-inline-flex p-4">
+
+                    <i class="bi bi-trophy text-primary fs-1"></i>
+
+                </div>
+
+            </div>
+
+            <h1 class="fw-bold">
+                Tell us about your sporting talent
+            </h1>
+
+            <p class="text-muted mb-0">
+
+                Welcome, {{ talent.user.first_name|default:talent.user.username }}.
+
+                Tell Awinlink about yourself as a sporting talent.
+
+                Your information will help organizations and scouts
+
+                discover you.
+
+            </p>
+
+        </div>
+
+
+        <!-- =====================================================
+             FORM
+        ====================================================== -->
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body p-4 p-md-5">
+
+                <form method="post">
+
+                    {% csrf_token %}
+
+
+                    <!-- =================================================
+                         FORM ERRORS
+                    ================================================== -->
+
+                    {% if form.non_field_errors %}
+
+                        <div class="alert alert-danger">
+
+                            {% for error in form.non_field_errors %}
+
+                                <div>
+                                    {{ error }}
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         SPORT
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.sport.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Sport
+                        </label>
+
+                        {{ form.sport }}
+
+                        <div class="form-text">
+
+                            Choose the sport in which you have talent.
+
+                        </div>
+
+                        {% for error in form.sport.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         SPORT CATEGORY
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.sport_category.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Sport Category
+                        </label>
+
+                        {{ form.sport_category }}
+
+                        <div class="form-text">
+
+                            Select the category or discipline within
+                            your sport.
+
+                        </div>
+
+                        {% for error in form.sport_category.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         POSITION
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.position.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            Position / Specialization
+                        </label>
+
+                        {{ form.position }}
+
+                        <div class="form-text">
+
+                            If your sport has positions or specializations,
+                            describe yours here.
+
+                            For example: Forward, Goalkeeper, Sprinter,
+                            Point Guard.
+
+                        </div>
+
+                        {% for error in form.position.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         PHYSICAL INFORMATION
+                    ================================================== -->
+
+                    <div class="row g-3 mb-4">
+
+                        <div class="col-md-6">
+
+                            <label
+                                for="{{ form.height.id_for_label }}"
+                                class="form-label fw-semibold"
+                            >
+                                Height
+                            </label>
+
+                            {{ form.height }}
+
+                            <div class="form-text">
+                                Enter your height as a number.
+                            </div>
+
+                            {% for error in form.height.errors %}
+
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+
+                        <div class="col-md-6">
+
+                            <label
+                                for="{{ form.weight.id_for_label }}"
+                                class="form-label fw-semibold"
+                            >
+                                Weight
+                            </label>
+
+                            {{ form.weight }}
+
+                            <div class="form-text">
+                                Enter your weight as a number.
+                            </div>
+
+                            {% for error in form.weight.errors %}
+
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         SPORTS BIO
+                    ================================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.bio.id_for_label }}"
+                            class="form-label fw-semibold"
+                        >
+                            About Your Sporting Talent
+                        </label>
+
+                        {{ form.bio }}
+
+                        <div class="form-text">
+
+                            Describe yourself freely. Tell organizations
+                            and scouts about your abilities, experience,
+                            style, goals and what makes you unique.
+
+                        </div>
+
+                        {% for error in form.bio.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ error }}
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+
+                    <!-- =================================================
+                         INFORMATION NOTICE
+                    ================================================== -->
+
+                    <div class="alert alert-light border mb-4">
+
+                        <div class="d-flex">
+
+                            <div class="me-3">
+
+                                <i class="bi bi-info-circle text-primary
+                                          fs-4"></i>
+
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    You are in control of your story.
+                                </strong>
+
+                                <p class="mb-0 small text-muted">
+
+                                    These details help Awinlink understand
+                                    your sporting background. You will be
+                                    able to add achievements, experiences,
+                                    certifications and other information
+                                    to your profile later.
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ACTIONS
+                    ================================================== -->
+
+                    <div class="d-flex flex-column flex-md-row gap-2">
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary btn-lg flex-grow-1"
+                        >
+
+                            <i class="bi bi-check-circle me-2"></i>
+
+                            Save Sports Profile
+
+                        </button>
+
+                        <a
+                            href="{% url 'talent_dashboard' %}"
+                            class="btn btn-outline-secondary btn-lg"
+                        >
+
+                            Skip for now
+
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             FOOTER MESSAGE
+        ====================================================== -->
+
+        <div class="text-center mt-4">
+
+            <p class="text-muted small mb-0">
+
+                <i class="bi bi-shield-check me-1"></i>
+
+                You can update your sports information later.
+
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+
+{% endblock %}

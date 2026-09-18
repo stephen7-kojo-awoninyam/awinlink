@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <div class="d-flex justify-content-between mb-4">
+
+        <div>
+
+            <h2>
+
+                {{ event.title }}
+
+            </h2>
+
+            <small class="text-muted">
+
+                Event Gallery
+
+            </small>
+
+        </div>
+
+        {% if request.user == event.organizer.user %}
+
+        <a href="{% url 'upload_event_media' event.id %}"
+
+           class="btn btn-success">
+
+            Upload Media
+
+        </a>
+
+        {% endif %}
+
+    </div>
+
+    <div class="row">
+
+        {% for item in media %}
+
+        <div class="col-md-4 mb-4">
+
+            <div class="card shadow-sm">
+
+                {% if item.media_type == "IMAGE" %}
+
+                    <img src="{{ item.file.url }}"
+
+                         class="card-img-top"
+
+                         style="height:250px;object-fit:cover;">
+
+                {% else %}
+
+                    <video controls
+
+                           class="w-100"
+
+                           style="height:250px;object-fit:cover;">
+
+                        <source src="{{ item.file.url }}">
+
+                    </video>
+
+                {% endif %}
+
+                <div class="card-body">
+
+                    <p>
+
+                        {{ item.caption }}
+
+                    </p>
+
+                    <small class="text-muted">
+
+                        {{ item.uploaded_at }}
+
+                    </small>
+
+                    {% if request.user == event.organizer.user %}
+
+                    <hr>
+
+                    <a href="{% url 'delete_event_media' item.id %}"
+
+                       class="btn btn-danger btn-sm">
+
+                        Delete
+
+                    </a>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% empty %}
+
+        <div class="col-12">
+
+            <div class="alert alert-info">
+
+                No media has been uploaded for this event yet.
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

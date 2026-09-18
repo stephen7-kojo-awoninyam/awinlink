@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">Welcome to Awinlink</h2>
+        <p class="text-muted">
+            Choose how you want to use Awinlink.
+        </p>
+    </div>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <div class="row g-4">
+
+            <!-- Talent -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card h-100 shadow-sm text-center">
+
+                    <div class="card-body">
+
+                        <h1>🏅</h1>
+
+                        <h4 class="mt-3">
+                            Talent
+                        </h4>
+
+                        <p class="text-muted">
+                            Athletes, developers, designers,
+                            musicians, artists and every other talent.
+                        </p>
+
+                    </div>
+
+                    <div class="card-footer bg-white border-0">
+
+                        <button
+                            type="submit"
+                            name="role"
+                            value="TALENT"
+                            class="btn btn-success w-100">
+
+                            Continue as Talent
+
+                        </button>
+
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Organization -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card h-100 shadow-sm text-center">
+
+                    <div class="card-body">
+
+                        <h1>🏢</h1>
+
+                        <h4 class="mt-3">
+                            Organization
+                        </h4>
+
+                        <p class="text-muted">
+                            Companies, clubs, academies,
+                            NGOs and institutions looking for talent.
+                        </p>
+
+                    </div>
+
+                    <div class="card-footer bg-white border-0">
+
+                        <button
+                            type="submit"
+                            name="role"
+                            value="ORGANIZATION"
+                            class="btn btn-primary w-100">
+
+                            Continue as Organization
+
+                        </button>
+
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Coach -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card h-100 shadow-sm text-center">
+
+                    <div class="card-body">
+
+                        <h1>🎓</h1>
+
+                        <h4 class="mt-3">
+                            Coach
+                        </h4>
+
+                        <p class="text-muted">
+                            Train, mentor and guide talented
+                            individuals to reach their potential.
+                        </p>
+
+                    </div>
+
+                    <div class="card-footer bg-white border-0">
+
+                        <button
+                            type="submit"
+                            name="role"
+                            value="COACH"
+                            class="btn btn-warning w-100">
+
+                            Continue as Coach
+
+                        </button>
+
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Scout -->
+            <div class="col-lg-3 col-md-6">
+                <div class="card h-100 shadow-sm text-center">
+
+                    <div class="card-body">
+
+                        <h1>🔍</h1>
+
+                        <h4 class="mt-3">
+                            Scout
+                        </h4>
+
+                        <p class="text-muted">
+                            Discover exceptional talent and connect
+                            them with opportunities worldwide.
+                        </p>
+
+                    </div>
+
+                    <div class="card-footer bg-white border-0">
+
+                        <button
+                            type="submit"
+                            name="role"
+                            value="SCOUT"
+                            class="btn btn-dark w-100">
+
+                            Continue as Scout
+
+                        </button>
+
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

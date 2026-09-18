@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+```
+<!-- =====================================================
+     HEADER
+====================================================== -->
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <div>
+
+        <h1 class="fw-bold mb-1">
+            Saved Talents
+        </h1>
+
+        <p class="text-muted mb-0">
+            Manage talents you are tracking.
+        </p>
+
+    </div>
+
+    <span class="badge bg-primary fs-6">
+
+        {{ total_saved }}
+
+        {% if total_saved == 1 %}
+            Talent
+        {% else %}
+            Talents
+        {% endif %}
+
+    </span>
+
+</div>
+
+
+<!-- =====================================================
+     SAVED TALENTS
+====================================================== -->
+
+<div class="row g-4">
+
+    {% for bookmark in saved_talents %}
+
+        {% with talent=bookmark.talent %}
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <!-- PROFILE IMAGE -->
+
+                {% if talent.profile_photo %}
+
+                <img
+                    src="{{ talent.profile_photo.url }}"
+                    class="card-img-top"
+                    style="height:220px; object-fit:cover;"
+                    alt="{{ talent.user.get_full_name|default:talent.user.username }}"
+                >
+
+                {% else %}
+
+                <div
+                    class="bg-light d-flex align-items-center justify-content-center"
+                    style="height:220px;"
+                >
+
+                    <i class="bi bi-person-circle fs-1 text-muted"></i>
+
+                </div>
+
+                {% endif %}
+
+
+                <!-- BODY -->
+
+                <div class="card-body d-flex flex-column">
+
+                    <!-- NAME -->
+
+                    <h5 class="fw-bold mb-1">
+
+                        {{ talent.user.get_full_name|default:talent.user.username }}
+
+                    </h5>
+
+
+                    <!-- HEADLINE -->
+
+                    {% if talent.headline %}
+
+                    <p class="text-muted mb-2">
+
+                        {{ talent.headline }}
+
+                    </p>
+
+                    {% endif %}
+
+
+                    <!-- LOCATION -->
+
+                    {% if talent.country %}
+
+                    <p class="small text-muted mb-3">
+
+                        <i class="bi bi-geo-alt me-1"></i>
+
+                        {{ talent.country }}
+
+                        {% if talent.city %}
+                            , {{ talent.city }}
+                        {% endif %}
+
+                    </p>
+
+                    {% endif %}
+
+
+                    <!-- PRIVATE NOTES -->
+
+                    <div class="bg-light rounded p-3 mb-3">
+
+                        <small class="text-muted d-block mb-1">
+
+                            <i class="bi bi-lock me-1"></i>
+
+                            Private Notes
+
+                        </small>
+
+                        {% if bookmark.notes %}
+
+                        <p class="small mb-0">
+
+                            {{ bookmark.notes }}
+
+                        </p>
+
+                        {% else %}
+
+                        <p class="small text-muted mb-0">
+
+                            No notes added yet.
+
+                        </p>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- SAVED DATE -->
+
+                    <p class="small text-muted">
+
+                        <i class="bi bi-bookmark me-1"></i>
+
+                        Saved {{ bookmark.created_at|date:"M d, Y" }}
+
+                    </p>
+
+
+                    <!-- =================================================
+                         ACTIONS
+                    ================================================== -->
+
+                    <div class="mt-auto pt-3">
+
+                        <!-- VIEW PROFILE -->
+
+                        <a
+                            href="{% url 'coach_view_talent' talent.id %}"
+                            class="btn btn-primary w-100"
+                        >
+
+                            <i class="bi bi-person me-1"></i>
+
+                            View Profile
+
+                        </a>
+
+
+                        <!-- MESSAGE TALENT -->
+
+                        <a
+                            href="{% url 'start_coach_conversation' talent.user.id %}"
+                            class="btn btn-outline-primary w-100 mt-2"
+                        >
+
+                            <i class="bi bi-chat-dots me-1"></i>
+
+                            Message Talent
+
+                        </a>
+
+
+                        <!-- REMOVE FROM SAVED -->
+
+                        <form
+                            method="POST"
+                            action="{% url 'unsave_talent' talent.id %}"
+                            class="mt-2"
+                        >
+
+                            {% csrf_token %}
+
+                            <button
+                                type="submit"
+                                class="btn btn-outline-danger w-100"
+                            >
+
+                                <i class="bi bi-bookmark-x me-1"></i>
+
+                                Remove
+
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endwith %}
+
+
+    {% empty %}
+
+    <!-- =================================================
+         EMPTY STATE
+    ================================================== -->
+
+    <div class="col-12">
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <i class="bi bi-bookmark fs-1 text-muted"></i>
+
+                <h4 class="fw-bold mt-3">
+                    No Saved Talents
+                </h4>
+
+                <p class="text-muted">
+                    Save promising talents from the talent directory
+                    to keep track of them here.
+                </p>
+
+                <a
+                    href="{% url 'coach_talent_directory' %}"
+                    class="btn btn-primary"
+                >
+
+                    <i class="bi bi-search me-1"></i>
+
+                    Discover Talents
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+
+
+</div>
+
+{% endblock %}

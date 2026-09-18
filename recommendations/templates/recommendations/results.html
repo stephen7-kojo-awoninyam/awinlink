@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+Recommended Talents
+</h2>
+
+
+<h4 class="mb-4">
+Opportunity:
+{{ opportunity.title }}
+</h4>
+
+
+
+<div class="row">
+
+
+{% for item in results %}
+
+
+
+<div class="col-md-4">
+
+
+<div class="card mb-4 shadow-sm">
+
+
+
+{% if item.talent.profile_photo %}
+
+
+<img 
+src="{{ item.talent.profile_photo.url }}"
+class="card-img-top"
+height="250"
+>
+
+
+{% endif %}
+
+
+
+<div class="card-body">
+
+
+
+<h5 class="card-title">
+
+{{ item.talent.user.get_full_name }}
+
+
+{% if item.talent.verified %}
+
+<span class="badge bg-success">
+
+✓ Verified
+
+</span>
+
+
+{% endif %}
+
+
+</h5>
+
+
+{% if item.talent.verified %}
+
+<span class="badge bg-success">
+
+Verified Talent
+
+</span>
+
+{% endif %}
+
+
+
+
+<hr>
+
+
+
+<p>
+
+<strong>
+Match Score:
+</strong>
+
+<span class="text-success">
+
+{{ item.score }}%
+
+</span>
+
+</p>
+
+
+
+
+<p>
+
+<strong>
+Location:
+</strong>
+
+{{ item.talent.city }},
+{{ item.talent.country }}
+
+</p>
+
+
+
+
+
+<p>
+
+<strong>
+Domains:
+</strong>
+
+<br>
+
+
+{% for domain in item.talent.domains.all %}
+
+
+<span class="badge bg-primary">
+
+{{ domain.name }}
+
+</span>
+
+
+{% empty %}
+
+No domains added.
+
+
+{% endfor %}
+
+
+</p>
+
+
+
+
+
+<p>
+
+<strong>
+Skills:
+</strong>
+
+<br>
+
+
+{% for skill in item.talent.skills.all %}
+
+
+<span class="badge bg-secondary">
+
+{{ skill.name }}
+
+</span>
+
+
+{% empty %}
+
+No skills added.
+
+
+{% endfor %}
+
+
+</p>
+
+
+
+
+
+<div class="mt-3">
+
+
+
+<a href="{% url 'talent_profile' item.talent.id %}"
+class="btn btn-outline-primary btn-sm">
+
+View Profile
+
+</a>
+
+
+
+
+
+<a href="{% url 'invite_talent' opportunity.id item.talent.id %}"
+class="btn btn-success btn-sm">
+
+Invite Talent
+
+</a>
+
+
+
+</div>
+
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+{% empty %}
+
+
+<div class="alert alert-warning">
+
+No matching talents found.
+
+</div>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

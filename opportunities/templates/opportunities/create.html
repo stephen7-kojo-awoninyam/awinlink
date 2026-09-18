@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<div class="card p-4">
+
+
+<h2 class="mb-4">
+Create Opportunity
+</h2>
+
+
+
+<form method="post">
+
+{% csrf_token %}
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Title
+</label>
+
+{{ form.title }}
+
+</div>
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Opportunity Type
+</label>
+
+{{ form.opportunity_type }}
+
+</div>
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Domain
+</label>
+
+{{ form.domain }}
+
+</div>
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Required Skills
+</label>
+
+{{ form.skills }}
+
+<small class="text-muted">
+Select skills required for this opportunity
+</small>
+
+</div>
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Description
+</label>
+
+{{ form.description }}
+
+</div>
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Experience Level
+</label>
+
+{{ form.experience_level }}
+
+</div>
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Work Type
+</label>
+
+{{ form.work_type }}
+
+</div>
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Location
+</label>
+
+{{ form.location }}
+
+</div>
+
+
+
+<div class="mb-3">
+
+<label class="form-label">
+Deadline
+</label>
+
+{{ form.deadline }}
+
+</div>
+
+
+
+<div class="form-check mb-3">
+
+{{ form.active }}
+
+<label class="form-check-label">
+
+Active Opportunity
+
+</label>
+
+</div>
+
+
+
+<button class="btn btn-primary">
+
+Create Opportunity
+
+</button>
+
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

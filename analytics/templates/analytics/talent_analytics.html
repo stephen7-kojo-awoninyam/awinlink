@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- HEADER -->
+    <div class="mb-4">
+        <h2 class="fw-bold">My Talent Analytics</h2>
+
+        {% if talent %}
+            <p class="text-muted mb-0">
+                Analytics for {{ talent.user.username }}
+            </p>
+        {% else %}
+            <p class="text-muted">
+                Your talent profile has not been created yet.
+            </p>
+        {% endif %}
+    </div>
+
+
+    {% if talent %}
+
+    <!-- TALENT SCORE -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-3">
+                Talent Score
+            </h5>
+
+            {% if score %}
+                <h1 class="display-5 fw-bold">
+                    {{ score.overall_score }}
+                </h1>
+
+                <p class="text-muted mb-0">
+                    Overall talent score
+                </p>
+            {% else %}
+                <p class="text-muted mb-0">
+                    No talent score available yet.
+                </p>
+            {% endif %}
+
+        </div>
+    </div>
+
+
+    <!-- PROFILE ANALYTICS -->
+    <div class="row g-4 mb-4">
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+
+                    <h6 class="text-muted">
+                        Profile Views
+                    </h6>
+
+                    <h3 class="fw-bold">
+                        {{ analytics.profile_views }}
+                    </h3>
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+
+                    <h6 class="text-muted">
+                        Organizations Interested
+                    </h6>
+
+                    <h3 class="fw-bold">
+                        {{ analytics.unique_organizations }}
+                    </h3>
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+
+                    <h6 class="text-muted">
+                        Views Last 30 Days
+                    </h6>
+
+                    <h3 class="fw-bold">
+                        {{ analytics.recent_profile_views }}
+                    </h3>
+
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+
+                    <h6 class="text-muted">
+                        Visibility
+                    </h6>
+
+                    <h3 class="fw-bold">
+                        {{ analytics.profile_visibility }}%
+                    </h3>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- APPLICATION ANALYTICS -->
+    <div class="card shadow-sm border-0 mb-4">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-4">
+                Application Analytics
+            </h5>
+
+            <div class="row g-4">
+
+                <div class="col-md-3">
+                    <h6 class="text-muted">
+                        Total Applications
+                    </h6>
+
+                    <h3>
+                        {{ analytics.total_applications }}
+                    </h3>
+                </div>
+
+
+                <div class="col-md-3">
+                    <h6 class="text-muted">
+                        Accepted
+                    </h6>
+
+                    <h3>
+                        {{ analytics.accepted_applications }}
+                    </h3>
+                </div>
+
+
+                <div class="col-md-3">
+                    <h6 class="text-muted">
+                        Reviewing
+                    </h6>
+
+                    <h3>
+                        {{ analytics.reviewing_applications }}
+                    </h3>
+                </div>
+
+
+                <div class="col-md-3">
+                    <h6 class="text-muted">
+                        Pending
+                    </h6>
+
+                    <h3>
+                        {{ analytics.pending_applications }}
+                    </h3>
+                </div>
+
+            </div>
+
+            <hr>
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <h6 class="text-muted">
+                        Success Rate
+                    </h6>
+
+                    <h3>
+                        {{ analytics.success_rate }}%
+                    </h3>
+
+                </div>
+
+
+                <div class="col-md-6">
+
+                    <h6 class="text-muted">
+                        Response Rate
+                    </h6>
+
+                    <h3>
+                        {{ analytics.response_rate }}%
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- RECOMMENDATION ANALYTICS -->
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-4">
+                AI Recommendation Analytics
+            </h5>
+
+            <div class="row g-4">
+
+                <div class="col-md-3">
+
+                    <h6 class="text-muted">
+                        Recommendations
+                    </h6>
+
+                    <h3>
+                        {{ analytics.total_recommendations }}
+                    </h3>
+
+                </div>
+
+
+                <div class="col-md-3">
+
+                    <h6 class="text-muted">
+                        Average Match
+                    </h6>
+
+                    <h3>
+                        {{ analytics.average_recommendation_score }}
+                    </h3>
+
+                </div>
+
+
+                <div class="col-md-3">
+
+                    <h6 class="text-muted">
+                        Strong Matches
+                    </h6>
+
+                    <h3>
+                        {{ analytics.strong_matches }}
+                    </h3>
+
+                </div>
+
+
+                <div class="col-md-3">
+
+                    <h6 class="text-muted">
+                        Excellent Matches
+                    </h6>
+
+                    <h3>
+                        {{ analytics.excellent_matches }}
+                    </h3>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {% else %}
+
+    <!-- NO PROFILE -->
+    <div class="alert alert-info">
+
+        You do not have a Talent Profile yet.
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

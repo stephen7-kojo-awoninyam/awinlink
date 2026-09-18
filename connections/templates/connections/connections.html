@@ -1,0 +1,863 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- ================================================= -->
+    <!-- HEADER -->
+    <!-- ================================================= -->
+
+    <div class="mb-4">
+
+        <h2>
+            🤝 My Connections & Groups
+        </h2>
+
+        <p class="text-muted">
+            Manage your professional connections, groups and requests.
+        </p>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- INCOMING REQUESTS -->
+    <!-- ================================================= -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+
+            <h5 class="mb-0">
+                📥 Connection Requests
+            </h5>
+
+        </div>
+
+
+        <div class="card-body">
+
+            {% for connection in incoming_requests %}
+
+                <div class="d-flex justify-content-between align-items-center border-bottom py-3">
+
+                    <div>
+
+                        <h6 class="mb-1">
+
+                            {{ connection.sender.get_full_name|default:connection.sender.username }}
+
+                        </h6>
+
+                        <small class="text-muted">
+
+                            Wants to connect with you.
+
+                        </small>
+
+                    </div>
+
+
+                    <div>
+
+                        <a
+                            href="{% url 'accept_connection_request' connection.id %}"
+                            class="btn btn-success btn-sm"
+                        >
+                            ✓ Accept
+                        </a>
+
+                        <a
+                            href="{% url 'reject_connection_request' connection.id %}"
+                            class="btn btn-outline-danger btn-sm"
+                        >
+                            ✕ Reject
+                        </a>
+
+                    </div>
+
+                </div>
+
+            {% empty %}
+
+                <p class="text-muted mb-0">
+                    No pending connection requests.
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- ACCEPTED CONNECTIONS -->
+    <!-- ================================================= -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+
+            <h5 class="mb-0">
+                🤝 Connected
+            </h5>
+
+        </div>
+
+
+        <div class="card-body">
+
+            <!-- =========================================== -->
+            <!-- CONNECTIONS I SENT -->
+            <!-- =========================================== -->
+                {% for connection in sent_accepted %}
+
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-3">
+
+                        <div>
+
+                            <h6 class="mb-1">
+
+                                {{ connection.receiver.get_full_name|default:connection.receiver.username }}
+
+                            </h6>
+
+                            <small class="text-success">
+
+                                ✓ Connected
+
+                            </small>
+
+                        </div>
+
+
+                        <div>
+
+                            {% if connection.receiver.talent_profile %}
+
+                                <a
+                                    href="{% url 'talent_profile' connection.receiver.talent_profile.id %}"
+                                    class="btn btn-outline-secondary btn-sm"
+                                >
+                                    👤 Profile
+                                </a>
+
+                            {% endif %}
+
+
+                            <a
+                                href="{% url 'messaging:start_conversation' connection.receiver.id %}"
+                                class="btn btn-primary btn-sm"
+                            >
+                                💬 Message
+                            </a>
+
+
+                            <a
+                                href="{% url 'remove_connection' connection.id %}"
+                                class="btn btn-outline-danger btn-sm"
+                            >
+                                Remove
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            
+
+
+            <!-- =========================================== -->
+            <!-- CONNECTIONS I RECEIVED -->
+            <!-- =========================================== -->
+
+            {% for connection in received_accepted %}
+
+                <div class="d-flex justify-content-between align-items-center border-bottom py-3">
+
+                    <div>
+
+                        <h6 class="mb-1">
+
+                            {{ connection.sender.get_full_name|default:connection.sender.username }}
+
+                        </h6>
+
+                        <small class="text-success">
+
+                            ✓ Connected
+
+                        </small>
+
+                    </div>
+
+
+                    <div>
+
+                        <a
+                            href="#"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            👤 Profile
+                        </a>
+
+                        <a
+                            href="{% url 'messaging:start_conversation' connection.sender.id %}"
+                            class="btn btn-primary btn-sm"
+                        >
+                            💬 Message
+                        </a>
+
+                        <a
+                            href="{% url 'remove_connection' connection.id %}"
+                            class="btn btn-outline-danger btn-sm"
+                        >
+                            Remove
+                        </a>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+
+            {% if not sent_accepted and not received_accepted %}
+
+                <p class="text-muted mb-0">
+                    You don't have any connections yet.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <!-- CREATE GROUP -->
+<div class="card shadow-sm mb-4">
+
+    <div class="card-body">
+
+        <h5 class="mb-3">
+            👥 Create Group
+        </h5>
+
+        <form method="POST" action="{% url 'create_group' %}">
+
+            {% csrf_token %}
+
+            <div class="mb-3">
+
+                <label class="form-label">
+                    Group Name
+                </label>
+
+                <input
+                    type="text"
+                    name="name"
+                    class="form-control"
+                    placeholder="Enter group name"
+                    required
+                >
+
+            </div>
+
+            <div class="mb-3">
+
+                <label class="form-label">
+                    Select Members
+                </label>
+
+                {% for connection in sent_accepted %}
+
+                    <div class="form-check mb-2">
+
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            name="user_ids"
+                            value="{{ connection.receiver.id }}"
+                            id="group-user-{{ connection.receiver.id }}"
+                        >
+
+                        <label
+                            class="form-check-label"
+                            for="group-user-{{ connection.receiver.id }}"
+                        >
+                            {{ connection.receiver.get_full_name|default:connection.receiver.username }}
+                        </label>
+
+                    </div>
+
+                {% endfor %}
+
+
+                {% for connection in received_accepted %}
+
+                    <div class="form-check mb-2">
+
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            name="user_ids"
+                            value="{{ connection.sender.id }}"
+                            id="group-user-{{ connection.sender.id }}"
+                        >
+
+                        <label
+                            class="form-check-label"
+                            for="group-user-{{ connection.sender.id }}"
+                        >
+                            {{ connection.sender.get_full_name|default:connection.sender.username }}
+                        </label>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                Create Group
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+<!-- ================================================= -->
+<!-- GROUPS -->
+<!-- ================================================= -->
+
+<div class="card shadow-sm mb-4">
+
+    <div class="card-header">
+
+        <h5 class="mb-0">
+            👥 My Groups
+        </h5>
+
+    </div>
+
+    <div class="card-body">
+
+        {% for group in groups %}
+
+            <div class="border-bottom py-3">
+
+                <!-- GROUP HEADER -->
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <h6 class="mb-1">
+                            {{ group.name|default:"Unnamed Group" }}
+                        </h6>
+
+                        <small class="text-muted">
+                            👥 {{ group.participants.count }}
+                            member{{ group.participants.count|pluralize }}
+                        </small>
+
+                    </div>
+
+                    <div>
+
+                        <a
+                            href="{% url 'messaging:conversation' group.id %}"
+                            class="btn btn-primary btn-sm"
+                        >
+                            💬 Open Chat
+                        </a>
+
+                    </div>
+
+                </div>
+
+
+                <!-- MEMBERS -->
+
+                <div class="mt-3">
+
+                    <small class="text-muted d-block mb-2">
+                        Members
+                    </small>
+
+                    <div class="d-flex flex-wrap gap-2">
+
+                        {% for participant in group.participants.all %}
+
+                            <span class="badge bg-light text-dark border">
+
+                                {% if participant.user.get_full_name %}
+
+                                    {{ participant.user.get_full_name }}
+
+                                {% else %}
+
+                                    {{ participant.user.username }}
+
+                                {% endif %}
+
+                            </span>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+
+                <!-- GROUP CREATOR CONTROLS -->
+
+                {% if group.created_by == request.user %}
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#manageGroup{{ group.id }}"
+                    >
+                        ⚙️ Manage Members
+                    </button>
+
+                    <div
+                        class="collapse mt-3"
+                        id="manageGroup{{ group.id }}"
+                    >
+
+                        <!-- CURRENT MEMBERS -->
+
+                        <div class="mb-3">
+
+                            <strong>
+                                Current Members
+                            </strong>
+
+                            {% for participant in group.participants.all %}
+
+                                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+
+                                    <span>
+                                        {{ participant.user.get_full_name|default:participant.user.username }}
+                                    </span>
+
+                                    {% if participant.user != group.created_by %}
+
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-danger btn-sm"
+                                            onclick="removeGroupMember({{ group.id }}, {{ participant.user.id }})"
+                                        >
+                                            Remove
+                                        </button>
+
+                                    {% else %}
+
+                                        <small class="text-muted">
+                                            Creator
+                                        </small>
+
+                                    {% endif %}
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+
+                        <!-- ADD MEMBER -->
+
+                        <div>
+
+                            <strong>
+                                Add Member
+                            </strong>
+
+                            <div class="input-group mt-2">
+
+                                <select
+                                    class="form-select"
+                                    id="addMember{{ group.id }}"
+                                >
+
+                                    <option value="">
+                                        Select a user
+                                    </option>
+
+                                    {% for user in available_users %}
+
+                                        <option value="{{ user.id }}">
+                                            {{ user.get_full_name|default:user.username }}
+                                        </option>
+
+                                    {% endfor %}
+
+                                </select>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    onclick="addGroupMember({{ group.id }})"
+                                >
+                                    Add
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+                
+
+            </div>
+
+        {% empty %}
+
+            <p class="text-muted mb-0">
+
+                You are not a member of any groups yet.
+
+            </p>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+
+    <!-- ================================================= -->
+    <!-- SENT REQUESTS -->
+    <!-- ================================================= -->
+
+    <div class="card shadow-sm">
+
+        <div class="card-header">
+
+            <h5 class="mb-0">
+                📤 Sent Requests
+            </h5>
+
+        </div>
+
+
+        <div class="card-body">
+
+            {% for connection in sent_requests %}
+
+                <div class="d-flex justify-content-between align-items-center border-bottom py-3">
+
+                    <div>
+
+                        <h6 class="mb-1">
+
+                            {{ connection.receiver.get_full_name|default:connection.receiver.username }}
+
+                        </h6>
+
+                        <small class="text-warning">
+
+                            🟡 Pending
+
+                        </small>
+
+                    </div>
+
+
+                    <div>
+
+                        <a
+                            href="{% url 'cancel_connection_request' connection.id %}"
+                            class="btn btn-outline-danger btn-sm"
+                        >
+                            Cancel
+                        </a>
+
+                    </div>
+
+                </div>
+
+            {% empty %}
+
+                <p class="text-muted mb-0">
+
+                    You haven't sent any pending requests.
+
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+</div>
+<script>
+
+
+function getCookie(name) {
+
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== "") {
+
+        const cookies = document.cookie.split(";");
+
+        for (let i = 0; i < cookies.length; i++) {
+
+            const cookie = cookies[i].trim();
+
+            if (
+                cookie.substring(
+                    0,
+                    name.length + 1
+                ) === (name + "=")
+            ) {
+
+                cookieValue = decodeURIComponent(
+                    cookie.substring(
+                        name.length + 1
+                    )
+                );
+
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+
+
+async function addGroupMember(groupId) {
+
+    const select = document.getElementById(
+        `addMember${groupId}`
+    );
+
+    const userId = select.value;
+
+    if (!userId) {
+        alert("Please select a user.");
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `/api/messaging/conversations/${groupId}/members/add/`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken")
+                },
+
+                body: JSON.stringify({
+                    user_id: userId
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            alert(
+                data.detail ||
+                "Unable to add member."
+            );
+
+            return;
+        }
+
+        location.reload();
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "An error occurred while adding the member."
+        );
+    }
+}
+
+
+async function removeGroupMember(
+    groupId,
+    userId
+) {
+
+    if (
+        !confirm(
+            "Remove this member from the group?"
+        )
+    ) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `/api/messaging/conversations/${groupId}/members/${userId}/remove/`,
+            {
+                method: "DELETE",
+
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken")
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            alert(
+                data.detail ||
+                "Unable to remove member."
+            );
+
+            return;
+        }
+
+        location.reload();
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "An error occurred while removing the member."
+        );
+    }
+}
+ 
+
+async function addGroupMember(groupId) {
+
+    const select = document.getElementById(
+        `addMember${groupId}`
+    );
+
+    const userId = select.value;
+
+    if (!userId) {
+        alert("Please select a user.");
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `/api/messaging/conversations/${groupId}/members/add/`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken")
+                },
+
+                body: JSON.stringify({
+                    user_id: userId
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            alert(
+                data.detail ||
+                "Unable to add member."
+            );
+
+            return;
+        }
+
+        location.reload();
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "An error occurred while adding the member."
+        );
+    }
+}
+
+
+async function removeGroupMember(
+    groupId,
+    userId
+) {
+
+    if (
+        !confirm(
+            "Remove this member from the group?"
+        )
+    ) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `/api/messaging/conversations/${groupId}/members/${userId}/remove/`,
+            {
+                method: "DELETE",
+
+                headers: {
+                    "X-CSRFToken": getCookie("csrftoken")
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+
+            alert(
+                data.detail ||
+                "Unable to remove member."
+            );
+
+            return;
+        }
+
+        location.reload();
+
+    } catch (error) {
+
+        console.error(error);
+
+        alert(
+            "An error occurred while removing the member."
+        );
+    }
+}
+
+</script>
+
+{% endblock %}

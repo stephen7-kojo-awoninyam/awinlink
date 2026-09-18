@@ -1,0 +1,1268 @@
+
+/* =========================================================
+   AWINLINK GLOBAL UI
+========================================================= */
+
+:root {
+    --awinlink-primary: #2563eb;
+    --awinlink-primary-dark: #1d4ed8;
+    --awinlink-bg: #f5f7fb;
+    --awinlink-card: #ffffff;
+    --awinlink-text: #172033;
+    --awinlink-muted: #6b7280;
+    --awinlink-border: #e5e7eb;
+    --awinlink-sidebar: #111827;
+    --awinlink-sidebar-hover: #1f2937;
+    --awinlink-danger: #dc2626;
+}
+
+
+/* =========================================================
+   GLOBAL
+========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--awinlink-bg);
+    color: var(--awinlink-text);
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        sans-serif;
+}
+
+a {
+    text-decoration: none;
+}
+
+img {
+    max-width: 100%;
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.awinlink-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+
+    width: 250px;
+    height: 100vh;
+
+    background: var(--awinlink-sidebar);
+    color: white;
+
+    display: flex;
+    flex-direction: column;
+
+    z-index: 1050;
+
+    overflow-y: auto;
+}
+
+
+/* BRAND */
+
+.sidebar-brand {
+    height: 75px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 0 24px;
+
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar-brand a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    color: white;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.brand-mark {
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 10px;
+
+    background: var(--awinlink-primary);
+
+    font-weight: 800;
+}
+
+
+/* USER */
+
+.sidebar-user {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 20px 18px;
+
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.user-avatar,
+.header-avatar {
+    width: 42px;
+    height: 42px;
+
+    border-radius: 50%;
+
+    background: #374151;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    flex-shrink: 0;
+}
+
+.user-avatar img,
+.header-avatar img {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+}
+
+.user-info {
+    min-width: 0;
+}
+
+.user-info strong {
+    display: block;
+
+    color: white;
+
+    font-size: 14px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-info small {
+    display: block;
+
+    color: #9ca3af;
+
+    margin-top: 3px;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   SIDEBAR NAVIGATION
+========================================================= */
+
+.sidebar-section {
+    padding: 18px 12px 4px;
+}
+
+.sidebar-label {
+    display: block;
+
+    padding: 0 12px 8px;
+
+    color: #6b7280;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    letter-spacing: 1.2px;
+}
+
+.sidebar-link {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    width: 100%;
+
+    padding: 11px 13px;
+
+    margin-bottom: 3px;
+
+    border-radius: 9px;
+
+    color: #d1d5db;
+
+    font-size: 14px;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.sidebar-link i {
+    width: 20px;
+
+    font-size: 17px;
+
+    text-align: center;
+}
+
+.sidebar-link:hover {
+    background: var(--awinlink-sidebar-hover);
+    color: white;
+
+    transform: translateX(2px);
+}
+
+.sidebar-link.active {
+    background: var(--awinlink-primary);
+    color: white;
+}
+
+
+/* BADGES */
+
+.sidebar-badge {
+    margin-left: auto;
+
+    min-width: 20px;
+    height: 20px;
+
+    padding: 0 6px;
+
+    border-radius: 20px;
+
+    background: var(--awinlink-danger);
+
+    color: white;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   SIDEBAR BOTTOM
+========================================================= */
+
+.sidebar-bottom {
+    margin-top: auto;
+
+    padding: 12px;
+
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.logout-link:hover {
+    background: rgba(220, 38, 38, 0.15);
+    color: #fca5a5;
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+.awinlink-main {
+    margin-left: 250px;
+
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.awinlink-header {
+    height: 75px;
+
+    background: white;
+
+    border-bottom: 1px solid var(--awinlink-border);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 30px;
+
+    position: sticky;
+    top: 0;
+
+    z-index: 900;
+}
+
+
+/* SEARCH */
+
+.header-search {
+    width: min(500px, 50%);
+    position: relative;
+}
+
+.header-search i {
+    position: absolute;
+
+    left: 15px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    color: var(--awinlink-muted);
+}
+
+.header-search input {
+    width: 100%;
+
+    height: 42px;
+
+    padding:
+        0 16px 0 43px;
+
+    border: 1px solid var(--awinlink-border);
+
+    border-radius: 10px;
+
+    background: #f9fafb;
+
+    outline: none;
+
+    font-size: 14px;
+
+    transition: 0.2s ease;
+}
+
+.header-search input:focus {
+    background: white;
+
+    border-color: var(--awinlink-primary);
+
+    box-shadow:
+        0 0 0 3px rgba(37,99,235,0.1);
+}
+
+
+/* HEADER ACTIONS */
+
+.header-actions {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+}
+
+.header-icon {
+    position: relative;
+
+    width: 40px;
+    height: 40px;
+
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: #4b5563;
+
+    transition: 0.2s ease;
+}
+
+.header-icon:hover {
+    background: #f3f4f6;
+
+    color: var(--awinlink-primary);
+}
+
+.header-icon i {
+    font-size: 19px;
+}
+
+.header-badge {
+    position: absolute;
+
+    top: 1px;
+    right: 1px;
+
+    min-width: 17px;
+    height: 17px;
+
+    padding: 0 4px;
+
+    border-radius: 20px;
+
+    background: var(--awinlink-danger);
+
+    color: white;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 9px;
+    font-weight: 700;
+}
+
+
+/* HEADER PROFILE */
+
+.header-profile {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding-left: 12px;
+
+    border-left: 1px solid var(--awinlink-border);
+}
+
+.header-profile-info strong {
+    display: block;
+
+    font-size: 13px;
+}
+
+.header-profile-info small {
+    display: block;
+
+    color: var(--awinlink-muted);
+
+    font-size: 11px;
+
+    margin-top: 2px;
+}
+
+
+/* =========================================================
+   CONTENT
+========================================================= */
+
+.awinlink-content {
+    width: 100%;
+
+    max-width: 1400px;
+
+    margin: 0 auto;
+
+    padding: 30px;
+}
+
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.awinlink-card {
+    background: white;
+
+    border: 1px solid var(--awinlink-border);
+
+    border-radius: 14px;
+
+    box-shadow:
+        0 2px 8px rgba(15,23,42,0.03);
+}
+
+.awinlink-card-header {
+    padding: 18px 20px;
+
+    border-bottom: 1px solid var(--awinlink-border);
+}
+
+.awinlink-card-body {
+    padding: 20px;
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.btn-awinlink {
+    background: var(--awinlink-primary);
+
+    border-color: var(--awinlink-primary);
+
+    color: white;
+
+    border-radius: 8px;
+
+    font-weight: 600;
+}
+
+.btn-awinlink:hover {
+    background: var(--awinlink-primary-dark);
+
+    border-color: var(--awinlink-primary-dark);
+
+    color: white;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.awinlink-footer {
+    margin-top: auto;
+
+    padding: 20px 30px;
+
+    border-top: 1px solid var(--awinlink-border);
+
+    background: white;
+
+    color: var(--awinlink-muted);
+
+    display: flex;
+    justify-content: space-between;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   MOBILE TOPBAR
+========================================================= */
+
+.mobile-topbar {
+    height: 60px;
+
+    background: var(--awinlink-sidebar);
+
+    color: white;
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 1100;
+
+    padding: 0 15px;
+}
+
+.mobile-brand {
+    color: white;
+
+    font-weight: 700;
+
+    font-size: 19px;
+}
+
+.mobile-menu-btn {
+    color: white;
+
+    font-size: 24px;
+
+    padding: 0;
+}
+
+.mobile-icon-link {
+    position: relative;
+
+    color: white;
+
+    font-size: 20px;
+}
+
+.notification-dot {
+    position: absolute;
+
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: var(--awinlink-danger);
+
+    top: 0;
+    right: -2px;
+}
+
+
+/* =========================================================
+   SIDEBAR OVERLAY
+========================================================= */
+
+.sidebar-overlay {
+    display: none;
+
+    position: fixed;
+
+    inset: 0;
+
+    background: rgba(0,0,0,0.45);
+
+    z-index: 1040;
+}
+
+
+/* =========================================================
+   ALERTS
+========================================================= */
+
+.alert {
+    border-radius: 10px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 991.98px) {
+
+    .awinlink-sidebar {
+        transform: translateX(-100%);
+
+        transition: transform 0.25s ease;
+    }
+
+    .awinlink-sidebar.show {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay.show {
+        display: block;
+    }
+
+    .awinlink-main {
+        margin-left: 0;
+    }
+
+    .awinlink-header {
+        display: none;
+    }
+
+    .awinlink-content {
+        padding: 20px 15px;
+    }
+
+    .awinlink-footer {
+        padding: 18px 15px;
+
+        flex-direction: column;
+
+        gap: 5px;
+    }
+
+}
+
+
+@media (max-width: 576px) {
+
+    .header-search {
+        width: 100%;
+    }
+
+    .sidebar-user {
+        padding: 16px;
+    }
+
+}
+
+/* =========================================================
+   AWINLINK AUTHENTICATION
+   REGISTER PAGE
+========================================================= */
+
+.auth-page {
+    min-height: 100vh;
+    margin: 0;
+    background: #f5f7fb;
+    color: #1f2937;
+}
+
+
+/* =========================================================
+   AUTH WRAPPER
+========================================================= */
+
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 35px 20px 25px;
+}
+
+
+/* =========================================================
+   BRAND
+========================================================= */
+
+.auth-brand {
+    margin-bottom: 25px;
+}
+
+.auth-brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #111827;
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.auth-brand-mark {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: #0d6efd;
+    color: white;
+
+    font-size: 1.35rem;
+    font-weight: 800;
+
+    box-shadow: 0 6px 18px rgba(13, 110, 253, 0.20);
+}
+
+.auth-brand-text {
+    letter-spacing: -0.4px;
+}
+
+
+/* =========================================================
+   AUTH MAIN
+========================================================= */
+
+.auth-main {
+    width: 100%;
+    max-width: 850px;
+}
+
+
+/* =========================================================
+   AUTH CARD
+========================================================= */
+
+.auth-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+
+    padding: 40px;
+
+    box-shadow:
+        0 15px 40px rgba(15, 23, 42, 0.07);
+}
+
+.register-card {
+    width: 100%;
+}
+
+
+/* =========================================================
+   AUTH HEADER
+========================================================= */
+
+.auth-card-header {
+    margin-bottom: 35px;
+}
+
+.auth-icon {
+    width: 58px;
+    height: 58px;
+
+    margin: 0 auto 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 16px;
+
+    background: #eef5ff;
+    color: #0d6efd;
+
+    font-size: 1.5rem;
+}
+
+.auth-card-header h1 {
+    margin-bottom: 10px;
+
+    font-size: 1.8rem;
+    font-weight: 700;
+
+    color: #111827;
+}
+
+.auth-card-header p {
+    max-width: 600px;
+    margin: 0 auto;
+
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   FORM SECTION
+========================================================= */
+
+.form-section {
+    padding: 25px 0;
+
+    border-top: 1px solid #eef0f3;
+}
+
+.form-section:first-of-type {
+    border-top: 0;
+}
+
+
+.section-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    margin-bottom: 20px;
+}
+
+.section-heading > i {
+    margin-top: 3px;
+
+    font-size: 1.15rem;
+    color: #0d6efd;
+}
+
+.section-heading h5 {
+    margin: 0 0 3px;
+
+    font-size: 1rem;
+    font-weight: 700;
+
+    color: #111827;
+}
+
+.section-heading p {
+    margin: 0;
+
+    font-size: 0.88rem;
+    color: #6b7280;
+}
+
+
+/* =========================================================
+   FORM LABELS
+========================================================= */
+
+.auth-card .form-label {
+    margin-bottom: 7px;
+
+    font-size: 0.88rem;
+    font-weight: 600;
+
+    color: #374151;
+}
+
+
+/* =========================================================
+   FORM INPUTS
+========================================================= */
+
+.auth-card .form-control,
+.auth-card .form-select {
+    min-height: 48px;
+
+    border: 1px solid #d9dee7;
+    border-radius: 10px;
+
+    padding: 11px 13px;
+
+    background: #ffffff;
+
+    font-size: 0.94rem;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.auth-card .form-control:focus,
+.auth-card .form-select:focus {
+    border-color: #0d6efd;
+
+    box-shadow:
+        0 0 0 3px rgba(13, 110, 253, 0.10);
+}
+
+
+/* =========================================================
+   INPUT GROUP
+========================================================= */
+
+.auth-card .input-group-text {
+    min-width: 45px;
+
+    justify-content: center;
+
+    background: #f8fafc;
+
+    border: 1px solid #d9dee7;
+    border-right: 0;
+
+    color: #6b7280;
+}
+
+.auth-card .input-group .form-control {
+    border-left: 0;
+}
+
+.auth-card .input-group:focus-within .input-group-text {
+    border-color: #0d6efd;
+    color: #0d6efd;
+}
+
+
+/* =========================================================
+   ROLE GRID
+========================================================= */
+
+.role-grid {
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 12px;
+}
+
+
+.role-option {
+    position: relative;
+
+    cursor: pointer;
+
+    margin: 0;
+}
+
+
+.role-option input {
+    position: absolute;
+
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+.role-content {
+    min-height: 125px;
+
+    padding: 18px 12px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+
+    border: 1px solid #dfe4ea;
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    transition:
+        transform 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.role-content i {
+    margin-bottom: 9px;
+
+    font-size: 1.55rem;
+
+    color: #6b7280;
+}
+
+
+.role-content strong {
+    display: block;
+
+    margin-bottom: 4px;
+
+    font-size: 0.9rem;
+
+    color: #1f2937;
+}
+
+
+.role-content small {
+    font-size: 0.73rem;
+
+    line-height: 1.35;
+
+    color: #6b7280;
+}
+
+
+.role-option:hover .role-content {
+    transform: translateY(-2px);
+
+    border-color: #9dbff5;
+
+    box-shadow:
+        0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+
+/* SELECTED ROLE */
+
+.role-option.selected .role-content {
+    border-color: #0d6efd;
+
+    background: #f3f8ff;
+
+    box-shadow:
+        0 0 0 2px rgba(13, 110, 253, 0.08);
+}
+
+
+.role-option.selected .role-content i {
+    color: #0d6efd;
+}
+
+
+.role-option.selected .role-content strong {
+    color: #0d6efd;
+}
+
+
+/* =========================================================
+   PASSWORD STRENGTH
+========================================================= */
+
+.password-strength {
+    height: 5px;
+
+    margin-top: 9px;
+
+    overflow: hidden;
+
+    border-radius: 20px;
+
+    background: #e9ecef;
+}
+
+.password-strength-bar {
+    height: 100%;
+
+    width: 0;
+
+    border-radius: inherit;
+
+    transition:
+        width 0.25s ease,
+        background-color 0.25s ease;
+}
+
+.password-strength-text {
+    display: block;
+
+    margin-top: 5px;
+
+    font-size: 0.75rem;
+
+    color: #6b7280;
+}
+
+
+/* =========================================================
+   PASSWORD TOGGLE
+========================================================= */
+
+.password-toggle {
+    cursor: pointer;
+
+    user-select: none;
+
+    background: #f8fafc;
+
+    color: #6b7280;
+
+    border: 1px solid #d9dee7;
+
+    border-left: 0;
+}
+
+.password-toggle:hover {
+    color: #0d6efd;
+}
+
+
+/* =========================================================
+   REGISTER BUTTON
+========================================================= */
+
+.register-button {
+    min-height: 50px;
+
+    margin-top: 10px;
+
+    border-radius: 10px;
+
+    font-weight: 600;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.register-button:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 8px 18px rgba(13, 110, 253, 0.18);
+}
+
+
+/* =========================================================
+   LOGIN SWITCH
+========================================================= */
+
+.auth-switch {
+    margin-top: 25px;
+
+    padding-top: 22px;
+
+    border-top: 1px solid #eef0f3;
+
+    text-align: center;
+
+    font-size: 0.9rem;
+
+    color: #6b7280;
+}
+
+.auth-switch a {
+    margin-left: 5px;
+
+    color: #0d6efd;
+
+    font-weight: 600;
+
+    text-decoration: none;
+}
+
+.auth-switch a:hover {
+    text-decoration: underline;
+}
+
+
+/* =========================================================
+   AUTH FOOTER
+========================================================= */
+
+.auth-footer {
+    width: 100%;
+    max-width: 850px;
+
+    display: flex;
+    justify-content: space-between;
+
+    margin-top: 25px;
+
+    padding: 0 5px;
+
+    font-size: 0.78rem;
+
+    color: #8a94a6;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+
+    .auth-wrapper {
+        padding: 25px 14px 20px;
+    }
+
+    .auth-card {
+        padding: 25px 20px;
+
+        border-radius: 16px;
+    }
+
+    .auth-card-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .role-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .auth-footer {
+        flex-direction: column;
+
+        gap: 5px;
+
+        text-align: center;
+    }
+
+}
+
+
+@media (max-width: 480px) {
+
+    .role-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .role-content {
+        min-height: 110px;
+
+        padding: 12px 7px;
+    }
+
+    .role-content small {
+        font-size: 0.68rem;
+    }
+
+}

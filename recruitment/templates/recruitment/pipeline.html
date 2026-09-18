@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- HEADER -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="fw-bold mb-1">
+                Recruitment Pipeline
+            </h2>
+
+            <p class="text-muted mb-0">
+                Track and manage your shortlisted talent through recruitment.
+            </p>
+        </div>
+
+    </div>
+
+
+    <!-- PIPELINE -->
+
+    <div class="row g-3">
+
+
+        <!-- SHORTLISTED -->
+
+        <div class="col-lg">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header bg-secondary text-white">
+                    <strong>Shortlisted</strong>
+                    <span class="badge bg-light text-dark float-end">
+                        {{ shortlisted|length }}
+                    </span>
+                </div>
+
+                <div class="card-body">
+
+                    {% for item in shortlisted %}
+
+                        <div class="card mb-3 shadow-sm">
+
+                            <div class="card-body">
+
+                                <h6 class="fw-bold">
+                                    {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+                                </h6>
+
+                                {% if item.opportunity %}
+
+                                    <p class="small text-muted mb-2">
+                                        {{ item.opportunity.title }}
+                                    </p>
+
+                                {% endif %}
+
+                                <a
+                                    href="{% url 'update_pipeline_stage' item.id 'INVITED' %}"
+                                    class="btn btn-primary btn-sm"
+                                >
+                                    Invite
+                                </a>
+
+                                <a
+                                    href="{% url 'update_pipeline_stage' item.id 'REJECTED' %}"
+                                    class="btn btn-outline-danger btn-sm"
+                                >
+                                    Reject
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    {% empty %}
+
+                        <p class="text-muted text-center">
+                            No shortlisted candidates.
+                        </p>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- INVITED -->
+
+        <div class="col-lg">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header bg-primary text-white">
+
+                    <strong>Invited</strong>
+
+                    <span class="badge bg-light text-dark float-end">
+                        {{ invited|length }}
+                    </span>
+
+                </div>
+
+                <div class="card-body">
+
+                    {% for item in invited %}
+
+                        <div class="card mb-3 shadow-sm">
+
+                            <div class="card-body">
+
+                                <h6 class="fw-bold">
+                                    {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+                                </h6>
+
+                                {% if item.opportunity %}
+
+                                    <p class="small text-muted">
+                                        {{ item.opportunity.title }}
+                                    </p>
+
+                                {% endif %}
+
+                                <a
+                                    href="{% url 'update_pipeline_stage' item.id 'INTERVIEW' %}"
+                                    class="btn btn-warning btn-sm"
+                                >
+                                    Move to Interview
+                                </a>
+
+                                <a
+                                    href="{% url 'update_pipeline_stage' item.id 'REJECTED' %}"
+                                    class="btn btn-outline-danger btn-sm"
+                                >
+                                    Reject
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    {% empty %}
+
+                        <p class="text-muted text-center">
+                            No invited candidates.
+                        </p>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- INTERVIEW -->
+
+        <div class="col-lg">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header bg-warning">
+
+                    <strong>Interview</strong>
+
+                    <span class="badge bg-dark float-end">
+                        {{ interview|length }}
+                    </span>
+
+                </div>
+
+                <div class="card-body">
+
+                    {% for item in interview %}
+
+                        <div class="card mb-3 shadow-sm">
+
+                            <div class="card-body">
+
+                                <h6 class="fw-bold">
+                                    {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+                                </h6>
+
+                                {% if item.opportunity %}
+
+                                    <p class="small text-muted">
+                                        {{ item.opportunity.title }}
+                                    </p>
+
+                                {% endif %}
+
+                                <a
+                                    href="{% url 'update_pipeline_stage' item.id 'SELECTED' %}"
+                                    class="btn btn-success btn-sm"
+                                >
+                                    Select
+                                </a>
+
+                                <a
+                                    href="{% url 'update_pipeline_stage' item.id 'REJECTED' %}"
+                                    class="btn btn-danger btn-sm"
+                                >
+                                    Reject
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    {% empty %}
+
+                        <p class="text-muted text-center">
+                            No candidates in interview.
+                        </p>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- SELECTED -->
+
+        <div class="col-lg">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header bg-success text-white">
+
+                    <strong>Selected</strong>
+
+                    <span class="badge bg-light text-dark float-end">
+                        {{ selected|length }}
+                    </span>
+
+                </div>
+
+                <div class="card-body">
+
+                    {% for item in selected %}
+
+                        <div class="card mb-3 shadow-sm">
+
+                            <div class="card-body">
+
+                                <h6 class="fw-bold">
+                                    {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+                                </h6>
+
+                                {% if item.opportunity %}
+
+                                    <p class="small text-muted">
+                                        {{ item.opportunity.title }}
+                                    </p>
+
+                                {% endif %}
+
+                                <span class="badge bg-success">
+                                    Selected
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    {% empty %}
+
+                        <p class="text-muted text-center">
+                            No selected candidates.
+                        </p>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- REJECTED -->
+
+        <div class="col-lg">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header bg-danger text-white">
+
+                    <strong>Rejected</strong>
+
+                    <span class="badge bg-light text-dark float-end">
+                        {{ rejected|length }}
+                    </span>
+
+                </div>
+
+                <div class="card-body">
+
+                    {% for item in rejected %}
+
+                        <div class="card mb-3 shadow-sm">
+
+                            <div class="card-body">
+
+                                <h6 class="fw-bold">
+                                    {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+                                </h6>
+
+                                {% if item.opportunity %}
+
+                                    <p class="small text-muted">
+                                        {{ item.opportunity.title }}
+                                    </p>
+
+                                {% endif %}
+
+                                <span class="badge bg-danger">
+                                    Rejected
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    {% empty %}
+
+                        <p class="text-muted text-center">
+                            No rejected candidates.
+                        </p>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

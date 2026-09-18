@@ -1,0 +1,543 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- ========================================= -->
+    <!-- HEADER -->
+    <!-- ========================================= -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2>🔎 Discover Talent</h2>
+
+            <p class="text-muted">
+                Find the right talent for your organization and opportunities.
+            </p>
+        </div>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- SEARCH FILTERS -->
+    <!-- ========================================= -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body">
+
+            <form method="GET">
+
+                <div class="row g-3">
+
+                    <!-- ROLE -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Role
+                        </label>
+
+                        <select
+                            name="role"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                All Roles
+                            </option>
+
+                            {% for value, label in role_choices %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if request.GET.role == value %}
+                                        selected
+                                    {% endif %}
+                                >
+
+                                    {{ label }}
+
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- SKILL -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Skill
+                        </label>
+
+                        <select
+                            name="skill"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                All Skills
+                            </option>
+
+                            {% for skill in skills %}
+
+                                <option
+                                    value="{{ skill.id }}"
+                                    {% if request.GET.skill == skill.id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+
+                                    {{ skill.name }}
+
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- DOMAIN -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Domain
+                        </label>
+
+                        <select
+                            name="domain"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                All Domains
+                            </option>
+
+                            {% for domain in domains %}
+
+                                <option
+                                    value="{{ domain.id }}"
+                                    {% if request.GET.domain == domain.id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+
+                                    {{ domain.name }}
+
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- COUNTRY -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Country
+                        </label>
+
+                        <input
+                            type="text"
+                            name="country"
+                            class="form-control"
+                            placeholder="e.g. Ghana"
+                            value="{{ request.GET.country }}"
+                        >
+
+                    </div>
+
+
+                    <!-- EXPERIENCE -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Experience
+                        </label>
+
+                        <select
+                            name="experience"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Any Experience
+                            </option>
+
+                            {% for value, label in experience_choices %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if request.GET.experience == value %}
+                                        selected
+                                    {% endif %}
+                                >
+
+                                    {{ label }}
+
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- AVAILABILITY -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Availability
+                        </label>
+
+                        <select
+                            name="availability"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Any Availability
+                            </option>
+
+                            {% for value, label in availability_choices %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if request.GET.availability == value %}
+                                        selected
+                                    {% endif %}
+                                >
+
+                                    {{ label }}
+
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- WORK TYPE -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Work Type
+                        </label>
+
+                        <select
+                            name="work_type"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Any Work Type
+                            </option>
+
+                            {% for value, label in work_type_choices %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if request.GET.work_type == value %}
+                                        selected
+                                    {% endif %}
+                                >
+
+                                    {{ label }}
+
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- VERIFIED -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Verification
+                        </label>
+
+                        <select
+                            name="verified"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                All Talents
+                            </option>
+
+                            <option
+                                value="true"
+                                {% if request.GET.verified == "true" %}
+                                    selected
+                                {% endif %}
+                            >
+
+                                Verified Only
+
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- BUTTONS -->
+
+                <div class="mt-4">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+
+                        🔎 Search Talent
+
+                    </button>
+
+                    <a
+                        href="{% url 'talent_search' %}"
+                        class="btn btn-outline-secondary"
+                    >
+
+                        Clear Filters
+
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- RESULTS -->
+    <!-- ========================================= -->
+
+    <div class="d-flex justify-content-between mb-3">
+
+        <h4>
+            Talent Results
+        </h4>
+
+        <span class="badge bg-primary align-self-center">
+
+            {{ talents|length }} Talents
+
+        </span>
+
+    </div>
+
+
+    <div class="row">
+
+        {% for talent in talents %}
+
+            <div class="col-md-4 mb-4">
+
+                <div class="card h-100 shadow-sm">
+
+                    <!-- PROFILE IMAGE -->
+
+                    <div class="text-center pt-4">
+
+                        {% if talent.profile_photo %}
+
+                            <img
+                                src="{{ talent.profile_photo.url }}"
+                                class="rounded-circle"
+                                width="110"
+                                height="110"
+                                style="object-fit:cover;"
+                            >
+
+                        {% else %}
+
+                            <div
+                                class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center"
+                                style="
+                                    width:110px;
+                                    height:110px;
+                                    font-size:40px;
+                                "
+                            >
+
+                                👤
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="card-body">
+
+                        <h5 class="text-center">
+
+                            {{ talent.user.get_full_name }}
+
+                        </h5>
+
+
+                        {% if talent.user.role %}
+
+                            <p class="text-center text-primary">
+
+                                {{ talent.user.get_role_display }}
+
+                            </p>
+
+                        {% endif %}
+
+
+                        {% if talent.verified %}
+
+                            <div class="text-center mb-2">
+
+                                <span class="badge bg-success">
+
+                                    ✓ Verified
+
+                                </span>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        {% if talent.headline %}
+
+                            <p>
+
+                                {{ talent.headline }}
+
+                            </p>
+
+                        {% endif %}
+
+
+                        {% if talent.country %}
+
+                            <p class="text-muted">
+
+                                📍
+
+                                {{ talent.city }}
+
+                                {% if talent.city %}, {% endif %}
+
+                                {{ talent.country }}
+
+                            </p>
+
+                        {% endif %}
+
+
+                        <!-- SKILLS -->
+
+                        <div class="mb-2">
+
+                            {% for skill in talent.skills.all|slice:":5" %}
+
+                                <span class="badge bg-light text-dark border">
+
+                                    {{ skill.name }}
+
+                                </span>
+
+                            {% endfor %}
+
+                        </div>
+
+
+                        <!-- EXPERIENCE -->
+
+                        <small class="text-muted">
+
+                            Experience:
+
+                            {{ talent.get_experience_level_display }}
+
+                        </small>
+
+                    </div>
+
+
+                    <!-- ACTIONS -->
+
+                    <div class="card-footer bg-white">
+
+                        <div class="d-grid gap-2">
+
+                            <a
+                                href="{% url 'talent_profile' talent.id %}"
+                                class="btn btn-primary btn-sm"
+                            >
+
+                                View Profile
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        {% empty %}
+
+            <div class="alert alert-info">
+
+                <h5>
+                    No talents found.
+                </h5>
+
+                <p class="mb-0">
+
+                    Try changing your search filters.
+
+                </p>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<div class="card p-4">
+
+
+<h2>
+
+Edit Organization Profile
+
+</h2>
+
+
+<form method="post"
+enctype="multipart/form-data">
+
+
+{% csrf_token %}
+
+
+{{ form.as_p }}
+
+
+<button class="btn btn-primary">
+
+Save Changes
+
+</button>
+
+
+<a href="{% url 'organization_dashboard' %}"
+class="btn btn-secondary">
+
+Cancel
+
+</a>
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

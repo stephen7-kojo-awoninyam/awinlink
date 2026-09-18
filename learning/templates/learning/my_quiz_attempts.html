@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="fw-bold mb-1">
+                My Quiz Attempts
+            </h2>
+
+            <p class="text-muted mb-0">
+                Review your quiz performance and previous attempts.
+            </p>
+        </div>
+
+        <a href="{% url 'my_learning' %}"
+           class="btn btn-outline-primary">
+            My Learning
+        </a>
+
+    </div>
+
+
+    {% if attempts %}
+
+        <div class="card shadow-sm border-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th>Quiz</th>
+
+                            <th>Course</th>
+
+                            <th>Score</th>
+
+                            <th>Percentage</th>
+
+                            <th>Result</th>
+
+                            <th>Date</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for attempt in attempts %}
+
+                        <tr>
+
+                            <td class="fw-semibold">
+                                {{ attempt.quiz.title }}
+                            </td>
+
+                            <td>
+                                {{ attempt.quiz.lesson.course.title }}
+                            </td>
+
+                            <td>
+                                {{ attempt.score }}
+                                /
+                                {{ attempt.total_questions }}
+                            </td>
+
+                            <td>
+                                {{ attempt.percentage }}%
+                            </td>
+
+                            <td>
+
+                                {% if attempt.passed %}
+
+                                    <span class="badge bg-success">
+                                        Passed
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-danger">
+                                        Failed
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+                                {{ attempt.attempted_at|date:"M d, Y H:i" }}
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    {% else %}
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <h5 class="fw-bold">
+                    No quiz attempts yet
+                </h5>
+
+                <p class="text-muted">
+                    Your quiz attempts will appear here after you complete a quiz.
+                </p>
+
+                <a href="{% url 'courses' %}"
+                   class="btn btn-primary">
+                    Browse Courses
+                </a>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

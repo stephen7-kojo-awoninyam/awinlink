@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<div class="container mt-5">
+
+
+<h2>
+My Certificates
+</h2>
+
+
+{% for certificate in certificates %}
+
+
+<div class="card shadow p-3 mb-3">
+
+
+<h4>
+
+{{certificate.certificate_title}}
+
+</h4>
+
+
+<p>
+
+Event:
+
+{{certificate.event.title}}
+
+</p>
+
+
+<p>
+
+Issued By:
+
+{{certificate.issued_by.name}}
+
+</p>
+
+
+<p>
+
+Certificate Code:
+
+{{certificate.certificate_code}}
+
+</p>
+
+
+<p>
+
+Issued:
+
+{{certificate.issued_at}}
+
+</p>
+
+
+</div>
+
+
+{% empty %}
+
+
+<div class="alert alert-info">
+
+No certificates earned yet.
+
+</div>
+
+
+{% endfor %}
+
+
+</div>
+
+
+{% endblock %}

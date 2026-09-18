@@ -1,0 +1,95 @@
+<li class="nav-item dropdown">
+
+
+<a class="nav-link dropdown-toggle"
+href="#"
+role="button"
+data-bs-toggle="dropdown">
+
+
+🔔
+
+{% if unread_notifications > 0 %}
+
+<span class="badge bg-danger">
+
+{{ unread_notifications }}
+
+</span>
+
+{% endif %}
+
+
+</a>
+
+
+
+<ul class="dropdown-menu">
+
+
+{% for notification in user_notifications %}
+
+
+<li>
+
+<a class="dropdown-item"
+href="{% url 'notification_detail' notification.id %}">
+
+
+{{ notification.message }}
+
+<br>
+
+<small>
+
+{{ notification.created_at|timesince }} ago
+
+</small>
+
+
+</a>
+
+
+</li>
+
+
+{% empty %}
+
+
+<li>
+
+<a class="dropdown-item">
+
+No notifications
+
+</a>
+
+</li>
+
+
+{% endfor %}
+
+
+<li>
+
+<hr class="dropdown-divider">
+
+</li>
+
+
+<li>
+
+<a class="dropdown-item"
+href="{% url 'notifications' %}">
+
+View all notifications
+
+</a>
+
+</li>
+
+
+</ul>
+
+
+</li>

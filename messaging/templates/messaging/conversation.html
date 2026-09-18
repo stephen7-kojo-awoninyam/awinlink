@@ -1,0 +1,2348 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+    .chat-wrapper {
+        max-width: 1000px;
+        margin: 40px auto;
+    }
+
+    .chat-card {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    /* =========================
+       CHAT HEADER
+       ========================= */
+
+    .chat-header {
+        min-height: 75px;
+    }
+
+    .chat-header h4 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .chat-header small {
+        opacity: 0.85;
+    }
+
+    .call-buttons button {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: none;
+        margin-left: 5px;
+    }
+
+    /* =========================
+       CHAT BODY
+       ========================= */
+
+    .chat-body {
+        height: 520px;
+        overflow-y: auto;
+        background: #f5f7fb;
+        padding: 25px;
+    }
+
+    .message-row {
+        display: flex;
+        margin-bottom: 18px;
+    }
+
+    .message-row.mine {
+        justify-content: flex-end;
+    }
+
+    .message-row.received {
+        justify-content: flex-start;
+    }
+
+    .message-bubble {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        position: relative;
+        word-wrap: break-word;
+    }
+
+    .mine .message-bubble {
+        background: #0d6efd;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .received .message-bubble {
+        background: white;
+        color: #212529;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .sender-name {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .message-time {
+        font-size: 11px;
+        opacity: 0.7;
+        display: block;
+        margin-top: 7px;
+    }
+
+    /* =========================
+       MEDIA
+       ========================= */
+
+    .message-image {
+        max-width: 300px;
+        width: 100%;
+        border-radius: 10px;
+    }
+
+    .message-video {
+        max-width: 300px;
+        width: 100%;
+        border-radius: 10px;
+    }
+
+    .message-audio {
+        width: 280px;
+        max-width: 100%;
+    }
+
+    /* =========================
+       COMPOSER
+       ========================= */
+
+    .composer {
+        background: white;
+        padding: 18px;
+    }
+
+    .message-input {
+        resize: none;
+        border-radius: 12px;
+    }
+
+    .composer-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .attachment-button,
+    .record-button {
+        border-radius: 10px;
+    }
+
+    .send-button {
+        margin-left: auto;
+        border-radius: 10px;
+        min-width: 100px;
+    }
+
+    /* =========================
+       ATTACHMENT PREVIEW
+       ========================= */
+
+    .attachment-preview {
+        display: none;
+        margin-top: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        font-size: 14px;
+    }
+
+    /* =========================
+       RECORDING
+       ========================= */
+
+    .recording-panel {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: #fff3cd;
+    }
+
+    .recording-dot {
+        width: 10px;
+        height: 10px;
+        background: red;
+        border-radius: 50%;
+        animation: recordingPulse 1s infinite;
+    }
+
+    @keyframes recordingPulse {
+
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.3;
+        }
+
+        100% {
+            opacity: 1;
+        }
+
+    }
+
+    /* =========================
+       MOBILE
+       ========================= */
+
+    @media (max-width: 768px) {
+
+        .chat-wrapper {
+            margin: 10px;
+        }
+
+        .chat-body {
+            height: 60vh;
+            padding: 15px;
+        }
+
+        .message-bubble {
+            max-width: 85%;
+        }
+
+        .call-buttons button {
+            width: 36px;
+            height: 36px;
+        }
+
+        .send-button {
+            margin-left: 0;
+        }
+
+    }
+
+.webrtc-call-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.webrtc-call-window {
+    width: 90%;
+    max-width: 900px;
+    background: #111;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.webrtc-call-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    color: white;
+}
+
+.webrtc-videos {
+    position: relative;
+    width: 100%;
+    min-height: 500px;
+    background: #000;
+}
+
+#remoteVideo {
+    width: 100%;
+    height: 500px;
+    object-fit: cover;
+    background: #000;
+}
+
+#localVideo {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    width: 180px;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid white;
+    background: #222;
+}
+
+.webrtc-call-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.webrtc-call-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.webrtc-call-participants {
+    font-size: 14px;
+    color: #777;
+    margin-top: 3px;
+}
+
+.webrtc-call-status {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 500;
+    margin-top: 20px;
+}
+
+.webrtc-call-timer {
+    text-align: center;
+    font-size: 14px;
+    color: #777;
+    margin-top: 5px;
+}
+
+.voice-call-placeholder {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.voice-call-icon {
+    font-size: 70px;
+    margin-bottom: 20px;
+}
+
+.voice-call-name {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.voice-call-description {
+    margin-top: 8px;
+    color: #777;
+}
+
+.webrtc-local-video {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    width: 180px;
+    height: 130px;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.webrtc-local-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+</style>
+
+
+<div class="container chat-wrapper">
+
+    <div class="card shadow chat-card">
+
+
+        <!-- =====================================================
+             CHAT HEADER
+        ====================================================== -->
+
+        <div class="card-header bg-primary text-white chat-header">
+
+            <div class="d-flex align-items-center justify-content-between">
+
+                <div>
+
+                <h4>
+                    {% if conversation.is_group %}
+                        👥 {{ conversation_display_name }}
+                    {% else %}
+                        👤 {{ conversation_display_name }}
+                    {% endif %}
+                </h4>
+
+                {% if conversation.is_group %}
+                    <small>
+                        {{ conversation.participants.count }}
+                        member{{ conversation.participants.count|pluralize }}
+                    </small>
+                {% endif %}
+
+                    {% if conversation.opportunity %}
+
+                        <small>
+                            Regarding:
+                            {{ conversation.opportunity.title }}
+                        </small>
+
+                    {% endif %}
+
+                </div>
+
+
+                <!-- CALL BUTTONS -->
+
+                <div class="call-buttons">
+
+                    <!-- VOICE CALL -->
+
+                    <button
+                        type="button"
+                        class="btn btn-light"
+                        title="Voice call"
+                        onclick="startConversationVoiceCall()"
+                    >
+                        📞
+                    </button>
+
+
+                    <!-- VIDEO CALL -->
+
+                    <button
+                        type="button"
+                        class="btn btn-light"
+                        title="Video call"
+                        onclick="startConversationVideoCall()"                    >
+                        📹
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             CHAT BODY
+        ====================================================== -->
+
+        <div
+            id="chatBody"
+            class="chat-body"
+        >
+
+            {% for message in messages %}
+
+
+                {% if message.sender == request.user %}
+
+                    <!-- =================================================
+                         MY MESSAGE
+                    ================================================== -->
+
+                    <div class="message-row mine">
+
+                        <div class="message-bubble">
+
+                            <div class="sender-name">
+                                You
+                            </div>
+
+
+                            <!-- TEXT -->
+
+                            {% if message.content %}
+
+                                <div class="mb-1">
+                                    {{ message.content }}
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- IMAGE -->
+
+                            {% if message.image %}
+
+                                <div class="mt-2">
+
+                                    <img
+                                        src="{{ message.image.url }}"
+                                        class="message-image"
+                                        alt="Image"
+                                    >
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- VIDEO -->
+
+                            {% if message.video %}
+
+                                <div class="mt-2">
+
+                                    <video
+                                        controls
+                                        class="message-video"
+                                    >
+
+                                        <source
+                                            src="{{ message.video.url }}"
+                                        >
+
+                                        Your browser does not support
+                                        video playback.
+
+                                    </video>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- AUDIO -->
+
+                            {% if message.audio %}
+
+                                <div class="mt-2">
+
+                                    <audio
+                                        controls
+                                        class="message-audio"
+                                    >
+
+                                        <source
+                                            src="{{ message.audio.url }}"
+                                        >
+
+                                        Your browser does not support
+                                        audio playback.
+
+                                    </audio>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- FILE -->
+
+                            {% if message.file %}
+
+                                <div class="mt-2">
+
+                                    <a
+                                        href="{{ message.file.url }}"
+                                        target="_blank"
+                                        class="btn btn-sm btn-light"
+                                    >
+                                        📎 Download File
+                                    </a>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <span class="message-time">
+
+                                {{ message.created_at }}
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                {% else %}
+
+
+                    <!-- =================================================
+                         RECEIVED MESSAGE
+                    ================================================== -->
+
+                    <div class="message-row received">
+
+                        <div class="message-bubble">
+
+                            <div class="sender-name">
+
+                                {{ message.sender.get_full_name|default:message.sender.username }}
+
+                            </div>
+
+
+                            <!-- TEXT -->
+
+                            {% if message.content %}
+
+                                <div class="mb-1">
+                                    {{ message.content }}
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- IMAGE -->
+
+                            {% if message.image %}
+
+                                <div class="mt-2">
+
+                                    <img
+                                        src="{{ message.image.url }}"
+                                        class="message-image"
+                                        alt="Image"
+                                    >
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- VIDEO -->
+
+                            {% if message.video %}
+
+                                <div class="mt-2">
+
+                                    <video
+                                        controls
+                                        class="message-video"
+                                    >
+
+                                        <source
+                                            src="{{ message.video.url }}"
+                                        >
+
+                                        Your browser does not support
+                                        video playback.
+
+                                    </video>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- AUDIO -->
+
+                            {% if message.audio %}
+
+                                <div class="mt-2">
+
+                                    <audio
+                                        controls
+                                        class="message-audio"
+                                    >
+
+                                        <source
+                                            src="{{ message.audio.url }}"
+                                        >
+
+                                        Your browser does not support
+                                        audio playback.
+
+                                    </audio>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- FILE -->
+
+                            {% if message.file %}
+
+                                <div class="mt-2">
+
+                                    <a
+                                        href="{{ message.file.url }}"
+                                        target="_blank"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+                                        📎 Download File
+                                    </a>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <span class="message-time text-muted">
+
+                                {{ message.created_at }}
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                {% endif %}
+
+
+            {% empty %}
+
+                <div
+                    class="text-center text-muted py-5"
+                    id="emptyConversation"
+                >
+
+                    <div class="fs-1">
+                        💬
+                    </div>
+
+                    <p>
+                        No messages yet.
+                    </p>
+
+                    <small>
+                        Start the conversation.
+                    </small>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- =====================================================
+             MESSAGE COMPOSER
+        ====================================================== -->
+
+        <div class="composer">
+
+            <form
+                id="messageForm"
+                method="POST"
+                enctype="multipart/form-data"
+                action="{% url 'messaging:send_message' conversation.id %}"
+            >
+
+                {% csrf_token %}
+
+
+                <!-- MESSAGE TYPE -->
+
+                <input
+                    type="hidden"
+                    name="message_type"
+                    id="messageType"
+                    value="TEXT"
+                >
+
+
+                <!-- TEXT -->
+
+                <textarea
+                    id="messageInput"
+                    name="content"
+                    class="form-control message-input"
+                    placeholder="Write a message..."
+                    rows="2"
+                ></textarea>
+
+
+                <!-- RECORDING PANEL -->
+
+                <div
+                    id="recordingPanel"
+                    class="recording-panel"
+                >
+
+                    <span class="recording-dot"></span>
+
+                    <strong>
+                        Recording
+                    </strong>
+
+                    <span id="recordingTimer">
+                        00:00
+                    </span>
+
+                    <button
+                        type="button"
+                        id="stopRecordingButton"
+                        class="btn btn-sm btn-danger ms-auto"
+                    >
+                        Stop
+                    </button>
+
+                    <button
+                        type="button"
+                        id="cancelRecordingButton"
+                        class="btn btn-sm btn-outline-secondary"
+                    >
+                        Cancel
+                    </button>
+
+                </div>
+
+
+                <!-- AUDIO PREVIEW -->
+
+                <div
+                    id="audioPreviewContainer"
+                    class="attachment-preview"
+                >
+
+                    <div class="d-flex align-items-center">
+
+                        <audio
+                            id="audioPreview"
+                            controls
+                            class="message-audio"
+                        ></audio>
+
+                        <button
+                            type="button"
+                            id="removeAudioButton"
+                            class="btn btn-sm btn-outline-danger ms-2"
+                        >
+                            Remove
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ATTACHMENT PREVIEW -->
+
+                <div
+                    id="attachmentPreview"
+                    class="attachment-preview"
+                ></div>
+
+
+                <!-- ACTIONS -->
+
+                <div class="composer-actions">
+
+
+                    <!-- IMAGE -->
+
+                    <label
+                        for="imageInput"
+                        class="btn btn-outline-secondary attachment-button"
+                        title="Attach image"
+                    >
+                        🖼️ Image
+                    </label>
+
+                    <input
+                        type="file"
+                        id="imageInput"
+                        name="image"
+                        accept="image/*"
+                        hidden
+                    >
+
+
+                    <!-- VIDEO -->
+
+                    <label
+                        for="videoInput"
+                        class="btn btn-outline-secondary attachment-button"
+                        title="Attach video"
+                    >
+                        🎬 Video
+                    </label>
+
+                    <input
+                        type="file"
+                        id="videoInput"
+                        name="video"
+                        accept="video/*"
+                        hidden
+                    >
+
+
+                    <!-- FILE -->
+
+                    <label
+                        for="fileInput"
+                        class="btn btn-outline-secondary attachment-button"
+                        title="Attach file"
+                    >
+                        📎 File
+                    </label>
+
+                    <input
+                        type="file"
+                        id="fileInput"
+                        name="file"
+                        hidden
+                    >
+
+
+                    <!-- VOICE RECORD -->
+
+                    <button
+                        type="button"
+                        id="recordButton"
+                        class="btn btn-outline-danger record-button"
+                        title="Record voice message"
+                    >
+                        🎙️ Voice
+                    </button>
+
+
+                    <!-- SEND -->
+
+                    <button
+                        type="submit"
+                        id="sendButton"
+                        class="btn btn-success send-button"
+                        disabled
+                    >
+                        Send
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const chatBody =
+        document.getElementById("chatBody");
+
+    const messageInput =
+        document.getElementById("messageInput");
+
+    const messageForm =
+        document.getElementById("messageForm");
+
+    const sendButton =
+        document.getElementById("sendButton");
+
+    const messageType =
+        document.getElementById("messageType");
+
+    const recordButton =
+        document.getElementById("recordButton");
+
+    const recordingPanel =
+        document.getElementById("recordingPanel");
+
+    const recordingTimer =
+        document.getElementById("recordingTimer");
+
+    const stopRecordingButton =
+        document.getElementById("stopRecordingButton");
+
+    const cancelRecordingButton =
+        document.getElementById("cancelRecordingButton");
+
+    const audioPreview =
+        document.getElementById("audioPreview");
+
+    const audioPreviewContainer =
+        document.getElementById("audioPreviewContainer");
+
+    const removeAudioButton =
+        document.getElementById("removeAudioButton");
+
+    const attachmentPreview =
+        document.getElementById("attachmentPreview");
+
+    const imageInput =
+        document.getElementById("imageInput");
+
+    const videoInput =
+        document.getElementById("videoInput");
+
+    const fileInput =
+        document.getElementById("fileInput");
+
+
+    /* =========================================================
+       RECORDING STATE
+    ========================================================= */
+
+    let mediaRecorder = null;
+
+    let recordingStream = null;
+
+    let audioChunks = [];
+
+    let audioBlob = null;
+
+    let recordingInterval = null;
+
+    let recordingSeconds = 0;
+
+    let isCancellingRecording = false;
+
+    let audioObjectURL = null;
+
+    function getCookie(name) {
+
+    let cookieValue = null;
+
+    if (document.cookie && document.cookie !== "") {
+
+        const cookies =
+            document.cookie.split(";");
+
+        for (let cookie of cookies) {
+
+            cookie = cookie.trim();
+
+            if (
+                cookie.substring(
+                    0,
+                    name.length + 1
+                ) ===
+                name + "="
+            ) {
+
+                cookieValue =
+                    decodeURIComponent(
+                        cookie.substring(
+                            name.length + 1
+                        )
+                    );
+
+                break;
+            }
+        }
+    }
+
+    return cookieValue;
+}
+
+
+    /* =========================================================
+       AUTO SCROLL
+    ========================================================= */
+
+    function scrollToBottom() {
+
+        if (chatBody) {
+            chatBody.scrollTop =
+                chatBody.scrollHeight;
+        }
+
+    }
+
+    scrollToBottom();
+
+
+    /* =========================================================
+       UPDATE SEND BUTTON
+    ========================================================= */
+
+    function updateSendButton() {
+
+        const hasText =
+            messageInput.value.trim().length > 0;
+
+        const hasImage =
+            imageInput.files.length > 0;
+
+        const hasVideo =
+            videoInput.files.length > 0;
+
+        const hasFile =
+            fileInput.files.length > 0;
+
+        const hasAudio =
+            audioBlob !== null &&
+            audioBlob.size > 0;
+
+
+        sendButton.disabled = !(
+            hasText ||
+            hasImage ||
+            hasVideo ||
+            hasFile ||
+            hasAudio
+        );
+
+    }
+
+
+    messageInput.addEventListener(
+        "input",
+        updateSendButton
+    );
+
+
+    /* =========================================================
+       ENTER TO SEND
+    ========================================================= */
+
+    messageInput.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+
+                event.preventDefault();
+
+                if (!sendButton.disabled) {
+
+                    messageForm.requestSubmit();
+
+                }
+
+            }
+
+        }
+    );
+
+
+    /* =========================================================
+       ATTACHMENT PREVIEW
+    ========================================================= */
+
+    function updateAttachmentPreview() {
+
+        const files = [];
+
+
+        if (imageInput.files.length) {
+
+            files.push(
+                "🖼️ " +
+                imageInput.files[0].name
+            );
+
+        }
+
+
+        if (videoInput.files.length) {
+
+            files.push(
+                "🎬 " +
+                videoInput.files[0].name
+            );
+
+        }
+
+
+        if (fileInput.files.length) {
+
+            files.push(
+                "📎 " +
+                fileInput.files[0].name
+            );
+
+        }
+
+
+        if (files.length) {
+
+            attachmentPreview.innerHTML =
+                files.join("<br>");
+
+            attachmentPreview.style.display =
+                "block";
+
+        } else {
+
+            attachmentPreview.innerHTML = "";
+
+            attachmentPreview.style.display =
+                "none";
+
+        }
+
+    }
+
+
+    [
+        imageInput,
+        videoInput,
+        fileInput
+    ].forEach(function (input) {
+
+        input.addEventListener(
+            "change",
+            function () {
+
+                updateAttachmentPreview();
+
+                updateSendButton();
+
+            }
+        );
+
+    });
+
+
+    /* =========================================================
+       CLEAR AUDIO OBJECT URL
+    ========================================================= */
+
+    function clearAudioObjectURL() {
+
+        if (audioObjectURL) {
+
+            URL.revokeObjectURL(
+                audioObjectURL
+            );
+
+            audioObjectURL = null;
+
+        }
+
+    }
+
+
+    /* =========================================================
+       RESET RECORDING UI
+    ========================================================= */
+
+    function resetRecordingUI() {
+
+        clearInterval(
+            recordingInterval
+        );
+
+        recordingInterval = null;
+
+        recordingSeconds = 0;
+
+        if (recordingTimer) {
+
+            recordingTimer.textContent =
+                "00:00";
+
+        }
+
+
+        if (recordingPanel) {
+
+            recordingPanel.style.display =
+                "none";
+
+        }
+
+
+        if (recordButton) {
+
+            recordButton.disabled =
+                false;
+
+        }
+
+
+        if (stopRecordingButton) {
+
+            stopRecordingButton.disabled =
+                true;
+
+        }
+
+    }
+
+
+    /* =========================================================
+       STOP MICROPHONE
+    ========================================================= */
+
+    function stopRecordingStream() {
+
+        if (recordingStream) {
+
+            recordingStream
+                .getTracks()
+                .forEach(function (track) {
+
+                    track.stop();
+
+                });
+
+            recordingStream = null;
+
+        }
+
+    }
+
+
+    /* =========================================================
+       CLEAR AUDIO PREVIEW
+    ========================================================= */
+
+    function clearAudioPreview() {
+
+        if (!audioPreview) {
+            return;
+        }
+
+
+        audioPreview.pause();
+
+        audioPreview.removeAttribute(
+            "src"
+        );
+
+        audioPreview.load();
+
+
+        clearAudioObjectURL();
+
+
+        if (audioPreviewContainer) {
+
+            audioPreviewContainer.style.display =
+                "none";
+
+        }
+
+    }
+
+
+    /* =========================================================
+       SHOW AUDIO PREVIEW
+    ========================================================= */
+
+    function showAudioPreview(blob) {
+
+        if (!audioPreview || !blob) {
+            return;
+        }
+
+
+        clearAudioObjectURL();
+
+
+        audioObjectURL =
+            URL.createObjectURL(blob);
+
+
+        console.log(
+            "Audio preview URL:",
+            audioObjectURL
+        );
+
+
+        audioPreview.src =
+            audioObjectURL;
+
+
+        audioPreview.controls =
+            true;
+
+
+        audioPreview.preload =
+            "metadata";
+
+
+        if (audioPreviewContainer) {
+
+            audioPreviewContainer.style.display =
+                "block";
+
+        }
+
+
+        /*
+         * Force browser to load the
+         * newly-created recording.
+         */
+
+        audioPreview.load();
+
+
+        audioPreview.onloadedmetadata =
+            function () {
+
+                console.log(
+                    "Audio loaded successfully."
+                );
+
+                console.log(
+                    "Audio duration:",
+                    audioPreview.duration
+                );
+
+            };
+
+
+        audioPreview.oncanplay =
+            function () {
+
+                console.log(
+                    "Audio is ready to play."
+                );
+
+            };
+
+
+        audioPreview.onerror =
+            function () {
+
+                console.error(
+                    "Audio playback error:",
+                    audioPreview.error
+                );
+
+            };
+
+    }
+
+
+    /* =========================================================
+    RECORD AUDIO
+    ========================================================= */
+
+    recordButton.addEventListener(
+        "click",
+        async function () {
+
+            try {
+
+                console.log("Requesting microphone...");
+
+                recordingStream =
+                    await navigator.mediaDevices.getUserMedia({
+                        audio: true
+                    });
+
+                console.log("Microphone access granted.");
+
+
+                /*
+                * Clear previous recording.
+                */
+
+                audioChunks = [];
+
+                audioBlob = null;
+
+                clearAudioPreview();
+
+
+                /*
+                * Select a browser-supported format.
+                */
+
+                let mimeType = "";
+
+                if (
+                    MediaRecorder.isTypeSupported(
+                        "audio/webm;codecs=opus"
+                    )
+                ) {
+
+                    mimeType =
+                        "audio/webm;codecs=opus";
+
+                }
+                else if (
+                    MediaRecorder.isTypeSupported(
+                        "audio/webm"
+                    )
+                ) {
+
+                    mimeType =
+                        "audio/webm";
+
+                }
+                else if (
+                    MediaRecorder.isTypeSupported(
+                        "audio/ogg;codecs=opus"
+                    )
+                ) {
+
+                    mimeType =
+                        "audio/ogg;codecs=opus";
+
+                }
+
+
+                console.log(
+                    "Selected MIME type:",
+                    mimeType
+                );
+
+
+                /*
+                * Create MediaRecorder.
+                */
+
+                if (mimeType) {
+
+                    mediaRecorder =
+                        new MediaRecorder(
+                            recordingStream,
+                            {
+                                mimeType: mimeType
+                            }
+                        );
+
+                } else {
+
+                    mediaRecorder =
+                        new MediaRecorder(
+                            recordingStream
+                        );
+
+                }
+
+
+                console.log(
+                    "Actual recorder MIME type:",
+                    mediaRecorder.mimeType
+                );
+
+
+                /* =====================================================
+                DATA AVAILABLE
+                ===================================================== */
+
+                mediaRecorder.ondataavailable =
+                    function (event) {
+
+                        console.log(
+                            "dataavailable:",
+                            event.data.size,
+                            event.data.type
+                        );
+
+
+                        if (
+                            event.data &&
+                            event.data.size > 0
+                        ) {
+
+                            audioChunks.push(
+                                event.data
+                            );
+
+                            console.log(
+                                "Audio chunk added. Total chunks:",
+                                audioChunks.length
+                            );
+
+                        }
+
+                    };
+
+
+                /* =====================================================
+                RECORDING ERROR
+                ===================================================== */
+
+                mediaRecorder.onerror =
+                    function (event) {
+
+                        console.error(
+                            "MediaRecorder error:",
+                            event.error
+                        );
+
+                        stopRecordingStream();
+
+                        resetRecordingUI();
+
+                        alert(
+                            "There was an error recording the audio."
+                        );
+
+                    };
+
+
+                /* =====================================================
+                RECORDING STOP
+                ===================================================== */
+
+                mediaRecorder.onstop =
+                    function () {
+
+                        console.log(
+                            "MediaRecorder stopped."
+                        );
+
+
+                        /*
+                        * Stop microphone.
+                        */
+
+                        stopRecordingStream();
+
+
+                        /*
+                        * Handle cancellation.
+                        */
+
+                        if (isCancellingRecording) {
+
+                            console.log(
+                                "Recording cancelled."
+                            );
+
+                            audioChunks = [];
+
+                            audioBlob = null;
+
+                            isCancellingRecording =
+                                false;
+
+                            resetRecordingUI();
+
+                            mediaRecorder = null;
+
+                            updateSendButton();
+
+                            return;
+
+                        }
+
+
+                        /*
+                        * Check whether chunks exist.
+                        */
+
+                        console.log(
+                            "Number of audio chunks:",
+                            audioChunks.length
+                        );
+
+
+                        if (
+                            audioChunks.length === 0
+                        ) {
+
+                            console.error(
+                                "NOTHING WAS RECORDED."
+                            );
+
+                            audioBlob = null;
+
+                            resetRecordingUI();
+
+                            mediaRecorder = null;
+
+                            alert(
+                                "Nothing was recorded. Please try again."
+                            );
+
+                            return;
+
+                        }
+
+
+                        /*
+                        * Determine MIME type.
+                        */
+
+                        const finalMimeType =
+                            mediaRecorder.mimeType ||
+                            audioChunks[0].type ||
+                            "audio/webm";
+
+
+                        console.log(
+                            "Final MIME type:",
+                            finalMimeType
+                        );
+
+
+                        /*
+                        * Create Blob.
+                        */
+
+                        audioBlob =
+                            new Blob(
+                                audioChunks,
+                                {
+                                    type: finalMimeType
+                                }
+                            );
+
+
+                        console.log(
+                            "Final audio size:",
+                            audioBlob.size
+                        );
+
+
+                        /*
+                        * Make sure Blob is valid.
+                        */
+
+                        if (
+                            !audioBlob ||
+                            audioBlob.size === 0
+                        ) {
+
+                            console.error(
+                                "Audio Blob is empty."
+                            );
+
+                            audioBlob = null;
+
+                            resetRecordingUI();
+
+                            mediaRecorder = null;
+
+                            alert(
+                                "The audio recording is empty. Please try again."
+                            );
+
+                            return;
+
+                        }
+
+
+                        /*
+                        * Create local playback.
+                        */
+
+                        showAudioPreview(
+                            audioBlob
+                        );
+
+
+                        /*
+                        * Set message type.
+                        */
+
+                        messageType.value =
+                            "AUDIO";
+
+
+                        /*
+                        * Clear chunks only AFTER
+                        * creating the Blob.
+                        */
+
+                        audioChunks = [];
+
+
+                        /*
+                        * Reset recording controls.
+                        */
+
+                        resetRecordingUI();
+
+
+                        mediaRecorder = null;
+
+
+                        /*
+                        * Enable Send.
+                        */
+
+                        updateSendButton();
+
+
+                        console.log(
+                            "Recording successfully created."
+                        );
+
+                    };
+
+
+                /* =====================================================
+                START RECORDING
+                ===================================================== */
+
+                mediaRecorder.start();
+
+
+                console.log(
+                    "Recording started."
+                );
+
+
+                recordingSeconds = 0;
+
+                recordingTimer.textContent =
+                    "00:00";
+
+
+                recordingPanel.style.display =
+                    "flex";
+
+
+                recordButton.disabled =
+                    true;
+
+
+                stopRecordingButton.disabled =
+                    false;
+
+
+                cancelRecordingButton.disabled =
+                    false;
+
+
+                /*
+                * Start timer.
+                */
+
+                clearInterval(
+                    recordingInterval
+                );
+
+
+                recordingInterval =
+                    setInterval(
+                        function () {
+
+                            recordingSeconds++;
+
+
+                            const minutes =
+                                Math.floor(
+                                    recordingSeconds / 60
+                                );
+
+
+                            const seconds =
+                                recordingSeconds % 60;
+
+
+                            recordingTimer.textContent =
+                                String(minutes)
+                                    .padStart(2, "0")
+                                +
+                                ":"
+                                +
+                                String(seconds)
+                                    .padStart(2, "0");
+
+
+                        },
+                        1000
+                    );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Microphone error:",
+                    error
+                );
+
+
+                stopRecordingStream();
+
+                resetRecordingUI();
+
+
+                alert(
+                    "Microphone access was not granted. " +
+                    "Please allow microphone access and try again."
+                );
+
+            }
+
+        }
+    );
+
+
+    /* =========================================================
+    STOP RECORDING
+    ========================================================= */
+
+    stopRecordingButton.addEventListener(
+        "click",
+        function () {
+
+            console.log(
+                "STOP button clicked."
+            );
+
+
+            if (
+                !mediaRecorder
+            ) {
+
+                console.warn(
+                    "No active MediaRecorder."
+                );
+
+                return;
+
+            }
+
+
+            console.log(
+                "Recorder state:",
+                mediaRecorder.state
+            );
+
+
+            if (
+                mediaRecorder.state === "recording"
+            ) {
+
+                isCancellingRecording =
+                    false;
+
+
+                /*
+                * Do NOT call requestData().
+                *
+                * MediaRecorder.stop() automatically
+                * fires the final dataavailable event
+                * before onstop.
+                */
+
+                mediaRecorder.stop();
+
+
+                console.log(
+                    "mediaRecorder.stop() called."
+                );
+
+            }
+
+
+            clearInterval(
+                recordingInterval
+            );
+
+            recordingInterval = null;
+
+        }
+    );
+
+
+
+
+    /* =========================================================
+       CANCEL RECORDING
+    ========================================================= */
+
+    cancelRecordingButton.addEventListener(
+        "click",
+        function () {
+
+            console.log(
+                "Cancel recording clicked."
+            );
+
+
+            isCancellingRecording =
+                true;
+
+
+            clearInterval(
+                recordingInterval
+            );
+
+            recordingInterval = null;
+
+
+            /*
+            * If recorder is active, stop it.
+            * onstop will detect cancellation.
+            */
+
+            if (
+                mediaRecorder &&
+                mediaRecorder.state !== "inactive"
+            ) {
+
+                mediaRecorder.stop();
+
+            } else {
+
+                stopRecordingStream();
+
+                audioChunks = [];
+
+                audioBlob = null;
+
+                isCancellingRecording = false;
+
+            }
+
+
+            /*
+            * Remove preview.
+            */
+
+            clearAudioPreview();
+
+
+            /*
+            * Reset message type.
+            */
+
+            messageType.value =
+                "TEXT";
+
+
+            /*
+            * Reset UI.
+            */
+
+            recordingPanel.style.display =
+                "none";
+
+            recordButton.disabled =
+                false;
+
+            stopRecordingButton.disabled =
+                true;
+
+
+            updateSendButton();
+
+        }
+    );
+
+
+    /* =========================================================
+       REMOVE AUDIO
+    ========================================================= */
+
+    removeAudioButton.addEventListener(
+        "click",
+        function () {
+
+            console.log(
+                "Removing recorded audio."
+            );
+
+
+            audioBlob = null;
+
+            audioChunks = [];
+
+
+            clearAudioPreview();
+
+
+            messageType.value =
+                "TEXT";
+
+
+            updateSendButton();
+
+        }
+    );
+
+
+    /* =========================================================
+       FORM SUBMISSION
+    ========================================================= */
+
+    messageForm.addEventListener(
+        "submit",
+        async function (event) {
+
+            /*
+             * =====================================================
+             * AUDIO MESSAGE
+             * =====================================================
+             */
+
+            if (
+                audioBlob &&
+                audioBlob.size > 0
+            ) {
+
+                event.preventDefault();
+
+
+                console.log(
+                    "Preparing audio message..."
+                );
+
+
+                /*
+                 * Build multipart FormData.
+                 */
+
+                const formData =
+                    new FormData(
+                        messageForm
+                    );
+
+
+                /*
+                 * Force AUDIO type.
+                 */
+
+                formData.set(
+                    "message_type",
+                    "AUDIO"
+                );
+
+
+                /*
+                 * Determine file extension.
+                 */
+
+                let extension =
+                    "webm";
+
+
+                if (
+                    audioBlob.type.includes(
+                        "ogg"
+                    )
+                ) {
+
+                    extension =
+                        "ogg";
+
+                }
+                else if (
+                    audioBlob.type.includes(
+                        "mp4"
+                    )
+                ) {
+
+                    extension =
+                        "mp4";
+
+                }
+
+
+                console.log(
+                    "Uploading audio as:",
+                    "voice_message." +
+                    extension
+                );
+
+
+                /*
+                 * Add audio file.
+                 */
+
+                formData.set(
+                    "audio",
+                    audioBlob,
+                    "voice_message." +
+                    extension
+                );
+
+
+                /*
+                 * Disable Send button.
+                 */
+
+                sendButton.disabled =
+                    true;
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            messageForm.action,
+                            {
+                                method: "POST",
+
+                                body: formData,
+
+                                credentials:
+                                    "same-origin",
+
+                                headers: {
+                                    "X-Requested-With":
+                                        "XMLHttpRequest"
+                                }
+                            }
+                        );
+
+
+                    /*
+                     * Django redirects after
+                     * successful submission.
+                     */
+
+                    if (response.ok) {
+
+                        console.log(
+                            "Audio message sent successfully."
+                        );
+
+
+                        window.location.href =
+                            response.url;
+
+                        return;
+
+                    }
+
+
+                    /*
+                     * Server error.
+                     */
+
+                    const text =
+                        await response.text();
+
+
+                    console.error(
+                        "Voice message upload failed:",
+                        response.status,
+                        text
+                    );
+
+
+                    alert(
+                        "Unable to send voice message."
+                    );
+
+
+                    sendButton.disabled =
+                        false;
+
+                } catch (error) {
+
+                    console.error(
+                        "Voice message upload error:",
+                        error
+                    );
+
+
+                    alert(
+                        "An error occurred while sending the voice message."
+                    );
+
+
+                    sendButton.disabled =
+                        false;
+
+                }
+
+
+                return;
+
+            }
+
+
+            /* =====================================================
+               NORMAL TEXT / ATTACHMENT MESSAGE
+            ===================================================== */
+
+            const hasText =
+                messageInput.value.trim() !== "";
+
+
+            const hasImage =
+                imageInput.files.length > 0;
+
+
+            const hasVideo =
+                videoInput.files.length > 0;
+
+
+            const hasFile =
+                fileInput.files.length > 0;
+
+
+            /*
+             * Prevent empty message.
+             */
+
+            if (
+                !hasText &&
+                !hasImage &&
+                !hasVideo &&
+                !hasFile
+            ) {
+
+                event.preventDefault();
+
+                return;
+
+            }
+
+
+            /*
+             * Determine message type.
+             */
+
+            if (hasImage) {
+
+                messageType.value =
+                    "IMAGE";
+
+            }
+            else if (hasVideo) {
+
+                messageType.value =
+                    "VIDEO";
+
+            }
+            else if (hasFile) {
+
+                messageType.value =
+                    "FILE";
+
+            }
+            else {
+
+                messageType.value =
+                    "TEXT";
+
+            }
+
+        }
+    );
+
+
+/* =========================================================
+   CLOSE DOMCONTENTLOADED
+========================================================= */
+
+});
+
+</script>
+
+<script>
+    const awinlinkConversationId =
+        Number("{{ conversation.id }}");
+
+    window.startConversationVoiceCall =
+        function () {
+            startVoiceCall(
+                awinlinkConversationId
+            );
+        };
+
+    window.startConversationVideoCall =
+        function () {
+            startVideoCall(
+                awinlinkConversationId
+            );
+        };
+</script>
+
+{% endblock %}

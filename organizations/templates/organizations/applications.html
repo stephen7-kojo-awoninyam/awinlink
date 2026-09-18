@@ -1,0 +1,392 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- ========================================= -->
+    <!-- PAGE HEADER -->
+    <!-- ========================================= -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2>
+                📩 Applications Received
+            </h2>
+
+            <p class="text-muted mb-0">
+                Review talents who have applied to your opportunities.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- APPLICATIONS -->
+    <!-- ========================================= -->
+
+    {% for application in applications %}
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body">
+
+                <div class="row">
+
+
+                    <!-- ================================= -->
+                    <!-- TALENT INFORMATION -->
+                    <!-- ================================= -->
+
+                    <div class="col-md-8">
+
+                        <h4>
+
+                            {{ application.talent.user.get_full_name }}
+
+                            {% if application.talent.verified %}
+
+                                <span class="badge bg-success">
+                                    ✓ Verified
+                                </span>
+
+                            {% endif %}
+
+                        </h4>
+
+
+                        {% if application.talent.headline %}
+
+                            <p class="text-muted">
+
+                                {{ application.talent.headline }}
+
+                            </p>
+
+                        {% endif %}
+
+
+                        <p>
+
+                            <strong>
+                                Opportunity:
+                            </strong>
+
+                            {{ application.opportunity.title }}
+
+                        </p>
+
+
+                        <p>
+
+                            <strong>
+                                Applied:
+                            </strong>
+
+                            {{ application.created_at|date:"M d, Y" }}
+
+                        </p>
+
+
+                        <!-- =============================== -->
+                        <!-- SKILLS -->
+                        <!-- =============================== -->
+
+                        {% if application.talent.skills.all %}
+
+                            <p class="mb-2">
+
+                                <strong>
+                                    Skills:
+                                </strong>
+
+                            </p>
+
+                            {% for skill in application.talent.skills.all %}
+
+                                <span class="badge bg-primary me-1">
+
+                                    {{ skill.name }}
+
+                                </span>
+
+                            {% endfor %}
+
+                        {% endif %}
+
+
+                        <!-- =============================== -->
+                        <!-- APPLICATION MESSAGE -->
+                        <!-- =============================== -->
+
+                        {% if application.message %}
+
+                            <div class="alert alert-light mt-3">
+
+                                <strong>
+                                    Applicant Message:
+                                </strong>
+
+                                <p class="mb-0 mt-2">
+
+                                    {{ application.message }}
+
+                                </p>
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- ================================= -->
+                    <!-- STATUS -->
+                    <!-- ================================= -->
+
+                    <div class="col-md-4 text-md-end">
+
+                        <p>
+
+                            <strong>
+                                Status
+                            </strong>
+
+                        </p>
+
+
+                        {% if application.status == "ACCEPTED" %}
+
+                            <span class="badge bg-success fs-6">
+                                Accepted
+                            </span>
+
+
+                        {% elif application.status == "REJECTED" %}
+
+                            <span class="badge bg-danger fs-6">
+                                Rejected
+                            </span>
+
+
+                        {% elif application.status == "REVIEWING" %}
+
+                            <span class="badge bg-info fs-6">
+                                Reviewing
+                            </span>
+
+
+                        {% else %}
+
+                            <span class="badge bg-warning fs-6">
+                                Pending
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+                <hr>
+
+
+                <!-- ================================= -->
+                <!-- ACTIONS -->
+                <!-- ================================= -->
+
+                <div class="d-flex gap-2 flex-wrap">
+
+
+                    <a
+                        href="{% url 'talent_profile' application.talent.id %}"
+                        class="btn btn-primary"
+                    >
+
+                        👤 View Talent
+
+                    </a>
+                            {% if application.status == "PENDING" %}
+
+                                <!-- ============================= -->
+                                <!-- REVIEW -->
+                                <!-- ============================= -->
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'review_application' application.id %}"
+                                    class="d-inline"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-info"
+                                    >
+
+                                        👁 Review
+
+                                    </button>
+
+                                </form>
+
+
+                                <!-- ============================= -->
+                                <!-- ACCEPT -->
+                                <!-- ============================= -->
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'accept_application' application.id %}"
+                                    class="d-inline"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-success"
+                                    >
+
+                                        ✓ Accept
+
+                                    </button>
+
+                                </form>
+
+
+                                <!-- ============================= -->
+                                <!-- REJECT -->
+                                <!-- ============================= -->
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'reject_application' application.id %}"
+                                    class="d-inline"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-danger"
+                                    >
+
+                                        ✕ Reject
+
+                                    </button>
+
+                                </form>
+
+
+                            {% elif application.status == "REVIEWING" %}
+
+                                <span class="badge bg-info align-self-center">
+
+                                    👁 Application Under Review
+
+                                </span>
+
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'accept_application' application.id %}"
+                                    class="d-inline"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-success"
+                                    >
+
+                                        ✓ Accept
+
+                                    </button>
+
+                                </form>
+
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'reject_application' application.id %}"
+                                    class="d-inline"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-danger"
+                                    >
+
+                                        ✕ Reject
+
+                                    </button>
+
+                                </form>
+
+
+                            {% elif application.status == "ACCEPTED" %}
+
+                                <span class="badge bg-success align-self-center">
+
+                                    ✓ Application Accepted
+
+                                </span>
+
+
+                            {% elif application.status == "REJECTED" %}
+
+                                <span class="badge bg-danger align-self-center">
+
+                                    Application Rejected
+
+                                </span>
+
+                            {% endif %}
+                            
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    {% empty %}
+
+        <!-- ========================================= -->
+        <!-- NO APPLICATIONS -->
+        <!-- ========================================= -->
+
+        <div class="alert alert-info">
+
+            <h5>
+                No applications received yet.
+            </h5>
+
+            <p class="mb-0">
+
+                When talents apply for your opportunities,
+                their applications will appear here.
+
+            </p>
+
+        </div>
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}
+

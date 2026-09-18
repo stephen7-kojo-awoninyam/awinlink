@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-4">
+
+
+<div class="card shadow">
+
+
+<div class="card-header bg-success text-white">
+
+<h4>
+Create New Event
+</h4>
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<form method="POST" enctype="multipart/form-data">
+
+{% csrf_token %}
+
+
+
+{{ form.non_field_errors }}
+
+
+
+<div class="row">
+
+
+{% for field in form %}
+
+
+<div class="col-md-6 mb-3">
+
+
+<label class="form-label">
+
+{{ field.label }}
+
+</label>
+
+
+
+{{ field }}
+
+
+
+{% if field.errors %}
+
+<div class="text-danger">
+
+{{ field.errors }}
+
+</div>
+
+{% endif %}
+
+
+
+</div>
+
+
+{% endfor %}
+
+
+</div>
+
+
+
+
+<button class="btn btn-success">
+
+Create Event
+
+</button>
+
+
+<a href="{% url 'organization_dashboard' %}"
+
+class="btn btn-secondary">
+
+Cancel
+
+</a>
+
+
+
+</form>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

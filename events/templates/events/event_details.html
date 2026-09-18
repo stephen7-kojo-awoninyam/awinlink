@@ -1,0 +1,499 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<div class="card shadow p-4">
+
+
+{% if event.image %}
+
+<img src="{{ event.image.url }}"
+class="img-fluid rounded mb-4">
+
+{% endif %}
+
+
+
+<h2>
+
+{{ event.title }}
+
+</h2>
+
+
+
+<span class="badge bg-primary">
+
+{{ event.get_event_type_display }}
+
+</span>
+
+
+
+<hr>
+
+
+
+<p>
+
+<strong>Organizer:</strong>
+
+{{ event.organizer.name }}
+
+</p>
+
+
+
+<p>
+
+<strong>Category:</strong>
+
+{{ event.category }}
+
+</p>
+
+
+
+<p>
+
+<strong>Description:</strong>
+
+</p>
+
+
+<p>
+
+{{ event.description|linebreaks }}
+
+</p>
+
+
+
+
+<div class="row">
+
+
+<div class="col-md-6">
+
+
+<p>
+
+<strong>Location:</strong>
+
+{{ event.location }}
+
+</p>
+
+
+
+<p>
+
+<strong>Start:</strong>
+
+{{ event.start_date }}
+
+</p>
+
+
+
+<p>
+
+<strong>End:</strong>
+
+{{ event.end_date }}
+
+</p>
+
+
+
+</div>
+
+
+
+
+<div class="col-md-6">
+
+
+<p>
+
+<strong>Registration Deadline:</strong>
+
+{{ event.registration_deadline }}
+
+</p>
+
+
+
+<p>
+
+<strong>Capacity:</strong>
+
+{{ event.capacity }}
+
+</p>
+
+
+
+<p>
+
+<strong>Participants:</strong>
+
+{{ participants.count }}
+
+</p>
+
+
+
+</div>
+
+
+</div>
+
+
+
+<hr>
+
+
+
+{% if event.online %}
+
+
+<div class="alert alert-info">
+
+
+This is an online event.
+
+
+<br>
+
+
+{% if event.meeting_link %}
+
+<a href="{{event.meeting_link}}"
+target="_blank"
+class="btn btn-primary mt-2">
+
+Join Meeting
+
+</a>
+
+{% endif %}
+
+
+</div>
+
+
+
+{% endif %}
+
+
+
+
+<!-- REGISTRATION -->
+
+
+{% if registered %}
+
+
+<a href="{% url 'cancel_registration' event.id %}"
+
+class="btn btn-danger">
+
+Cancel Registration
+
+</a>
+
+
+
+{% else %}
+
+
+
+<a href="{% url 'register_event' event.id %}"
+
+class="btn btn-success">
+
+Register Now
+
+</a>
+
+
+
+{% endif %}
+
+
+
+<hr>
+
+
+
+<h4>
+
+Registered Participants
+
+</h4>
+
+
+
+{% for participant in participants %}
+
+
+<div class="d-flex align-items-center mb-3">
+
+
+{% if participant.talent.profile_photo %}
+
+<img src="{{participant.talent.profile_photo.url}}"
+
+width="50"
+
+height="50"
+
+class="rounded-circle me-3">
+
+
+{% endif %}
+
+
+
+<div>
+
+
+<strong>
+
+{{participant.talent.user.get_full_name}}
+
+</strong>
+
+
+<br>
+
+
+<small>
+
+{{participant.status}}
+
+</small>
+
+
+</div>
+
+
+</div>
+
+
+
+{% empty %}
+
+
+<p class="text-muted">
+
+No participants yet.
+
+</p>
+
+
+{% endfor %}
+
+
+<hr>
+
+
+<h4>
+Feedback
+</h4>
+
+
+{% for feedback in feedbacks %}
+
+<div class="card p-3 mb-2">
+
+<strong>
+
+{{feedback.reviewer.get_full_name}}
+
+</strong>
+
+
+<p>
+
+Rating:
+
+{{feedback.rating}} ⭐
+
+</p>
+
+
+<p>
+
+{{feedback.comment}}
+
+</p>
+
+
+</div>
+
+
+{% empty %}
+
+<p>
+No feedback yet.
+</p>
+
+{% endfor %}
+
+
+<hr>
+
+
+<h4>
+Event Feedback
+</h4>
+
+
+<div class="card p-3 mb-3">
+
+
+<h5>
+
+Average Rating:
+
+{% if feedback_summary.average_rating %}
+
+{{ feedback_summary.average_rating|floatformat:1 }} ⭐
+
+{% else %}
+
+No ratings yet
+
+{% endif %}
+
+</h5>
+
+
+<p>
+
+Total Reviews:
+
+{{ feedback_summary.total_feedback }}
+
+</p>
+
+
+</div>
+
+
+
+
+{% for feedback in feedbacks %}
+
+
+<div class="card p-3 mb-2">
+
+
+<strong>
+
+{{feedback.reviewer.get_full_name}}
+
+</strong>
+
+
+<p>
+
+{{feedback.rating}} ⭐
+
+</p>
+
+
+<p>
+
+{{feedback.comment}}
+
+</p>
+
+
+</div>
+
+
+{% empty %}
+
+
+<p>
+
+No feedback submitted yet.
+
+</p>
+
+
+{% endfor %}
+
+</div>
+
+{% if registered %}
+
+    <button class="btn btn-secondary" disabled>
+        Already Registered
+    </button>
+
+{% elif capacity_full %}
+
+    <button class="btn btn-secondary" disabled>
+        Event Full
+    </button>
+
+{% elif event.registration_deadline <= now %}
+
+    <button class="btn btn-secondary" disabled>
+        Registration Closed
+    </button>
+
+{% else %}
+
+    <a href="{% url 'register_event' event.id %}"
+       class="btn btn-primary">
+        Register for Event
+    </a>
+
+{% endif %}
+
+
+
+{% if registered %}
+
+{% for registration in event.registrations.all %}
+
+
+{% if registration.status == "ATTENDED" %}
+
+
+<a href="{% url 'give_feedback' event.id %}"
+
+class="btn btn-warning">
+
+Leave Feedback ⭐
+
+</a>
+
+
+{% endif %}
+
+
+{% endfor %}
+
+{% endif %}
+<a href="{% url 'event_gallery' event.id %}"
+
+   class="btn btn-outline-secondary">
+
+    View Gallery
+
+</a>
+</div>
+
+
+{% endblock %}

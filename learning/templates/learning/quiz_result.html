@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-7">
+
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-body text-center p-5">
+
+
+                    <!-- =================================================
+                         PASSED
+                    ================================================== -->
+
+                    {% if passed %}
+
+                    <i
+                        class="bi bi-check-circle-fill text-success"
+                        style="font-size:70px;"
+                    ></i>
+
+
+                    <h1 class="fw-bold mt-3">
+                        Quiz Passed!
+                    </h1>
+
+
+                    <p class="text-muted">
+                        Congratulations! You passed the quiz.
+                    </p>
+
+
+                    <!-- =================================================
+                         FAILED
+                    ================================================== -->
+
+                    {% else %}
+
+                    <i
+                        class="bi bi-x-circle-fill text-danger"
+                        style="font-size:70px;"
+                    ></i>
+
+
+                    <h1 class="fw-bold mt-3">
+                        Quiz Not Passed
+                    </h1>
+
+
+                    <p class="text-muted">
+                        Review the lesson material and try again.
+                    </p>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         QUIZ TITLE
+                    ================================================== -->
+
+                    <h5 class="mt-4">
+                        {{ quiz.title }}
+                    </h5>
+
+
+                    <!-- =================================================
+                         SCORE
+                    ================================================== -->
+
+                    <div class="card bg-light border-0 mt-4">
+
+                        <div class="card-body">
+
+                            <div class="text-muted">
+                                Your Score
+                            </div>
+
+
+                            <div class="display-4 fw-bold">
+
+                                {{ percentage }}%
+
+                            </div>
+
+
+                            <p class="text-muted mb-0">
+
+                                {{ score }}
+                                /
+                                {{ total_questions }}
+
+                                correct answers
+
+                            </p>
+
+
+                            <small class="text-muted">
+
+                                Passing score:
+                                {{ quiz.passing_score }}%
+
+                            </small>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ACTIONS
+                    ================================================== -->
+
+                    <div class="mt-4">
+
+
+                        {% if passed %}
+
+                        <a
+                            href="{% url 'lesson_detail' lesson.id %}"
+                            class="btn btn-primary"
+                        >
+
+                            <i class="bi bi-arrow-right me-1"></i>
+
+                            Continue Learning
+
+                        </a>
+
+
+                        {% else %}
+
+                        <a
+                            href="{% url 'take_quiz' quiz.id %}"
+                            class="btn btn-primary"
+                        >
+
+                            <i class="bi bi-arrow-repeat me-1"></i>
+
+                            Try Again
+
+                        </a>
+
+                        {% endif %}
+
+
+                        <a
+                            href="{% url 'course_progress' course.id %}"
+                            class="btn btn-outline-secondary ms-2"
+                        >
+
+                            <i class="bi bi-bar-chart me-1"></i>
+
+                            Course Progress
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

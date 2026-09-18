@@ -1,0 +1,823 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h1 class="fw-bold mb-1">
+                Coach Analytics
+            </h1>
+
+            <p class="text-muted mb-0">
+                Talent discovery and coaching activity insights
+                {% if coach %}
+                    for {{ coach.user.get_full_name|default:coach.user.username }}.
+                {% endif %}
+            </p>
+        </div>
+
+        {% if coach %}
+            <div>
+                <span class="badge bg-primary fs-6">
+                    Coach
+                </span>
+            </div>
+        {% endif %}
+
+    </div>
+
+
+    {% if not coach %}
+
+        <!-- =================================================
+             NO COACH PROFILE
+        ================================================== -->
+
+        <div class="alert alert-warning">
+
+            <i class="bi bi-exclamation-circle me-2"></i>
+
+            No coach profile is associated with your account.
+
+        </div>
+
+    {% else %}
+
+
+    <!-- =====================================================
+         OVERVIEW
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        Overview
+    </h4>
+
+    <div class="row g-4 mb-5">
+
+        <!-- TALENTS VIEWED -->
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+
+                            <small class="text-muted">
+                                Talent Views
+                            </small>
+
+                            <h2 class="fw-bold mb-0">
+                                {{ analytics.total_talent_views }}
+                            </h2>
+
+                        </div>
+
+                        <i class="bi bi-eye fs-2 text-info"></i>
+
+                    </div>
+
+                    <p class="small text-muted mt-3 mb-0">
+                        Total talent profiles you have viewed.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- UNIQUE TALENTS -->
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+
+                            <small class="text-muted">
+                                Unique Talents
+                            </small>
+
+                            <h2 class="fw-bold mb-0">
+                                {{ analytics.unique_talents_viewed }}
+                            </h2>
+
+                        </div>
+
+                        <i class="bi bi-people fs-2 text-primary"></i>
+
+                    </div>
+
+                    <p class="small text-muted mt-3 mb-0">
+                        Different talents you have discovered.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- FOLLOWED -->
+
+        <div class="col-md-6 col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+
+                            <small class="text-muted">
+                                Followed Talents
+                            </small>
+
+                            <h2 class="fw-bold mb-0">
+                                {{ analytics.total_followed_talents }}
+                            </h2>
+
+                        </div>
+
+                        <i class="bi bi-person-plus fs-2 text-success"></i>
+
+                    </div>
+
+                    <p class="small text-muted mt-3 mb-0">
+                        Talents you currently follow.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SAVED TALENTS
+    ====================================================== -->
+
+    <div class="row g-4 mb-5">
+
+        <div class="col-md-6">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <div>
+
+                            <small class="text-muted">
+                                Bookmarked Talents
+                            </small>
+
+                            <h2 class="fw-bold">
+                                {{ analytics.total_bookmarked_talents }}
+                            </h2>
+
+                        </div>
+
+                        <i class="bi bi-bookmark-star fs-1 text-warning"></i>
+
+                    </div>
+
+                    <p class="text-muted small mb-0">
+                        Talents you have saved for future review.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-6">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold mb-3">
+                        Coaching Activity
+                    </h5>
+
+                    <p class="mb-2">
+                        <strong>Profiles viewed:</strong>
+                        {{ analytics.unique_talents_viewed }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>Talents followed:</strong>
+                        {{ analytics.total_followed_talents }}
+                    </p>
+
+                    <p class="mb-0">
+                        <strong>Talents bookmarked:</strong>
+                        {{ analytics.total_bookmarked_talents }}
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MOST VIEWED TALENTS
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        Most Viewed Talents
+    </h4>
+
+    <div class="card border-0 shadow-sm mb-5">
+
+        <div class="card-body">
+
+            {% if most_viewed_talents %}
+
+                <div class="table-responsive">
+
+                    <table class="table align-middle mb-0">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Talent
+                                </th>
+
+                                <th>
+                                    Views
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            {% for talent in most_viewed_talents %}
+
+                                <tr>
+
+                                    <td>
+
+                                        <div class="d-flex align-items-center">
+
+                                            {% if talent.profile_photo %}
+
+                                                <img
+                                                    src="{{ talent.profile_photo.url }}"
+                                                    alt="{{ talent.user.get_full_name }}"
+                                                    class="rounded-circle me-3"
+                                                    width="45"
+                                                    height="45"
+                                                    style="object-fit: cover;"
+                                                >
+
+                                            {% else %}
+
+                                                <div
+                                                    class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3"
+                                                    style="width:45px;height:45px;"
+                                                >
+                                                    <i class="bi bi-person"></i>
+                                                </div>
+
+                                            {% endif %}
+
+                                            <div>
+
+                                                <strong>
+                                                    {{ talent.user.get_full_name|default:talent.user.username }}
+                                                </strong>
+
+                                                {% if talent.headline %}
+
+                                                    <div class="small text-muted">
+                                                        {{ talent.headline }}
+                                                    </div>
+
+                                                {% endif %}
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+                                    <td>
+
+                                        <span class="badge bg-info">
+                                            {{ talent.view_count }}
+                                        </span>
+
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% else %}
+
+                <div class="text-center py-4">
+
+                    <i class="bi bi-eye fs-1 text-muted"></i>
+
+                    <p class="text-muted mt-3 mb-0">
+                        You have not viewed any talent profiles yet.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MOST FOLLOWED TALENTS
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        Followed Talents
+    </h4>
+
+    <div class="card border-0 shadow-sm mb-5">
+
+        <div class="card-body">
+
+            {% if most_followed_talents %}
+
+                <div class="row g-4">
+
+                    {% for talent in most_followed_talents %}
+
+                        <div class="col-md-6 col-lg-4">
+
+                            <div class="card border h-100">
+
+                                <div class="card-body">
+
+                                    <div class="d-flex align-items-center mb-3">
+
+                                        {% if talent.profile_photo %}
+
+                                            <img
+                                                src="{{ talent.profile_photo.url }}"
+                                                alt="{{ talent.user.get_full_name }}"
+                                                class="rounded-circle me-3"
+                                                width="50"
+                                                height="50"
+                                                style="object-fit: cover;"
+                                            >
+
+                                        {% else %}
+
+                                            <div
+                                                class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3"
+                                                style="width:50px;height:50px;"
+                                            >
+                                                <i class="bi bi-person"></i>
+                                            </div>
+
+                                        {% endif %}
+
+                                        <div>
+
+                                            <strong>
+                                                {{ talent.user.get_full_name|default:talent.user.username }}
+                                            </strong>
+
+                                            {% if talent.headline %}
+
+                                                <div class="small text-muted">
+                                                    {{ talent.headline }}
+                                                </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="d-flex justify-content-between">
+
+                                        <span class="text-muted">
+                                            Follow activity
+                                        </span>
+
+                                        <span class="badge bg-success">
+                                            {{ talent.follow_count }}
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="text-center py-4">
+
+                    <i class="bi bi-person-plus fs-1 text-muted"></i>
+
+                    <p class="text-muted mt-3 mb-0">
+                        You are not following any talents yet.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         BOOKMARKED TALENTS
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        Bookmarked Talents
+    </h4>
+
+    <div class="card border-0 shadow-sm mb-5">
+
+        <div class="card-body">
+
+            {% if most_bookmarked_talents %}
+
+                <div class="row g-4">
+
+                    {% for talent in most_bookmarked_talents %}
+
+                        <div class="col-md-6 col-lg-4">
+
+                            <div class="card border h-100">
+
+                                <div class="card-body">
+
+                                    <div class="d-flex align-items-center mb-3">
+
+                                        {% if talent.profile_photo %}
+
+                                            <img
+                                                src="{{ talent.profile_photo.url }}"
+                                                alt="{{ talent.user.get_full_name }}"
+                                                class="rounded-circle me-3"
+                                                width="50"
+                                                height="50"
+                                                style="object-fit: cover;"
+                                            >
+
+                                        {% else %}
+
+                                            <div
+                                                class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3"
+                                                style="width:50px;height:50px;"
+                                            >
+                                                <i class="bi bi-person"></i>
+                                            </div>
+
+                                        {% endif %}
+
+                                        <div>
+
+                                            <strong>
+                                                {{ talent.user.get_full_name|default:talent.user.username }}
+                                            </strong>
+
+                                            {% if talent.headline %}
+
+                                                <div class="small text-muted">
+                                                    {{ talent.headline }}
+                                                </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                    {% if talent.bookmark_count %}
+
+                                        <div class="d-flex justify-content-between">
+
+                                            <span class="text-muted">
+                                                Saved
+                                            </span>
+
+                                            <span class="badge bg-warning text-dark">
+                                                {{ talent.bookmark_count }}
+                                            </span>
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="text-center py-4">
+
+                    <i class="bi bi-bookmark fs-1 text-muted"></i>
+
+                    <p class="text-muted mt-3 mb-0">
+                        You have not bookmarked any talents yet.
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RECENT ACTIVITY
+    ====================================================== -->
+
+    <h4 class="fw-bold mb-3">
+        Recent Activity
+    </h4>
+
+    <div class="row g-4 mb-5">
+
+        <!-- RECENT VIEWS -->
+
+        <div class="col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold mb-3">
+
+                        <i class="bi bi-eye text-info me-2"></i>
+
+                        Recent Views
+
+                    </h5>
+
+                    {% if recent_views %}
+
+                        {% for item in recent_views %}
+
+                            <div class="border-bottom py-2">
+
+                                <strong>
+                                    {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+                                </strong>
+
+                                <div class="small text-muted">
+
+                                    {{ item.viewed_at|date:"M d, Y H:i" }}
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <p class="text-muted small">
+                            No recent profile views.
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- RECENT FOLLOWS -->
+
+        <div class="col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold mb-3">
+
+                        <i class="bi bi-person-plus text-success me-2"></i>
+
+                        Recent Follows
+
+                    </h5>
+
+                    {% if recent_follows %}
+
+                        {% for item in recent_follows %}
+
+                            <div class="border-bottom py-2">
+
+                                <strong>
+                                    {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+                                </strong>
+
+                                <div class="small text-muted">
+
+                                    {{ item.created_at|date:"M d, Y H:i" }}
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <p class="text-muted small">
+                            No recent follows.
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- RECENT BOOKMARKS -->
+
+        <div class="col-lg-4">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <h5 class="fw-bold mb-3">
+
+                        <i class="bi bi-bookmark text-warning me-2"></i>
+
+                        Recent Bookmarks
+
+                    </h5>
+
+                    {% if recent_bookmarks %}
+
+                        {% for item in recent_bookmarks %}
+
+                            <div class="border-bottom py-2">
+
+                                <strong>
+                                    {{ item.talent.user.get_full_name|default:item.talent.user.username }}
+                                </strong>
+
+                                <div class="small text-muted">
+
+                                    {{ item.created_at|date:"M d, Y H:i" }}
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <p class="text-muted small">
+                            No recent bookmarks.
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SUMMARY
+    ====================================================== -->
+
+    <div class="card border-0 shadow-sm">
+
+        <div class="card-body">
+
+            <h5 class="fw-bold mb-3">
+                Coaching Summary
+            </h5>
+
+            <div class="row">
+
+                <div class="col-md-6">
+
+                    <p class="mb-2">
+                        <strong>
+                            Talent Profiles Viewed:
+                        </strong>
+
+                        {{ analytics.total_talent_views }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>
+                            Unique Talents:
+                        </strong>
+
+                        {{ analytics.unique_talents_viewed }}
+                    </p>
+
+                </div>
+
+                <div class="col-md-6">
+
+                    <p class="mb-2">
+                        <strong>
+                            Followed Talents:
+                        </strong>
+
+                        {{ analytics.total_followed_talents }}
+                    </p>
+
+                    <p class="mb-2">
+                        <strong>
+                            Bookmarked Talents:
+                        </strong>
+
+                        {{ analytics.total_bookmarked_talents }}
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

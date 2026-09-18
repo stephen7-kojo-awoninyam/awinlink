@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+```
+<!-- =====================================================
+     PAGE HEADER
+====================================================== -->
+
+<div class="mb-4">
+
+    <h1 class="fw-bold mb-1">
+        My Learning
+    </h1>
+
+    <p class="text-muted mb-0">
+        Track your courses, progress, quizzes and certificates.
+    </p>
+
+</div>
+
+
+<!-- =====================================================
+     LEARNING STATISTICS
+====================================================== -->
+
+<div class="row g-4 mb-5">
+
+    <!-- ENROLLED COURSES -->
+
+    <div class="col-6 col-lg-3">
+
+        <div class="card border-0 shadow-sm h-100">
+
+            <div class="card-body">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <small class="text-muted">
+                            Enrolled Courses
+                        </small>
+
+                        <h2 class="fw-bold mb-0 mt-2">
+                            {{ total_courses }}
+                        </h2>
+
+                    </div>
+
+                    <i class="bi bi-journal-bookmark fs-2 text-primary"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- IN PROGRESS -->
+
+    <div class="col-6 col-lg-3">
+
+        <div class="card border-0 shadow-sm h-100">
+
+            <div class="card-body">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <small class="text-muted">
+                            In Progress
+                        </small>
+
+                        <h2 class="fw-bold mb-0 mt-2">
+                            {{ in_progress_courses }}
+                        </h2>
+
+                    </div>
+
+                    <i class="bi bi-clock-history fs-2 text-warning"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- COMPLETED -->
+
+    <div class="col-6 col-lg-3">
+
+        <div class="card border-0 shadow-sm h-100">
+
+            <div class="card-body">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <small class="text-muted">
+                            Completed
+                        </small>
+
+                        <h2 class="fw-bold mb-0 mt-2">
+                            {{ completed_courses }}
+                        </h2>
+
+                    </div>
+
+                    <i class="bi bi-check-circle fs-2 text-success"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- CERTIFICATES -->
+
+    <div class="col-6 col-lg-3">
+
+        <div class="card border-0 shadow-sm h-100">
+
+            <div class="card-body">
+
+                <div class="d-flex justify-content-between align-items-center">
+
+                    <div>
+
+                        <small class="text-muted">
+                            Certificates
+                        </small>
+
+                        <h2 class="fw-bold mb-0 mt-2">
+                            {{ certificates }}
+                        </h2>
+
+                    </div>
+
+                    <i class="bi bi-award fs-2 text-success"></i>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     QUIZ STATISTICS
+====================================================== -->
+
+<div class="alert alert-light border mb-5">
+
+    <i class="bi bi-question-circle me-2"></i>
+
+    You have completed
+
+    <strong>
+        {{ quiz_attempts }}
+    </strong>
+
+    quiz attempt{{ quiz_attempts|pluralize }}.
+
+</div>
+
+
+<!-- =====================================================
+     ENROLLED COURSES HEADER
+====================================================== -->
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+
+    <div>
+
+        <h4 class="fw-bold mb-1">
+            Your Courses
+        </h4>
+
+        <p class="text-muted small mb-0">
+            Continue where you left off.
+        </p>
+
+    </div>
+
+    <a
+        href="{% url 'courses' %}"
+        class="btn btn-outline-primary btn-sm"
+    >
+
+        <i class="bi bi-search me-1"></i>
+
+        Browse Courses
+
+    </a>
+
+</div>
+
+
+<!-- =====================================================
+     ENROLLED COURSES
+====================================================== -->
+
+<div class="row g-4">
+
+    {% for enrollment in enrollments %}
+
+    <div class="col-md-6 col-lg-4">
+
+        <div class="card border-0 shadow-sm h-100">
+
+            <!-- COURSE IMAGE -->
+
+            {% if enrollment.course.thumbnail %}
+
+            <img
+                src="{{ enrollment.course.thumbnail.url }}"
+                class="card-img-top"
+                style="height:180px; object-fit:cover;"
+                alt="{{ enrollment.course.title }}"
+            >
+
+            {% else %}
+
+            <div
+                class="bg-light d-flex align-items-center justify-content-center"
+                style="height:180px;"
+            >
+
+                <i class="bi bi-book fs-1 text-muted"></i>
+
+            </div>
+
+            {% endif %}
+
+
+            <!-- COURSE BODY -->
+
+            <div class="card-body d-flex flex-column">
+
+                <h5 class="fw-bold">
+                    {{ enrollment.course.title }}
+                </h5>
+
+
+                {% if enrollment.course.category %}
+
+                <p class="small text-muted mb-3">
+
+                    {{ enrollment.course.category.name }}
+
+                </p>
+
+                {% endif %}
+
+
+                <!-- =================================================
+                     PROGRESS
+                ================================================== -->
+
+                <div class="d-flex justify-content-between align-items-center mb-1">
+
+                    <small class="text-muted">
+                        Course Progress
+                    </small>
+
+                    <small class="fw-bold">
+                        {{ enrollment.progress_percentage }}%
+                    </small>
+
+                </div>
+
+
+                <div
+                    class="progress mb-3"
+                    style="height: 8px;"
+                >
+
+                    <div
+                        class="progress-bar"
+                        role="progressbar"
+                        style="width: {{ enrollment.progress_percentage }}%;"
+                        aria-valuenow="{{ enrollment.progress_percentage }}"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    ></div>
+
+                </div>
+
+
+                <!-- =================================================
+                     COMPLETION STATUS
+                ================================================== -->
+
+                {% if enrollment.completed %}
+
+                <span class="badge bg-success align-self-start">
+
+                    <i class="bi bi-check-circle me-1"></i>
+
+                    Completed
+
+                </span>
+
+                {% else %}
+
+                <span class="badge bg-warning text-dark align-self-start">
+
+                    <i class="bi bi-clock me-1"></i>
+
+                    In Progress
+
+                </span>
+
+                {% endif %}
+
+
+                <!-- =================================================
+                     ENROLLMENT DATE
+                ================================================== -->
+
+                <p class="small text-muted mt-3 mb-2">
+
+                    <i class="bi bi-calendar3 me-1"></i>
+
+                    Enrolled:
+                    {{ enrollment.enrolled_at|date:"M d, Y" }}
+
+                </p>
+
+
+                <!-- =================================================
+                     ACTIONS
+                ================================================== -->
+
+                <div class="mt-auto pt-3">
+
+                    {% if enrollment.completed %}
+
+                    <a
+                        href="{% url 'course_detail' enrollment.course.slug %}"
+                        class="btn btn-success w-100"
+                    >
+
+                        <i class="bi bi-check-circle me-1"></i>
+
+                        Review Course
+
+                    </a>
+
+                    <a
+                        href="{% url 'course_progress' enrollment.course.id %}"
+                        class="btn btn-outline-success w-100 mt-2"
+                    >
+
+                        <i class="bi bi-bar-chart me-1"></i>
+
+                        View Progress
+
+                    </a>
+
+                    <a
+                        href="{% url 'my_certificates' %}"
+                        class="btn btn-outline-primary w-100 mt-2"
+                    >
+
+                        <i class="bi bi-award me-1"></i>
+
+                        View Certificate
+
+                    </a>
+
+
+                    {% else %}
+
+                    <a
+                        href="{% url 'course_progress' enrollment.course.id %}"
+                        class="btn btn-primary w-100"
+                    >
+
+                        <i class="bi bi-play-circle me-1"></i>
+
+                        Continue Learning
+
+                    </a>
+
+                    <a
+                        href="{% url 'course_detail' enrollment.course.slug %}"
+                        class="btn btn-outline-secondary w-100 mt-2"
+                    >
+
+                        <i class="bi bi-info-circle me-1"></i>
+
+                        Course Details
+
+                    </a>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {% empty %}
+
+    <!-- =====================================================
+         NO ENROLLMENTS
+    ====================================================== -->
+
+    <div class="col-12">
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <i class="bi bi-book fs-1 text-muted"></i>
+
+                <h4 class="fw-bold mt-3">
+                    You haven't enrolled in any courses yet.
+                </h4>
+
+                <p class="text-muted">
+                    Explore our available courses and start learning.
+                </p>
+
+                <a
+                    href="{% url 'courses' %}"
+                    class="btn btn-primary"
+                >
+
+                    <i class="bi bi-search me-1"></i>
+
+                    Browse Courses
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    {% endfor %}
+
+</div>
+```
+
+</div>
+
+{% endblock %}

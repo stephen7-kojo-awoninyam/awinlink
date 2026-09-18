@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+Talent Invitations 📩
+</h2>
+
+
+<hr>
+
+
+{% for invitation in invitations %}
+
+
+<div class="card p-4 mb-3">
+
+
+<h4>
+
+{{ invitation.organization.name }}
+
+</h4>
+
+
+
+<p>
+
+<strong>
+Opportunity:
+</strong>
+
+{{ invitation.opportunity.title }}
+
+</p>
+
+
+
+<p>
+
+{{ invitation.message }}
+
+</p>
+
+
+
+<p>
+
+Status:
+
+{% if invitation.status == "PENDING" %}
+
+<span class="badge bg-warning">
+
+Pending
+
+</span>
+
+
+{% elif invitation.status == "ACCEPTED" %}
+
+
+<span class="badge bg-success">
+
+Accepted
+
+</span>
+
+
+{% else %}
+
+
+<span class="badge bg-danger">
+
+Declined
+
+</span>
+
+
+{% endif %}
+
+
+</p>
+
+
+
+{% if invitation.status == "PENDING" %}
+
+
+<a href="{% url 'accept_invitation' invitation.id %}"
+
+class="btn btn-success">
+
+Accept
+
+</a>
+
+
+
+<a href="{% url 'decline_invitation' invitation.id %}"
+
+class="btn btn-danger">
+
+Decline
+
+</a>
+
+
+
+{% endif %}
+
+
+</div>
+
+
+
+{% empty %}
+
+
+<div class="alert alert-info">
+
+No invitations available.
+
+</div>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+{% endblock %}

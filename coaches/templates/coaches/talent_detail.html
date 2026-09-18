@@ -1,0 +1,384 @@
+```html
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-9">
+
+            <div class="card border-0 shadow-sm">
+
+                {% if talent.cover_photo %}
+
+                <img
+                    src="{{ talent.cover_photo.url }}"
+                    class="card-img-top"
+                    style="height:250px; object-fit:cover;"
+                    alt="Talent cover"
+                >
+
+                {% else %}
+
+                <div
+                    class="bg-dark"
+                    style="height:250px;"
+                ></div>
+
+                {% endif %}
+
+
+                <div class="card-body p-4">
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+
+                        {% if talent.profile_photo %}
+
+                        <img
+                            src="{{ talent.profile_photo.url }}"
+                            class="rounded-circle"
+                            style="width:110px;height:110px;object-fit:cover;"
+                            alt="Talent profile"
+                        >
+
+                        {% else %}
+
+                        <div
+                            class="rounded-circle bg-light d-flex align-items-center justify-content-center"
+                            style="width:110px;height:110px;"
+                        >
+
+                            <i class="bi bi-person fs-1 text-muted"></i>
+
+                        </div>
+
+                        {% endif %}
+
+
+                        <div>
+
+                            <h2 class="fw-bold mb-1">
+
+                                {{ talent.user.get_full_name|default:talent.user.username }}
+
+                                {% if talent.verified %}
+
+                                <i class="bi bi-patch-check-fill text-primary"></i>
+
+                                {% endif %}
+
+                            </h2>
+
+
+                            {% if talent.headline %}
+
+                            <p class="text-muted mb-0">
+                                {{ talent.headline }}
+                            </p>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ABOUT -->
+
+                    {% if talent.biography %}
+
+                    <div class="mb-4">
+
+                        <h5 class="fw-bold">
+                            About
+                        </h5>
+
+                        <p class="text-muted">
+                            {{ talent.biography }}
+                        </p>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    <!-- BASIC INFORMATION -->
+
+                    <div class="row g-4 mb-4">
+
+                        <div class="col-md-4">
+
+                            <small class="text-muted d-block">
+                                Location
+                            </small>
+
+                            <strong>
+
+                                {% if talent.city %}
+                                    {{ talent.city }},
+                                {% endif %}
+
+                                {{ talent.country|default:"Not specified" }}
+
+                            </strong>
+
+                        </div>
+
+
+                        <div class="col-md-4">
+
+                            <small class="text-muted d-block">
+                                Experience
+                            </small>
+
+                            <strong>
+                                {{ talent.get_experience_level_display }}
+                            </strong>
+
+                        </div>
+
+
+                        <div class="col-md-4">
+
+                            <small class="text-muted d-block">
+                                Verification
+                            </small>
+
+                            {% if talent.verified %}
+
+                            <span class="badge bg-success">
+                                Verified
+                            </span>
+
+                            {% else %}
+
+                            <span class="badge bg-secondary">
+                                Unverified
+                            </span>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- DOMAINS -->
+
+                    {% if talent.domains.all %}
+                        <div class="mb-4">
+
+                            <h5 class="fw-bold">
+                                Domains
+                            </h5>
+
+                            <div class="d-flex flex-wrap gap-2">
+
+                                {% for domain in talent.domains.all %}
+
+                                <span class="badge bg-light text-dark border">
+                                    {{ domain.name }}
+                                </span>
+
+                                {% empty %}
+
+                                <span class="text-muted">
+                                    No domains added.
+                                </span>
+
+                                {% endfor %}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    <!-- SKILLS -->
+
+                    {% if talent.skills.all %}
+
+                    <div class="mb-4">
+
+                        <h5 class="fw-bold">
+                            Skills
+                        </h5>
+
+                        <div class="d-flex flex-wrap gap-2">
+
+                            {% for skill in talent.skills.all %}
+
+                            <span class="badge bg-primary">
+                                {{ skill.name }}
+                            </span>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </div>
+
+                    {% endif %}
+
+
+                    <div class="d-flex gap-2 mt-4">
+
+
+                        <a
+                            href="{% url 'coach_talent_directory' %}"
+                            class="btn btn-outline-secondary"
+                        >
+
+                            <i class="bi bi-arrow-left me-1"></i>
+
+                            Back to Talents
+
+                        </a>
+
+                    </div>
+                    
+                                {% if talent.saved_by_coaches.filter %}
+                                {% endif %}
+
+                                {% if talent in saved_talent_ids %}
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'unsave_talent' talent.id %}"
+                                    class="d-inline"
+                                >
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-warning"
+                                    >
+
+                                        <i class="bi bi-bookmark-fill me-1"></i>
+
+                                        Saved
+
+                                    </button>
+
+                                </form>
+
+                                {% else %}
+
+                                <form
+                                    method="POST"
+                                    action="{% url 'save_talent' talent.id %}"
+                                    class="d-inline"
+                                >
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+
+                                        <i class="bi bi-bookmark me-1"></i>
+
+                                        Save Talent
+
+                                    </button>
+
+                                </form>
+                                
+                                <form
+                                    method="POST"
+                                    action="{% url 'message_talent' talent.id %}"
+                                    class="d-inline"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-primary"
+                                    >
+
+                                        <i class="bi bi-chat-dots me-1"></i>
+
+                                        Message Talent
+
+                                    </button>
+
+                                </form>
+
+
+
+                                {% endif %}
+
+                                
+                                    {% if is_saved %}
+
+                                    <div class="card border-0 shadow-sm mt-4">
+
+                                        <div class="card-body">
+
+                                            <h5 class="fw-bold mb-3">
+
+                                                <i class="bi bi-journal-text me-1"></i>
+
+                                                Private Notes
+
+                                            </h5>
+
+                                            <p class="text-muted small">
+                                                These notes are visible only to you.
+                                            </p>
+
+                                            <form
+                                                method="POST"
+                                                action="{% url 'save_talent' talent.id %}"
+                                            >
+
+                                                {% csrf_token %}
+
+                                                <textarea
+                                                    name="notes"
+                                                    class="form-control"
+                                                    rows="5"
+                                                    placeholder="Add private notes about this talent..."
+                                                >{{ bookmark.notes }}</textarea>
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-primary mt-3"
+                                                >
+
+                                                    <i class="bi bi-save me-1"></i>
+
+                                                    Save Notes
+
+                                                </button>
+
+                                            </form>
+
+                                        </div>
+
+                                    </div>
+
+                                    {% endif %}
+
+
+
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+

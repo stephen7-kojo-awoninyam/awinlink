@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+Recommended Opportunities 🎯
+</h2>
+
+
+<hr>
+
+
+<div class="row">
+
+
+{% for item in recommendations %}
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3 mb-3">
+
+
+<h4>
+
+{{ item.opportunity.title }}
+
+</h4>
+
+
+
+<p>
+
+{{ item.opportunity.description|truncatewords:20 }}
+
+</p>
+
+
+
+<p>
+
+Organization:
+
+{{ item.opportunity.organization.name }}
+
+</p>
+
+
+
+<p>
+
+Location:
+
+{{ item.opportunity.location }}
+
+</p>
+
+
+
+<div class="progress">
+
+
+<div class="progress-bar"
+
+style="width: {{ item.score }}%">
+
+{{ item.score }}%
+
+</div>
+
+
+</div>
+
+
+
+<br>
+
+
+<a href="{% url 'opportunity_detail' item.opportunity.id %}"
+
+class="btn btn-primary">
+
+View Opportunity
+
+</a>
+
+
+
+</div>
+
+
+</div>
+
+
+
+{% empty %}
+
+
+<p>
+
+No recommendations available.
+
+</p>
+
+
+{% endfor %}
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

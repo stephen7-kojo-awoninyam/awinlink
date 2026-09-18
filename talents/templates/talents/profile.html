@@ -1,0 +1,2701 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ talent.user.get_full_name|default:talent.user.username }} | Awinlink
+{% endblock %}
+
+{% block extra_css %}
+
+<style>
+
+/* =========================================================
+   ATHLETE / TALENT PASSPORT
+========================================================= */
+
+.passport-page {
+    max-width: 1150px;
+    margin: 0 auto;
+    padding: 30px 20px 60px;
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.passport-hero {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 22px;
+    overflow: hidden;
+    margin-bottom: 25px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.05);
+}
+
+.passport-cover {
+    height: 260px;
+    background: linear-gradient(135deg, #0d6efd, #3d8bfd);
+    position: relative;
+    overflow: hidden;
+}
+
+.passport-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.passport-cover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.02),
+        rgba(0,0,0,0.18)
+    );
+}
+
+/* =========================================================
+   IDENTITY
+========================================================= */
+
+.passport-identity {
+    padding: 0 30px 30px;
+    position: relative;
+}
+
+.passport-avatar {
+    width: 145px;
+    height: 145px;
+    border-radius: 50%;
+    border: 6px solid #fff;
+    background: #f1f5f9;
+    margin-top: -72px;
+    position: relative;
+    z-index: 2;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+}
+
+.passport-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.passport-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    font-size: 50px;
+}
+
+.passport-identity-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 25px;
+    margin-top: 10px;
+}
+
+.passport-name {
+    font-size: 2rem;
+    font-weight: 750;
+    margin: 0 0 7px;
+    color: #212529;
+}
+
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #e8f7ee;
+    color: #198754;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.role-model-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #fff4d6;
+    color: #9a6b00;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.passport-headline {
+    color: #495057;
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+}
+
+.passport-location {
+    color: #6c757d;
+    margin: 0 0 14px;
+}
+
+.passport-location i {
+    margin-right: 5px;
+}
+
+/* =========================================================
+   HERO STATUS
+========================================================= */
+
+.passport-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 11px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.status-available {
+    background: #e8f7ee;
+    color: #198754;
+}
+
+.status-busy {
+    background: #fff4d6;
+    color: #9a6b00;
+}
+
+.status-not-looking {
+    background: #f1f3f5;
+    color: #6c757d;
+}
+
+.status-general {
+    background: #eef4ff;
+    color: #0d6efd;
+}
+
+/* =========================================================
+   FOLLOWERS
+========================================================= */
+
+.passport-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    margin-top: 18px;
+}
+
+.passport-stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.passport-stat-value {
+    font-size: 1.1rem;
+    font-weight: 750;
+    color: #212529;
+}
+
+.passport-stat-label {
+    font-size: 0.78rem;
+    color: #6c757d;
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.passport-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* =========================================================
+   GRID
+========================================================= */
+
+.passport-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    margin-bottom: 22px;
+}
+
+.passport-card {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 18px;
+    padding: 25px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.035);
+    margin-bottom: 22px;
+}
+
+.passport-card.full-width {
+    grid-column: 1 / -1;
+}
+
+/* =========================================================
+   CARD HEADER
+========================================================= */
+
+.passport-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.passport-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #eef4ff;
+    color: #0d6efd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+}
+
+.passport-card-header h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.passport-card-header p {
+    margin: 3px 0 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+/* =========================================================
+   PROFILE DETAILS
+========================================================= */
+
+.profile-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+.detail-item {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.detail-label {
+    display: block;
+    color: #6c757d;
+    font-size: 0.78rem;
+    margin-bottom: 5px;
+}
+
+.detail-value {
+    font-weight: 600;
+    color: #212529;
+}
+
+/* =========================================================
+   BIOGRAPHY
+========================================================= */
+
+.biography {
+    color: #495057;
+    line-height: 1.8;
+    margin: 0;
+    white-space: pre-line;
+}
+
+/* =========================================================
+   TAGS
+========================================================= */
+
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.passport-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 12px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: #eef4ff;
+    color: #0d6efd;
+}
+
+.domain-tag {
+    background: #eaf8f1;
+    color: #198754;
+}
+
+/* =========================================================
+   PORTFOLIO
+========================================================= */
+
+.portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.portfolio-item {
+    border: 1px solid #e9ecef;
+    border-radius: 15px;
+    overflow: hidden;
+    background: #fff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.portfolio-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.portfolio-image {
+    width: 100%;
+    height: 170px;
+    object-fit: cover;
+}
+
+.portfolio-content {
+    padding: 17px;
+}
+
+.portfolio-content h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.portfolio-content p {
+    color: #6c757d;
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+
+.portfolio-type {
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
+/* =========================================================
+   TIMELINE
+========================================================= */
+
+.timeline {
+    position: relative;
+}
+
+.timeline-item {
+    position: relative;
+    padding: 0 0 22px 28px;
+    border-left: 2px solid #e9ecef;
+}
+
+.timeline-item:last-child {
+    border-left-color: transparent;
+    padding-bottom: 0;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -7px;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    background: #0d6efd;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #0d6efd;
+}
+
+.timeline-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 17px;
+}
+
+.timeline-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.timeline-card h4 {
+    font-size: 0.9rem;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.timeline-card p {
+    color: #6c757d;
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.timeline-date {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+/* =========================================================
+   CERTIFICATES
+========================================================= */
+
+.certificate-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 17px;
+    border: 1px solid #e9ecef;
+    border-radius: 13px;
+    margin-bottom: 12px;
+}
+
+.certificate-icon {
+    width: 45px;
+    height: 45px;
+    min-width: 45px;
+    border-radius: 12px;
+    background: #fff4d6;
+    color: #b58105;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.certificate-card h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+}
+
+.certificate-card p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+/* =========================================================
+   ONLINE LINKS
+========================================================= */
+
+.profile-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.empty-state {
+    text-align: center;
+    padding: 30px 15px;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 30px;
+    margin-bottom: 10px;
+    display: block;
+    color: #adb5bd;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .passport-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .passport-card.full-width {
+        grid-column: auto;
+    }
+
+    .portfolio-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .passport-identity-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .passport-page {
+        padding: 18px 10px 40px;
+    }
+
+    .passport-cover {
+        height: 190px;
+    }
+
+    .passport-identity {
+        padding: 0 18px 22px;
+    }
+
+    .passport-avatar {
+        width: 110px;
+        height: 110px;
+        margin-top: -55px;
+    }
+
+    .passport-name {
+        font-size: 1.5rem;
+    }
+
+    .passport-actions {
+        width: 100%;
+    }
+
+    .passport-actions .btn {
+        flex: 1;
+    }
+
+    .passport-card {
+        padding: 20px;
+    }
+
+    .profile-details {
+        grid-template-columns: 1fr;
+    }
+
+    .portfolio-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .passport-stats {
+        gap: 15px;
+    }
+}
+
+</style>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="passport-page">
+
+<!-- =====================================================
+     HERO
+====================================================== -->
+
+<div class="passport-hero">
+
+```
+<div class="passport-cover">
+
+    {% if talent.cover_photo %}
+        <img
+            src="{{ talent.cover_photo.url }}"
+            alt="Cover photo"
+        >
+    {% endif %}
+
+</div>
+
+
+<div class="passport-identity">
+
+    <!-- PROFILE PHOTO -->
+
+    <div class="passport-avatar">
+
+        {% if talent.profile_photo %}
+
+            <img
+                src="{{ talent.profile_photo.url }}"
+                alt="{{ talent.user.get_full_name }}"
+            >
+
+        {% else %}
+
+            <div class="passport-avatar-placeholder">
+                <i class="bi bi-person"></i>
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <div class="passport-identity-content">
+
+        <div>
+
+            <!-- NAME -->
+
+            <h1 class="passport-name">
+
+                {{ talent.user.get_full_name|default:talent.user.username }}
+
+                {% if talent.verified %}
+
+                    <span class="verified-badge">
+
+                        <i class="bi bi-patch-check-fill"></i>
+
+                        Verified
+
+                    </span>
+
+                {% endif %}
+
+
+                {% if talent.is_role_model %}
+
+                    <span class="role-model-badge">
+
+                        <i class="bi bi-star-fill"></i>
+
+                        Role Model
+
+                    </span>
+
+                {% endif %}
+
+            </h1>
+
+
+            <!-- ROLE MODEL CATEGORY -->
+
+            {% if talent.is_role_model and talent.role_model_category %}
+
+                <div class="text-muted small mb-2">
+
+                    <i class="bi bi-award me-1"></i>
+
+                    {{ talent.role_model_category }}
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- HEADLINE -->
+
+            {% if talent.headline %}
+
+                <div class="passport-headline">
+
+                    {{ talent.headline }}
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- LOCATION -->
+
+            <p class="passport-location">
+
+                <i class="bi bi-geo-alt"></i>
+
+                {% if talent.city %}
+                    {{ talent.city }}
+                {% endif %}
+
+                {% if talent.city and talent.country %}
+                    ,
+                {% endif %}
+
+                {% if talent.country %}
+                    {{ talent.country }}
+                {% else %}
+                    Location not provided
+                {% endif %}
+
+            </p>
+
+
+            <!-- STATUS -->
+
+            <div class="passport-status">
+
+                <!-- AVAILABILITY -->
+
+                {% if talent.availability_status == "AVAILABLE" %}
+
+                    <span class="status-pill status-available">
+
+                        <i class="bi bi-circle-fill"></i>
+
+                        Available
+
+                    </span>
+
+                {% elif talent.availability_status == "BUSY" %}
+
+                    <span class="status-pill status-busy">
+
+                        <i class="bi bi-clock-fill"></i>
+
+                        Currently Busy
+
+                    </span>
+
+                {% elif talent.availability_status == "NOT_LOOKING" %}
+
+                    <span class="status-pill status-not-looking">
+
+                        <i class="bi bi-dash-circle-fill"></i>
+
+                        Not Looking
+
+                    </span>
+
+                {% endif %}
+
+
+                <!-- EXPERIENCE -->
+
+                <span class="status-pill status-general">
+
+                    <i class="bi bi-bar-chart-fill"></i>
+
+                    {{ talent.get_experience_level_display }}
+
+                </span>
+
+
+                <!-- WORK TYPE -->
+
+                <span class="status-pill status-general">
+
+                    <i class="bi bi-laptop"></i>
+
+                    {{ talent.get_preferred_work_type_display }}
+
+                </span>
+
+            </div>
+
+
+            <!-- FOLLOWERS -->
+
+            <div class="passport-stats">
+
+                <div class="passport-stat">
+
+                    <span class="passport-stat-value">
+
+                        {{ talent.followers_count }}
+
+                    </span>
+
+                    <span class="passport-stat-label">
+
+                        Followers
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ACTIONS -->
+
+        <div class="passport-actions">
+
+            {% if request.user != talent.user %}
+
+                <a
+                    href="{% url 'messaging:start_conversation' talent.user.id %}"
+                    class="btn btn-primary"
+                >
+
+                    <i class="bi bi-chat-dots me-1"></i>
+
+                    Message
+
+                </a>
+
+
+                <a
+                    href="#"
+                    class="btn btn-outline-primary"
+                >
+
+                    <i class="bi bi-person-plus me-1"></i>
+
+                    Follow
+
+                </a>
+
+            {% else %}
+
+                <a
+                    href="{% url 'talent_dashboard' %}"
+                    class="btn btn-primary"
+                >
+
+                    <i class="bi bi-pencil me-1"></i>
+
+                    Edit Profile
+
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+```
+
+</div>
+
+<!-- =====================================================
+     PROFILE INFORMATION
+====================================================== -->
+
+<div class="passport-grid">
+
+```
+<!-- GENERAL TALENT INFORMATION -->
+
+<div class="passport-card">
+
+    <div class="passport-card-header">
+
+        <div class="passport-card-icon">
+
+            <i class="bi bi-person-vcard"></i>
+
+        </div>
+
+        <div>
+
+            <h2>
+                Profile Information
+            </h2>
+
+            <p>
+                General talent information
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="profile-details">
+
+        <div class="detail-item">
+
+            <span class="detail-label">
+                Talent Category
+            </span>
+
+            <span class="detail-value">
+
+                {{ talent.get_talent_category_display|default:"Not provided" }}
+
+            </span>
+
+        </div>
+
+
+        <div class="detail-item">
+
+            <span class="detail-label">
+                Experience Level
+            </span>
+
+            <span class="detail-value">
+
+                {{ talent.get_experience_level_display }}
+
+            </span>
+
+        </div>
+
+
+        <div class="detail-item">
+
+            <span class="detail-label">
+                Availability
+            </span>
+
+            <span class="detail-value">
+
+                {{ talent.get_availability_status_display }}
+
+            </span>
+
+        </div>
+
+
+        <div class="detail-item">
+
+            <span class="detail-label">
+                Preferred Work
+            </span>
+
+            <span class="detail-value">
+
+                {{ talent.get_preferred_work_type_display }}
+
+            </span>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- CATEGORY INFORMATION -->
+
+<div class="passport-card">
+
+    <div class="passport-card-header">
+
+        <div class="passport-card-icon">
+
+            {% if talent.talent_category == "SPORTS" %}
+
+                <i class="bi bi-trophy"></i>
+
+            {% elif talent.talent_category == "SCIENCE_TECHNOLOGY" %}
+
+                <i class="bi bi-cpu"></i>
+
+            {% elif talent.talent_category == "ARTS" %}
+
+                <i class="bi bi-palette"></i>
+
+            {% else %}
+
+                <i class="bi bi-grid"></i>
+
+            {% endif %}
+
+        </div>
+
+        <div>
+
+            <h2>
+
+                {% if talent.talent_category == "SPORTS" %}
+                    Sports Profile
+
+                {% elif talent.talent_category == "SCIENCE_TECHNOLOGY" %}
+                    Science & Technology
+
+                {% elif talent.talent_category == "ARTS" %}
+                    Arts Profile
+
+                {% elif talent.talent_category == "OTHERS" %}
+                    Other Talent
+
+                {% else %}
+                    Category Profile
+                {% endif %}
+
+            </h2>
+
+            <p>
+                Category-specific information
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+         SPORTS
+    ================================================== -->
+
+    {% if talent.talent_category == "SPORTS" %}
+
+        {% if sports_profile %}
+
+            <div class="profile-details">
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Sport
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ sports_profile.sport|default:"Not provided" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Sport Category
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ sports_profile.sport_category|default:"Not provided" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Position
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ sports_profile.position|default:"Not provided" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Height
+                    </span>
+
+                    <span class="detail-value">
+
+                        {% if sports_profile.height %}
+                            {{ sports_profile.height }} cm
+                        {% else %}
+                            Not provided
+                        {% endif %}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Weight
+                    </span>
+
+                    <span class="detail-value">
+
+                        {% if sports_profile.weight %}
+                            {{ sports_profile.weight }} kg
+                        {% else %}
+                            Not provided
+                        {% endif %}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <i class="bi bi-trophy"></i>
+
+                <p>
+                    Sports profile information has not been completed yet.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+
+    <!-- =================================================
+         SCIENCE & TECHNOLOGY
+    ================================================== -->
+
+    {% elif talent.talent_category == "SCIENCE_TECHNOLOGY" %}
+
+        {% if science_technology_profile %}
+
+            <div class="profile-details">
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Specialization
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ science_technology_profile.specialization|default:"Not provided" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Institution
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ science_technology_profile.institution|default:"Not provided" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Years of Experience
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ science_technology_profile.years_of_experience }}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <i class="bi bi-cpu"></i>
+
+                <p>
+                    Science & Technology profile information has not been completed yet.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+
+    <!-- =================================================
+         ARTS
+    ================================================== -->
+
+    {% elif talent.talent_category == "ARTS" %}
+
+        {% if arts_profile %}
+
+            <div class="profile-details">
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Specialization
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ arts_profile.specialization|default:"Not provided" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Artistic Discipline
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ arts_profile.discipline|default:"Not provided" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Years of Experience
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ arts_profile.years_of_experience }}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <i class="bi bi-palette"></i>
+
+                <p>
+                    Arts profile information has not been completed yet.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+
+    <!-- =================================================
+         OTHERS
+    ================================================== -->
+
+    {% elif talent.talent_category == "OTHERS" %}
+
+        {% if other_profile %}
+
+            <div class="profile-details">
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Specialization
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ other_profile.specialization|default:"Not provided" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Field / Area
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ other_profile.field|default:"Not provided" }}
+
+                    </span>
+
+                </div>
+
+
+                <div class="detail-item">
+
+                    <span class="detail-label">
+                        Years of Experience
+                    </span>
+
+                    <span class="detail-value">
+
+                        {{ other_profile.years_of_experience }}
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <i class="bi bi-grid"></i>
+
+                <p>
+                    Talent profile information has not been completed yet.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    {% endif %}
+
+</div>
+```
+
+</div>
+
+<!-- =====================================================
+     CATEGORY-SPECIFIC PROFILE
+====================================================== -->
+
+{% if talent.talent_category == "SPORTS" and sports_profile %}
+
+<div class="passport-card full-width">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-trophy"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Athletic Profile
+        </h2>
+
+        <p>
+            Athletic background and sporting information
+        </p>
+
+    </div>
+
+</div>
+
+
+{% if sports_profile.bio %}
+
+    <p class="biography">
+
+        {{ sports_profile.bio }}
+
+    </p>
+
+{% endif %}
+```
+
+</div>
+
+{% elif talent.talent_category == "SCIENCE_TECHNOLOGY" and science_technology_profile %}
+
+<div class="passport-card full-width">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-cpu"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Science & Technology Profile
+        </h2>
+
+        <p>
+            Professional, technical and research background
+        </p>
+
+    </div>
+
+</div>
+
+
+{% if science_technology_profile.description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            About
+        </h6>
+
+        <p class="biography">
+            {{ science_technology_profile.description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if science_technology_profile.education %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Education & Training
+        </h6>
+
+        <p class="biography">
+            {{ science_technology_profile.education }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if science_technology_profile.skills_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Technical & Scientific Skills
+        </h6>
+
+        <p class="biography">
+            {{ science_technology_profile.skills_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if science_technology_profile.projects_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Projects & Work
+        </h6>
+
+        <p class="biography">
+            {{ science_technology_profile.projects_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if science_technology_profile.research_interests %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Research Interests
+        </h6>
+
+        <p class="biography">
+            {{ science_technology_profile.research_interests }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+<div class="profile-links">
+
+    {% if science_technology_profile.website %}
+
+        <a
+            href="{{ science_technology_profile.website }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-primary"
+        >
+
+            <i class="bi bi-globe me-1"></i>
+            Website
+
+        </a>
+
+    {% endif %}
+
+
+    {% if science_technology_profile.linkedin %}
+
+        <a
+            href="{{ science_technology_profile.linkedin }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-primary"
+        >
+
+            <i class="bi bi-linkedin me-1"></i>
+            LinkedIn
+
+        </a>
+
+    {% endif %}
+
+
+    {% if science_technology_profile.github %}
+
+        <a
+            href="{{ science_technology_profile.github }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-dark"
+        >
+
+            <i class="bi bi-github me-1"></i>
+            GitHub
+
+        </a>
+
+    {% endif %}
+
+</div>
+```
+
+</div>
+
+{% elif talent.talent_category == "ARTS" and arts_profile %}
+
+<div class="passport-card full-width">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-palette"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Artistic Profile
+        </h2>
+
+        <p>
+            Creative background and artistic interests
+        </p>
+
+    </div>
+
+</div>
+
+
+{% if arts_profile.description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            About
+        </h6>
+
+        <p class="biography">
+            {{ arts_profile.description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if arts_profile.experience_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Experience & Background
+        </h6>
+
+        <p class="biography">
+            {{ arts_profile.experience_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if arts_profile.skills_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Skills & Expertise
+        </h6>
+
+        <p class="biography">
+            {{ arts_profile.skills_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if arts_profile.portfolio_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Creative Portfolio
+        </h6>
+
+        <p class="biography">
+            {{ arts_profile.portfolio_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if arts_profile.achievements_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Achievements
+        </h6>
+
+        <p class="biography">
+            {{ arts_profile.achievements_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if arts_profile.creative_interests %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Creative Interests
+        </h6>
+
+        <p class="biography">
+            {{ arts_profile.creative_interests }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+<div class="profile-links">
+
+    {% if arts_profile.website %}
+
+        <a
+            href="{{ arts_profile.website }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-primary"
+        >
+
+            <i class="bi bi-globe me-1"></i>
+            Website
+
+        </a>
+
+    {% endif %}
+
+
+    {% if arts_profile.portfolio_url %}
+
+        <a
+            href="{{ arts_profile.portfolio_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-success"
+        >
+
+            <i class="bi bi-briefcase me-1"></i>
+            Portfolio
+
+        </a>
+
+    {% endif %}
+
+
+    {% if arts_profile.instagram %}
+
+        <a
+            href="{{ arts_profile.instagram }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-danger"
+        >
+
+            <i class="bi bi-instagram me-1"></i>
+            Instagram
+
+        </a>
+
+    {% endif %}
+
+
+    {% if arts_profile.youtube %}
+
+        <a
+            href="{{ arts_profile.youtube }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-danger"
+        >
+
+            <i class="bi bi-youtube me-1"></i>
+            YouTube
+
+        </a>
+
+    {% endif %}
+
+</div>
+```
+
+</div>
+
+{% elif talent.talent_category == "OTHERS" and other_profile %}
+
+<div class="passport-card full-width">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-grid"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Professional Profile
+        </h2>
+
+        <p>
+            Background, work and interests
+        </p>
+
+    </div>
+
+</div>
+
+
+{% if other_profile.description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            About
+        </h6>
+
+        <p class="biography">
+            {{ other_profile.description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if other_profile.experience_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Experience & Background
+        </h6>
+
+        <p class="biography">
+            {{ other_profile.experience_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if other_profile.skills_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Skills & Expertise
+        </h6>
+
+        <p class="biography">
+            {{ other_profile.skills_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if other_profile.projects_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Projects & Work
+        </h6>
+
+        <p class="biography">
+            {{ other_profile.projects_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if other_profile.achievements_description %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Achievements
+        </h6>
+
+        <p class="biography">
+            {{ other_profile.achievements_description }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+{% if other_profile.interests %}
+
+    <div class="mb-4">
+
+        <h6 class="fw-bold">
+            Interests & Ambitions
+        </h6>
+
+        <p class="biography">
+            {{ other_profile.interests }}
+        </p>
+
+    </div>
+
+{% endif %}
+
+
+<div class="profile-links">
+
+    {% if other_profile.website %}
+
+        <a
+            href="{{ other_profile.website }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-primary"
+        >
+
+            <i class="bi bi-globe me-1"></i>
+            Website
+
+        </a>
+
+    {% endif %}
+
+
+    {% if other_profile.linkedin %}
+
+        <a
+            href="{{ other_profile.linkedin }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-primary"
+        >
+
+            <i class="bi bi-linkedin me-1"></i>
+            LinkedIn
+
+        </a>
+
+    {% endif %}
+
+
+    {% if other_profile.other_link %}
+
+        <a
+            href="{{ other_profile.other_link }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-sm btn-outline-success"
+        >
+
+            <i class="bi bi-box-arrow-up-right me-1"></i>
+            More Information
+
+        </a>
+
+    {% endif %}
+
+</div>
+```
+
+</div>
+
+{% endif %}
+
+<!-- =====================================================
+     ABOUT ME
+====================================================== -->
+
+<div class="passport-card">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-chat-left-text"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            About Me
+        </h2>
+
+        <p>
+            Personal introduction
+        </p>
+
+    </div>
+
+</div>
+
+
+{% if talent.biography %}
+
+    <p class="biography">
+
+        {{ talent.biography }}
+
+    </p>
+
+{% else %}
+
+    <div class="empty-state">
+
+        <i class="bi bi-chat-square-text"></i>
+
+        <p>
+            No biography added yet.
+        </p>
+
+    </div>
+
+{% endif %}
+```
+
+</div>
+
+<!-- =====================================================
+     SPORTS BIO
+====================================================== -->
+
+{% if talent.talent_category == "SPORTS" and sports_profile and sports_profile.bio %}
+
+<div class="passport-card">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-person-running"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Athletic Background
+        </h2>
+
+        <p>
+            Sporting biography
+        </p>
+
+    </div>
+
+</div>
+
+<p class="biography">
+
+    {{ sports_profile.bio }}
+
+</p>
+```
+
+</div>
+
+{% endif %}
+
+<!-- =====================================================
+     SKILLS & DOMAINS
+====================================================== -->
+
+<div class="passport-grid">
+
+```
+<!-- SKILLS -->
+
+<div class="passport-card">
+
+    <div class="passport-card-header">
+
+        <div class="passport-card-icon">
+
+            <i class="bi bi-stars"></i>
+
+        </div>
+
+        <div>
+
+            <h2>
+                Skills
+            </h2>
+
+            <p>
+                Areas of expertise
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="tag-list">
+
+        {% for skill in talent.skills.all %}
+
+            <span class="passport-tag">
+
+                {{ skill.name }}
+
+            </span>
+
+        {% empty %}
+
+            <span class="text-muted">
+                No skills added yet.
+            </span>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+
+<!-- DOMAINS -->
+
+<div class="passport-card">
+
+    <div class="passport-card-header">
+
+        <div class="passport-card-icon">
+
+            <i class="bi bi-diagram-3"></i>
+
+        </div>
+
+        <div>
+
+            <h2>
+                Domains
+            </h2>
+
+            <p>
+                Areas of specialization
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="tag-list">
+
+        {% for domain in talent.domains.all %}
+
+            <span class="passport-tag domain-tag">
+
+                {{ domain.name }}
+
+            </span>
+
+        {% empty %}
+
+            <span class="text-muted">
+                No domains added yet.
+            </span>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+```
+
+</div>
+
+<!-- =====================================================
+     PORTFOLIO
+====================================================== -->
+
+<div class="passport-card full-width">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-briefcase"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Portfolio
+        </h2>
+
+        <p>
+            Work, projects and evidence of talent
+        </p>
+
+    </div>
+
+</div>
+
+
+{% if portfolio_items %}
+
+    <div class="portfolio-grid">
+
+        {% for item in portfolio_items %}
+
+            <div class="portfolio-item">
+
+                {% if item.image %}
+
+                    <img
+                        src="{{ item.image.url }}"
+                        class="portfolio-image"
+                        alt="{{ item.title }}"
+                    >
+
+                {% endif %}
+
+
+                <div class="portfolio-content">
+
+                    <span class="badge bg-primary portfolio-type">
+
+                        {{ item.get_item_type_display }}
+
+                    </span>
+
+
+                    <h3>
+
+                        {{ item.title }}
+
+                    </h3>
+
+
+                    {% if item.description %}
+
+                        <p>
+
+                            {{ item.description }}
+
+                        </p>
+
+                    {% endif %}
+
+
+                    <div class="d-flex gap-2 flex-wrap">
+
+                        {% if item.file %}
+
+                            <a
+                                href="{{ item.file.url }}"
+                                class="btn btn-sm btn-outline-primary"
+                                target="_blank"
+                            >
+
+                                <i class="bi bi-file-earmark me-1"></i>
+
+                                Open File
+
+                            </a>
+
+                        {% endif %}
+
+
+                        {% if item.link %}
+
+                            <a
+                                href="{{ item.link }}"
+                                class="btn btn-sm btn-outline-success"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+
+                                <i class="bi bi-box-arrow-up-right me-1"></i>
+
+                                Visit Link
+
+                            </a>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+{% else %}
+
+    <div class="empty-state">
+
+        <i class="bi bi-briefcase"></i>
+
+        <p>
+            No portfolio items available yet.
+        </p>
+
+    </div>
+
+{% endif %}
+```
+
+</div>
+
+<!-- =====================================================
+     ACHIEVEMENTS
+====================================================== -->
+
+<div class="passport-card full-width">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-trophy"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Achievements
+        </h2>
+
+        <p>
+            Milestones and accomplishments
+        </p>
+
+    </div>
+
+</div>
+
+
+{% if talent.achievements.all %}
+
+    <div class="timeline">
+
+        {% for achievement in talent.achievements.all %}
+
+            <div class="timeline-item">
+
+                <span class="timeline-dot"></span>
+
+
+                <div class="timeline-card">
+
+                    <h3>
+
+                        {{ achievement.title }}
+
+                    </h3>
+
+
+                    {% if achievement.description %}
+
+                        <p>
+
+                            {{ achievement.description }}
+
+                        </p>
+
+                    {% endif %}
+
+
+                    {% if achievement.date_received %}
+
+                        <span class="timeline-date">
+
+                            <i class="bi bi-calendar3 me-1"></i>
+
+                            {{ achievement.date_received }}
+
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+{% else %}
+
+    <div class="empty-state">
+
+        <i class="bi bi-trophy"></i>
+
+        <p>
+            No achievements added yet.
+        </p>
+
+    </div>
+
+{% endif %}
+```
+
+</div>
+
+<!-- =====================================================
+     CERTIFICATIONS
+====================================================== -->
+
+<div class="passport-card full-width">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-patch-check"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Certifications
+        </h2>
+
+        <p>
+            Professional qualifications
+        </p>
+
+    </div>
+
+</div>
+
+
+{% for certificate in talent.certifications.all %}
+
+    <div class="certificate-card">
+
+        <div class="certificate-icon">
+
+            <i class="bi bi-award"></i>
+
+        </div>
+
+
+        <div>
+
+            <h3>
+
+                {{ certificate.name }}
+
+            </h3>
+
+
+            <p>
+
+                {{ certificate.issuing_organization }}
+
+                {% if certificate.issue_date %}
+
+                    · {{ certificate.issue_date }}
+
+                {% endif %}
+
+            </p>
+
+        </div>
+
+    </div>
+
+{% empty %}
+
+    <div class="empty-state">
+
+        <i class="bi bi-patch-check"></i>
+
+        <p>
+            No certifications added yet.
+        </p>
+
+    </div>
+
+{% endfor %}
+```
+
+</div>
+
+<!-- =====================================================
+     EXPERIENCE
+====================================================== -->
+
+<div class="passport-card full-width">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-briefcase-fill"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Experience
+        </h2>
+
+        <p>
+            Professional and athletic experience
+        </p>
+
+    </div>
+
+</div>
+
+
+<div class="timeline">
+
+    {% for experience in talent.experiences.all %}
+
+        <div class="timeline-item">
+
+            <span class="timeline-dot"></span>
+
+
+            <div class="timeline-card">
+
+                <h3>
+
+                    {{ experience.role }}
+
+                </h3>
+
+
+                <h4>
+
+                    {{ experience.company }}
+
+                </h4>
+
+
+                {% if experience.description %}
+
+                    <p>
+
+                        {{ experience.description }}
+
+                    </p>
+
+                {% endif %}
+
+
+                <span class="timeline-date">
+
+                    {{ experience.start_date }}
+
+                    -
+
+                    {% if experience.currently_working %}
+
+                        Present
+
+                    {% else %}
+
+                        {{ experience.end_date }}
+
+                    {% endif %}
+
+                </span>
+
+            </div>
+
+        </div>
+
+    {% empty %}
+
+        <div class="empty-state">
+
+            <i class="bi bi-briefcase"></i>
+
+            <p>
+                No experience added yet.
+            </p>
+
+        </div>
+
+    {% endfor %}
+
+</div>
+```
+
+</div>
+
+<!-- =====================================================
+     EVENT CERTIFICATES
+====================================================== -->
+
+<div class="passport-card full-width">
+
+```
+<div class="passport-card-header">
+
+    <div class="passport-card-icon">
+
+        <i class="bi bi-award"></i>
+
+    </div>
+
+    <div>
+
+        <h2>
+            Verified Event Certificates
+        </h2>
+
+        <p>
+            Certificates earned through Awinlink events
+        </p>
+
+    </div>
+
+</div>
+
+
+{% for certificate in talent.event_certificates.all %}
+
+    <div class="certificate-card">
+
+        <div class="certificate-icon">
+
+            <i class="bi bi-patch-check-fill"></i>
+
+        </div>
+
+
+        <div>
+
+            <h3>
+
+                {{ certificate.title }}
+
+            </h3>
+
+
+            <p>
+
+                {{ certificate.event.title }}
+
+                ·
+
+                <span class="text-success fw-semibold">
+
+                    Verified
+
+                </span>
+
+            </p>
+
+        </div>
+
+    </div>
+
+{% empty %}
+
+    <div class="empty-state">
+
+        <i class="bi bi-award"></i>
+
+        <p>
+            No event certificates yet.
+        </p>
+
+    </div>
+
+{% endfor %}
+```
+
+</div>
+
+</div>
+
+{% endblock %}

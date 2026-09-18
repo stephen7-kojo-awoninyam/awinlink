@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+AI Recommended Talents 🎯
+</h2>
+
+
+<h5>
+
+Opportunity:
+
+{{ opportunity.title }}
+
+</h5>
+
+
+<hr>
+
+
+
+<div class="row">
+
+
+
+{% for item in recommendations %}
+
+
+
+<div class="col-md-4">
+
+
+<div class="card p-3 mb-4 shadow">
+
+
+
+{% if item.talent.profile_photo %}
+
+
+<img src="{{ item.talent.profile_photo.url }}"
+
+class="rounded-circle mx-auto"
+
+width="120"
+
+height="120">
+
+
+{% endif %}
+
+
+
+
+<h5 class="mt-3">
+
+{{ item.talent.user.get_full_name }}
+
+</h5>
+
+
+
+
+<p>
+
+{{ item.talent.headline }}
+
+</p>
+
+
+
+
+<p>
+
+{{ item.talent.country }}
+
+</p>
+
+
+
+
+<h4 class="text-success">
+
+{{ item.score }}% Match
+
+</h4>
+
+
+
+<hr>
+
+
+
+<h6>
+Why this match?
+</h6>
+
+
+
+<ul>
+
+{% for reason in item.reasons %}
+
+<li>
+
+{{ reason }}
+
+</li>
+
+
+{% empty %}
+
+<li>
+No matching details available.
+</li>
+
+
+{% endfor %}
+
+
+</ul>
+
+
+
+
+<a href="{% url 'talent_profile' item.talent.id %}"
+
+class="btn btn-primary">
+
+View Profile
+
+</a>
+
+
+
+<a href="{% url 'invite_talent' opportunity.id item.talent.id %}"
+class="btn btn-success">
+
+Invite Talent
+
+</a>
+
+
+
+
+<a href="{% url 'add_to_shortlist' item.talent.id %}"
+
+class="btn btn-warning">
+
+⭐ Shortlist
+
+</a>
+
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+{% empty %}
+
+
+
+<div class="alert alert-warning">
+
+No suitable talents found.
+
+</div>
+
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,78 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <div class="card p-4">
+
+        <h3>
+            Create Post
+        </h3>
+
+        <form method="POST" enctype="multipart/form-data" id="createPostForm">
+
+            {% csrf_token %}
+
+            {{ form.as_p }}
+
+            <button
+                type="submit"
+                class="btn btn-success"
+                id="postButton"
+                disabled
+            >
+                Post
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const form = document.getElementById("createPostForm");
+    const postButton = document.getElementById("postButton");
+
+    if (!form || !postButton) {
+        return;
+    }
+
+    // Find the main text input/textarea
+    const textField = form.querySelector("textarea, input[type='text']");
+
+    if (!textField) {
+        return;
+    }
+
+    function updatePostButton() {
+
+        if (textField.value.trim().length > 0) {
+
+            postButton.disabled = false;
+
+        } else {
+
+            postButton.disabled = true;
+
+        }
+    }
+
+    // Check whenever the user types
+    textField.addEventListener("input", updatePostButton);
+
+    // Check initial state
+    updatePostButton();
+
+});
+
+</script>
+
+{% endblock %}
+

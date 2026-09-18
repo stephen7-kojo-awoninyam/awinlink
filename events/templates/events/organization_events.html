@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<div class="d-flex justify-content-between mb-4">
+
+
+<h2>
+My Created Events
+</h2>
+
+<div class="row mb-4">
+
+
+<div class="col-md-3">
+
+<div class="card shadow p-3">
+
+<h5>
+Total Events
+</h5>
+
+<h2>
+{{total_events}}
+</h2>
+
+</div>
+
+</div>
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow p-3">
+
+<h5>
+Participants
+</h5>
+
+<h2>
+{{total_participants}}
+</h2>
+
+</div>
+
+</div>
+
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow p-3">
+
+<h5>
+Attendance
+</h5>
+
+<h2>
+{{total_attendance}}
+</h2>
+
+</div>
+
+</div>
+
+
+
+
+<div class="col-md-3">
+
+<div class="card shadow p-3">
+
+<h5>
+Certificates
+</h5>
+
+<h2>
+{{total_certificates}}
+</h2>
+
+</div>
+
+</div>
+
+
+</div>
+
+
+<a href="{% url 'create_event' %}"
+class="btn btn-success">
+
++ Create Event
+
+</a>
+
+<a href="{% url 'event_analytics' %}"
+
+class="btn btn-dark">
+
+Analytics
+
+</a>
+</div>
+
+
+
+<div class="row">
+
+
+{% for event in events %}
+
+
+
+<div class="col-md-6 mb-4">
+
+
+<div class="card shadow-sm">
+
+
+
+{% if event.image %}
+
+<img src="{{event.image.url}}"
+class="card-img-top"
+style="height:220px;object-fit:cover;">
+
+{% endif %}
+
+
+
+<div class="card-body">
+
+
+
+<h4>
+
+{{event.title}}
+
+</h4>
+
+
+
+<span class="badge bg-primary">
+
+{{event.get_status_display}}
+
+</span>
+
+
+
+
+<p class="mt-3">
+
+📅
+
+{{event.start_date}}
+
+</p>
+
+
+
+
+<p>
+
+🎯
+
+{{event.get_event_type_display}}
+
+</p>
+
+
+
+<hr>
+
+
+
+<h5>
+Event Statistics
+</h5>
+
+
+
+<p>
+
+👥 Participants:
+
+<strong>
+
+{{event.participants}}
+
+</strong>
+<a href="{% url 'event_gallery' event.id %}"
+
+   class="btn btn-outline-dark">
+
+    Gallery
+
+</a>
+</p>
+
+
+
+<p>
+
+✅ Attended:
+
+<strong>
+
+{{event.attended}}
+
+</strong>
+<a href="{% url 'event_gallery' event.id %}"
+
+   class="btn btn-outline-dark">
+
+    Gallery
+
+</a>
+</p>
+
+
+
+<p>
+
+⭐ Rating:
+
+{% if event.rating %}
+
+{{event.rating|floatformat:1}}
+
+{% else %}
+
+No rating yet
+
+{% endif %}
+<a href="{% url 'event_gallery' event.id %}"
+
+   class="btn btn-outline-dark">
+
+    Gallery
+
+</a>
+
+</p>
+
+
+
+<div class="mt-3">
+
+
+<a href="{% url 'event_detail' event.id %}"
+
+class="btn btn-outline-primary btn-sm">
+
+View
+
+</a>
+
+
+
+<a href="{% url 'event_participants' event.id %}"
+
+class="btn btn-primary btn-sm">
+
+Manage Participants
+
+</a>
+
+
+
+<a href="{% url 'event_dashboard' event.id %}"
+
+class="btn btn-dark btn-sm">
+
+Dashboard
+
+</a>
+
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+{% empty %}
+
+
+<div class="alert alert-info">
+
+You have not created any events yet.
+
+</div>
+
+
+{% endfor %}
+
+
+
+</div>
+
+<div class="card shadow p-4 mt-4">
+
+
+<h4>
+Registration Growth
+</h4>
+
+
+<canvas id="registrationChart"></canvas>
+
+
+</div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+<script>
+
+
+const labels = [
+
+{% for item in registration_chart %}
+
+"{{item.month|date:'M Y'}}",
+
+{% endfor %}
+
+];
+
+
+const data = [
+
+{% for item in registration_chart %}
+
+{{item.total}},
+
+{% endfor %}
+
+];
+
+
+
+new Chart(
+
+document.getElementById(
+"registrationChart"
+),
+
+{
+
+type:"line",
+
+
+data:{
+
+
+labels:labels,
+
+
+datasets:[{
+
+label:"Registrations",
+
+
+data:data,
+
+
+borderWidth:2
+
+}]
+
+
+}
+
+
+}
+
+);
+
+
+</script>
+
+{% endblock %}

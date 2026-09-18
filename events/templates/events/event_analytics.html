@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+<h2 class="mb-4">
+
+Event Analytics
+
+</h2>
+
+<div class="row">
+
+<div class="col-md-3">
+
+<div class="card text-center shadow">
+
+<div class="card-body">
+
+<h3>{{ total_events }}</h3>
+
+<p>Total Events</p>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-3">
+
+<div class="card text-center shadow">
+
+<div class="card-body">
+
+<h3>{{ total_participants }}</h3>
+
+<p>Participants</p>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-3">
+
+<div class="card text-center shadow">
+
+<div class="card-body">
+
+<h3>{{ attendance_rate }}%</h3>
+
+<p>Attendance</p>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="col-md-3">
+
+<div class="card text-center shadow">
+
+<div class="card-body">
+
+<h3>{{ certificates }}</h3>
+
+<p>Certificates</p>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<hr>
+
+<h3>
+
+Top Performing Events
+
+</h3>
+
+<table class="table table-striped">
+
+<thead>
+
+<tr>
+
+<th>Event</th>
+
+<th>Participants</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for event in top_events %}
+
+<tr>
+
+<td>{{ event.title }}</td>
+
+<td>{{ event.participants }}</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+{% endblock %}

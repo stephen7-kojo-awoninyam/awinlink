@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2>
+My Certificates
+</h2>
+
+
+
+{% for certificate in certificates %}
+
+
+<div class="card shadow p-4 mb-3">
+
+
+<h4>
+
+{{certificate.title}}
+
+</h4>
+
+
+
+<p>
+
+Event:
+
+{{certificate.event.title}}
+
+</p>
+
+
+
+<p>
+
+Issued:
+
+{{certificate.issued_at}}
+
+</p>
+
+
+
+<p>
+
+Certificate ID:
+
+<strong>
+
+{{certificate.certificate_number}}
+
+</strong>
+
+</p>
+
+
+
+{% if certificate.verified %}
+
+<span class="badge bg-success">
+
+Verified
+
+</span>
+
+{% endif %}
+
+
+
+</div>
+
+
+
+{% empty %}
+
+
+<p>
+No certificates available.
+</p>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+{% endblock %}

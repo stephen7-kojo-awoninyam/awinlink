@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<h2>
+Welcome {{ talent.user.get_full_name }}
+</h2>
+
+
+<hr>
+
+
+<h4>
+My Profile
+</h4>
+
+
+<p>
+{{ talent.biography }}
+</p>
+
+
+<h4>
+My Skills
+</h4>
+
+
+{% for skill in talent.skills.all %}
+
+<span class="badge bg-primary">
+
+{{ skill.name }}
+
+</span>
+
+{% empty %}
+
+<p>
+No skills added yet.
+</p>
+
+{% endfor %}
+
+
+
+<hr>
+
+
+<h4>
+My Portfolio
+</h4>
+
+
+{% for item in talent.portfolio_items.all %}
+
+<p>
+
+{{ item.title }}
+
+</p>
+
+
+{% empty %}
+
+<p>
+No portfolio items yet.
+</p>
+
+{% endfor %}
+
+
+
+<hr>
+
+
+<h4>
+Recommended Opportunities
+</h4>
+
+
+
+
+{% for item in opportunities %}
+
+
+<div class="card mb-3">
+
+<div class="card-body">
+
+
+<h5>
+
+{{ item.opportunity.title }}
+
+</h5>
+
+
+<p>
+
+{{ item.opportunity.description }}
+
+</p>
+
+
+<p>
+
+<strong>
+Match:
+</strong>
+
+{{ item.score }}%
+
+</p>
+
+
+<a href="{% url 'apply_opportunity' item.opportunity.id %}"
+class="btn btn-success">
+
+Apply
+
+</a>
+
+
+</div>
+
+</div>
+
+
+{% empty %}
+
+
+<p>
+No recommended opportunities available.
+</p>
+
+
+{% endfor %}
+
+
+{% endblock %}

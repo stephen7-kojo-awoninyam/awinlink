@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h1 class="fw-bold mb-1">
+                Saved Talents
+            </h1>
+
+            <p class="text-muted mb-0">
+                Talents you have bookmarked for future scouting.
+            </p>
+        </div>
+
+        <span class="badge bg-primary fs-6">
+            {{ bookmarks|length }} Saved
+        </span>
+
+    </div>
+
+
+    {% if bookmarks %}
+
+        <div class="row g-4">
+
+            {% for bookmark in bookmarks %}
+
+                <div class="col-md-6 col-lg-4">
+
+                    <div class="card border-0 shadow-sm h-100">
+
+                        <div class="card-body">
+
+                            <h5 class="fw-bold">
+                                {{ bookmark.talent.user.get_full_name|default:bookmark.talent.user.username }}
+                            </h5>
+
+                            {% if bookmark.talent.headline %}
+
+                                <p class="text-muted mb-2">
+                                    {{ bookmark.talent.headline }}
+                                </p>
+
+                            {% endif %}
+
+
+                            {% if bookmark.notes %}
+
+                                <div class="alert alert-light border mt-3">
+
+                                    <small class="text-muted">
+                                        Scout Notes
+                                    </small>
+
+                                    <p class="mb-0 mt-1">
+                                        {{ bookmark.notes }}
+                                    </p>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <div class="d-flex gap-2 mt-3">
+
+                                <a
+                                    href="{% url 'talent_detail' bookmark.talent.id %}"
+                                    class="btn btn-primary btn-sm"
+                                >
+                                    View Profile
+                                </a>
+
+                                <a
+                                    href="{% url 'remove_bookmark' bookmark.talent.id %}"
+                                    class="btn btn-outline-danger btn-sm"
+                                >
+                                    Remove
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body text-center py-5">
+
+                <i class="bi bi-bookmark fs-1 text-muted"></i>
+
+                <h4 class="fw-bold mt-3">
+                    No Saved Talents
+                </h4>
+
+                <p class="text-muted">
+                    You haven't bookmarked any talents yet.
+                </p>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

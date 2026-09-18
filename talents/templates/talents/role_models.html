@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<div class="container mt-5">
+
+
+<h2 class="mb-4">
+
+⭐ Discover Role Models
+
+</h2>
+
+
+
+<div class="row">
+
+
+
+{% for talent in role_models %}
+
+
+
+<div class="col-md-4 mb-4">
+
+
+
+<div class="card shadow-sm h-100">
+
+
+
+<!-- Profile Image -->
+
+<div class="text-center mt-3">
+
+
+{% if talent.profile_photo %}
+
+
+<img src="{{ talent.profile_photo.url }}"
+width="120"
+height="120"
+class="rounded-circle">
+
+
+{% else %}
+
+
+<div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center"
+style="width:120px;height:120px">
+
+
+{{ talent.user.first_name|first }}
+
+
+</div>
+
+
+{% endif %}
+
+
+
+</div>
+
+
+
+
+<div class="card-body text-center">
+
+
+
+<h5>
+
+
+{{ talent.user.get_full_name }}
+
+
+
+{% if talent.verified %}
+
+
+<span class="badge bg-success">
+
+✓
+
+</span>
+
+
+{% endif %}
+
+
+
+</h5>
+
+
+
+
+<p class="text-muted">
+
+{{ talent.headline }}
+
+</p>
+
+
+
+
+
+<p>
+
+🌍 {{ talent.country }}
+
+</p>
+
+
+
+
+<hr>
+
+
+
+<h6>
+
+Skills
+
+</h6>
+
+
+
+{% for skill in talent.skills.all %}
+
+
+
+<span class="badge bg-primary">
+
+{{ skill.name }}
+
+</span>
+
+
+{% empty %}
+
+
+<small>
+
+No skills added
+
+</small>
+
+
+{% endfor %}
+
+
+
+<br><br>
+
+
+
+
+<p>
+
+⭐ Followers:
+
+{{ talent.followers_count }}
+
+</p>
+
+
+
+
+
+
+{% if request.user != talent.user %}
+
+
+
+{% if talent.user in request.user.following.all %}
+
+
+
+<a href="{% url 'unfollow_talent' talent.id %}"
+
+class="btn btn-danger btn-sm">
+
+
+Unfollow
+
+
+</a>
+
+
+
+{% else %}
+
+
+
+<a href="{% url 'follow_talent' talent.id %}"
+
+class="btn btn-primary btn-sm">
+
+
+Follow
+
+
+</a>
+
+
+
+{% endif %}
+
+
+
+{% endif %}
+
+
+
+
+
+<a href="{% url 'talent_profile' talent.id %}"
+
+class="btn btn-outline-dark btn-sm">
+
+
+View Profile
+
+
+</a>
+
+
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+{% empty %}
+
+
+<div class="alert alert-info">
+
+No role models available yet.
+
+</div>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

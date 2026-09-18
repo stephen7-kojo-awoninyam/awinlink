@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <div class="card shadow-lg">
+
+        <div class="card-body p-5 text-center">
+
+            <p class="text-muted mb-2">
+                AWINLINK
+            </p>
+
+            <h1 class="mb-4">
+                Certificate of Participation
+            </h1>
+
+            <p class="lead">
+                This certificate is proudly presented to
+            </p>
+
+            <h2 class="my-4">
+                {{ certificate.talent.user.get_full_name }}
+            </h2>
+
+            <p>
+                for successfully participating in
+            </p>
+
+            <h3 class="mb-4">
+                {{ certificate.event.title }}
+            </h3>
+
+            {% if certificate.description %}
+
+                <p class="text-muted">
+                    {{ certificate.description }}
+                </p>
+
+            {% endif %}
+
+            <hr class="my-4">
+
+            <div class="row">
+
+                <div class="col-md-4">
+
+                    <strong>Issued By</strong>
+
+                    <p>
+                        {{ certificate.issued_by.name }}
+                    </p>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <strong>Certificate Code</strong>
+
+                    <p>
+                        {{ certificate.certificate_code }}
+                    </p>
+
+                </div>
+
+                <div class="col-md-4">
+
+                    <strong>Issued Date</strong>
+
+                    <p>
+                        {{ certificate.issued_at|date:"F d, Y" }}
+                    </p>
+
+                </div>
+
+            </div>
+
+            <div class="mt-4">
+
+                {% if certificate.verified %}
+
+                    <span class="badge bg-success p-2">
+                        ✓ Verified Certificate
+                    </span>
+
+                {% else %}
+
+                    <span class="badge bg-danger p-2">
+                        Certificate Not Verified
+                    </span>
+
+                {% endif %}
+
+            </div>
+
+            <div class="mt-4">
+                        <a
+                        href="{% url 'certificate_detail' certificate.id %}"
+                        class="btn btn-primary"
+                    >
+                        View Certificate
+                    </a>
+
+                <a
+                    href="{% url 'verify_certificate' certificate.certificate_code %}"
+                    class="btn btn-outline-primary"
+                >
+                    Verify Certificate
+                </a>
+
+                <button
+                    onclick="window.print()"
+                    class="btn btn-primary"
+                >
+                    Print Certificate
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
