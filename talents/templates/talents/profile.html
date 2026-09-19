@@ -848,16 +848,34 @@
                 </a>
 
 
-                <a
-                    href="#"
-                    class="btn btn-outline-primary"
-                >
 
-                    <i class="bi bi-person-plus me-1"></i>
+                {% if request.user != talent.user %}
 
-                    Follow
+                    {% if following %}
 
-                </a>
+                        <a
+                            href="{% url 'connections:unfollow_user' talent.user.id %}"
+                            class="btn btn-outline-primary"
+                        >
+                            <i class="bi bi-person-check me-1"></i>
+                            Unfollow
+                        </a>
+
+                    {% else %}
+
+                        <a
+                            href="{% url 'connections:follow_user' talent.user.id %}"
+                            class="btn btn-outline-primary"
+                        >
+                            <i class="bi bi-person-plus me-1"></i>
+                            Follow
+                        </a>
+
+                    {% endif %}
+
+                {% endif %}
+
+
 
             {% else %}
 
@@ -931,6 +949,15 @@
 
             </span>
 
+        </div>
+
+        <div class="detail-item">
+            <span class="detail-label">
+                Talent Area
+            </span>
+            <span class="detail-value">
+                {{ talent.talent_area|default:"Not provided" }}
+            </span>
         </div>
 
 
