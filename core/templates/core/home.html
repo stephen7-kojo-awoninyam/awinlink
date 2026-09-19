@@ -1,31 +1,30 @@
 {% extends "base.html" %}
 
+{% block title %}
+Awinlink
+{% endblock %}
 
-{% block content %}
-
+{% block public_content %}
 
 <div class="container mt-5">
 
 
 <h1>
-Welcome to Awinlink
+    Welcome to Awinlink
 </h1>
 
-
 <p>
-Discover talents, organizations and opportunities.
+    Discover talents, organizations and opportunities.
 </p>
 
-
-<a href="{% url 'home_feed' %}"
-class="btn btn-primary">
-
-Explore Feed
-
+<a
+    href="{% url 'home_feed' %}"
+    class="btn btn-primary"
+>
+    Explore Feed
 </a>
 
 
 </div>
-
 
 {% endblock %}
