@@ -1145,7 +1145,7 @@ View Profile
 </a>
 
 <a
-    href="{% url 'start_conversation' item.talent.id item.opportunity.id %}"
+    href="{% url 'messaging:start_conversation_with_opportunity' item.talent.id item.opportunity.id %}"
     class="btn btn-primary btn-sm"
 >
     💬 Message Talent
@@ -1640,7 +1640,7 @@ class="btn btn-warning me-2">
 
 
 
-<a href="{% url 'conversation_list' %}"
+<a href="{% url 'messaging:conversation_list' %}"
 
 class="btn btn-primary">
 

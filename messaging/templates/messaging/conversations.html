@@ -120,29 +120,33 @@
                         <!-- PARTICIPANT NAME -->
                         <!-- ============================== -->
 
-                                        <h5 class="mb-1">
+                                <h5 class="mb-1">
 
-                                            {% if conversation.other_participant %}
+                                    {% if conversation.is_group %}
 
-                                                {{ conversation.other_participant.user.get_full_name }}
+                                        👥 {{ conversation.participant_name }}
 
-                                                {% if conversation.participant_role %}
+                                    {% elif conversation.other_participant %}
 
-                                                    <span class="badge bg-secondary">
+                                        {{ conversation.participant_name }}
 
-                                                        {{ conversation.participant_role }}
+                                        {% if conversation.participant_role %}
 
-                                                    </span>
+                                            <span class="badge bg-secondary">
 
-                                                {% endif %}
+                                                {{ conversation.participant_role }}
 
-                                            {% else %}
+                                            </span>
 
-                                                Unknown User
+                                        {% endif %}
 
-                                            {% endif %}
+                                    {% else %}
 
-                                        </h5>
+                                        Unknown User
+
+                                    {% endif %}
+
+                                </h5>
 
                         <!-- ============================== -->
                         <!-- OPPORTUNITY -->

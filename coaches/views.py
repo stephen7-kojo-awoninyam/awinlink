@@ -753,7 +753,7 @@ def message_talent(request, talent_id):
     # -----------------------------------------------------
 
     return redirect(
-        "conversation",
+        "messaging:conversation",
         conversation_id=conversation.id
     )
 

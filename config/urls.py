@@ -47,7 +47,7 @@ urlpatterns = [
     path("api/", include("api.urls")),
     path("api/feed/",include("feed.urls_api")),
     path("api/messaging/",include("messaging.api_urls")),
-    path("events/",include("events.api_urls")),
+    path("api/events/",include("events.api_urls")),
     path("api/learning/",include("learning.api_urls")),
     path("api/portfolio/",include("portfolio.api_urls")),
     path("api/domains/",include("domains.api_urls",namespace="domains_api")),

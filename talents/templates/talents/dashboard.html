@@ -126,7 +126,7 @@
 
 
                 <a
-                    href="{% url 'conversation_list' %}"
+                    href="{% url 'messaging:conversation_list' %}"
                     class="btn btn-primary w-100"
                 >
                     💬 Messages
@@ -783,7 +783,7 @@
 
 
                         <a
-                            href="{% url 'conversation' conversation.id %}"
+                            href="{% url 'messaging:conversation' conversation.id %}"
                             class="btn btn-primary btn-sm mt-2"
                         >
                             Open Chat

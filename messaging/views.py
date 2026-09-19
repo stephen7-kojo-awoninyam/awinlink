@@ -409,7 +409,7 @@ def send_message(request, conversation_id):
         if message_type == "AUDIO" and not audio:
 
             return redirect(
-                "conversation",
+                "messaging:conversation",
                 conversation_id
             )
 
@@ -573,88 +573,77 @@ def conversation_list(request):
         # PARTICIPANT INFORMATION
         # ==========================================
 
-        if conversation.other_participant:
+        # ==========================================
+        # DETERMINE CONVERSATION DISPLAY NAME
+        # ==========================================
 
-            user = conversation.other_participant.user
-
-
-            # ======================================
-            # PARTICIPANT NAME
-            # ======================================
+        if conversation.is_group:
 
             conversation.participant_name = (
-
-                user.get_full_name()
-
-                or user.username
-
-            )
-
-
-            # ======================================
-            # PARTICIPANT ROLE
-            # ======================================
-
-            conversation.participant_role = (
-
-                user.role
-
-                if user.role
-
-                else ""
-
-            )
-
-
-            # ======================================
-            # PARTICIPANT IMAGE
-            # ======================================
-
-            conversation.participant_image = None
-
-
-            # Talent / Athlete / Coach / Scout
-            # all use TalentProfile
-
-            if hasattr(user, "talent_profile"):
-
-                if user.talent_profile.profile_photo:
-
-                    conversation.participant_image = (
-
-                        user.talent_profile.profile_photo.url
-
-                    )
-
-
-            # Organization
-
-            elif hasattr(user, "organization"):
-
-                if user.organization.logo:
-
-                    conversation.participant_image = (
-
-                        user.organization.logo.url
-
-                    )
-
-
-        else:
-
-            # ======================================
-            # NO OTHER PARTICIPANT
-            # ======================================
-
-            conversation.participant_name = (
-
-                "Unknown User"
-
+                conversation.name
+                or f"Group Conversation {conversation.id}"
             )
 
             conversation.participant_role = ""
-
             conversation.participant_image = None
+
+        else:
+
+            if conversation.other_participant:
+
+                user = conversation.other_participant.user
+
+                conversation.participant_name = (
+                    user.get_full_name()
+                    or user.username
+                )
+
+                # ======================================
+                # PARTICIPANT ROLE
+                # ======================================
+
+                conversation.participant_role = (
+                    user.role
+                    if user.role
+                    else ""
+                )
+
+                # ======================================
+                # PARTICIPANT IMAGE
+                # ======================================
+
+                conversation.participant_image = None
+
+                # Talent / Athlete / Coach / Scout
+                # all use TalentProfile
+
+                if hasattr(user, "talent_profile"):
+
+                    if user.talent_profile.profile_photo:
+
+                        conversation.participant_image = (
+                            user.talent_profile.profile_photo.url
+                        )
+
+                # Organization
+
+                elif hasattr(user, "organization"):
+
+                    if user.organization.logo:
+
+                        conversation.participant_image = (
+                            user.organization.logo.url
+                        )
+
+            else:
+
+                # ======================================
+                # NO OTHER PARTICIPANT
+                # ======================================
+
+                conversation.participant_name = "Unknown User"
+                conversation.participant_role = ""
+                conversation.participant_image = None
 
 
     # ==========================================
@@ -926,7 +915,7 @@ def start_coach_conversation(request, talent_id):
         if target_user == request.user:
 
             return redirect(
-            "conversation_list"
+            "messaging:conversation_list"
             )
 
 

@@ -42,4 +42,10 @@ urlpatterns = [
         name="start_conversation_with_opportunity",
     ),
 
+    path(
+        "start-coach/<int:talent_id>/",
+        views.start_coach_conversation,
+        name="start_coach_conversation",
+    ),
+
 ]
