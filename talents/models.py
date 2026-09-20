@@ -176,8 +176,26 @@ class TalentProfile(models.Model):
         auto_now_add=True
     )
 
+   
     @property
     def display_identity(self):
+
+        # Scout identities are category-specific
+        if self.user.role == "SCOUT":
+
+            scout_identities = {
+                "SPORTS": "Sports Scout",
+                "SCIENCE_TECHNOLOGY": "Technology Scout",
+                "ARTS": "Arts Scout",
+                "OTHERS": "Talent Scout",
+            }
+
+            return scout_identities.get(
+                self.talent_category,
+                "Talent Scout"
+            )
+
+        # Normal talent identities
         identities = {
             "SPORTS": "Athlete",
             "SCIENCE_TECHNOLOGY": "Technology Professional",

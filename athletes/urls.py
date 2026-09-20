@@ -19,11 +19,6 @@ urlpatterns = [
     views.add_media,
     name="add_media"
 ),   
-
-path(
-    "media/add/",
-    views.add_media,
-    name="add_media"
-),     
+    
 
 ]

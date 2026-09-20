@@ -207,9 +207,11 @@
 
 <!-- USER -->
 
+<<!-- USER -->
+
 <div class="sidebar-user">
 
-    {% if user.role == "ATHLETE" and user.talent_profile %}
+    {% if user.talent_profile %}
 
         <a
             href="{% url 'talent_profile' user.talent_profile.id %}"
@@ -247,9 +249,19 @@
                     {{ user.get_full_name|default:user.username }}
                 </strong>
 
-                <small>
-                    {{ user.talent_profile.display_identity }}
-                </small>
+                {% if user.talent_profile.display_identity %}
+
+                    <small>
+                        {{ user.talent_profile.display_identity }}
+                    </small>
+
+                {% else %}
+
+                    <small>
+                        {{ user.get_role_display }}
+                    </small>
+
+                {% endif %}
 
             </div>
 
@@ -333,6 +345,7 @@
     {% endif %}
 
 </div>
+
 
 <!-- =====================================================
      MAIN NAVIGATION

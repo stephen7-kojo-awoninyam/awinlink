@@ -1,84 +1,54 @@
 from django import forms
 
-from .models import SportsTalentProfile
+from talents.forms import SportsTalentProfileForm
 
-
-class SportsTalentProfileForm(forms.ModelForm):
+class SportsScoutProfileForm(forms.Form):
 
     sport = forms.CharField(
         required=True,
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Enter your sport, e.g. Football, Basketball, Tennis",
+                "placeholder": "e.g. Football, Basketball, Athletics",
+                "list": "sport-suggestions",
             }
-        )
+        ),
+        label="Sport",
+        help_text="Enter the sport you specialize in scouting.",
     )
 
     sport_category = forms.CharField(
-        required=True,
+        required=False,
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
-                "placeholder": "Enter your sport category or discipline",
+                "placeholder": "e.g. Youth Development, Academy Talent, Goalkeeping",
+                "list": "sport-category-suggestions",
             }
-        )
+        ),
+        label="Sport Category / Scouting Area",
+        help_text=(
+            "Describe the category, level, position group, "
+            "or area you specialize in scouting."
+        ),
     )
 
-    class Meta:
-        model = SportsTalentProfile
-
-        fields = [
-            "sport",
-            "sport_category",
-            "position",
-            "height",
-            "weight",
-            "bio",
-        ]
-
-        widgets = {
-            "position": forms.TextInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Example: Forward, Goalkeeper, Sprinter",
-                }
-            ),
-            "height": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Height",
-                    "step": "0.01",
-                }
-            ),
-            "weight": forms.NumberInput(
-                attrs={
-                    "class": "form-control",
-                    "placeholder": "Weight",
-                    "step": "0.01",
-                }
-            ),
-            "bio": forms.Textarea(
-                attrs={
-                    "class": "form-control",
-                    "rows": 5,
-                    "placeholder": (
-                        "Tell us about yourself as a sporting talent..."
-                    ),
-                }
-            ),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Show existing values when editing
-        if self.instance and self.instance.pk:
-
-            if self.instance.sport:
-                self.initial["sport"] = self.instance.sport.name
-
-            if self.instance.sport_category:
-                self.initial["sport_category"] = (
-                    self.instance.sport_category.name
-                )
+    bio = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 6,
+                "placeholder": (
+                    "Describe your scouting background, experience, "
+                    "approach to identifying talent, and areas of expertise."
+                ),
+            }
+        ),
+        label="Scouting Background",
+        help_text=(
+            "Describe your scouting background, experience, "
+            "approach to identifying talent, and the areas of "
+            "sporting talent you specialize in evaluating."
+        ),
+    )

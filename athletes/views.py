@@ -8,6 +8,17 @@ from sports.models import Sport, SportCategory
 @login_required
 def create_profile(request):
 
+    # Prevent an existing user from creating another profile
+    existing_profile = AthleteProfile.objects.filter(
+        user=request.user
+    ).first()
+
+    if existing_profile:
+        return redirect(
+            "athlete_profile",
+            existing_profile.id
+        )
+
     if request.method == "POST":
 
         form = AthleteProfileForm(
@@ -69,7 +80,6 @@ def create_profile(request):
             "form": form
         }
     )
-
 
 
 

@@ -29,23 +29,39 @@ Sports Talent Profile | Awinlink
                     </div>
 
                 </div>
+                {% if is_scout %}
 
-                <h1 class="fw-bold">
-                    Tell us about your sporting talent
-                </h1>
+                    <h1 class="fw-bold">
+                        Tell us about your scouting expertise
+                    </h1>
 
-                <p class="text-muted mb-0">
+                    <p class="text-muted mb-0">
 
-                    Welcome, {{ talent.user.first_name|default:talent.user.username }}.
+                        Welcome, {{ talent.user.first_name|default:talent.user.username }}.
 
-                    Tell Awinlink about yourself as a sporting talent.
+                        Tell Awinlink about your scouting background and the type
+                        of sporting talent you specialize in identifying.
 
-                    Your information will help organizations and scouts
+                    </p>
 
-                    discover you.
+                {% else %}
 
-                </p>
+                    <h1 class="fw-bold">
+                        Tell us about your sporting talent
+                    </h1>
 
+                    <p class="text-muted mb-0">
+
+                        Welcome, {{ talent.user.first_name|default:talent.user.username }}.
+
+                        Tell Awinlink about yourself as a sporting talent.
+
+                        Your information will help organizations and scouts
+                        discover you.
+
+                    </p>
+
+                {% endif %}
             </div>
 
 
@@ -137,7 +153,11 @@ Sports Talent Profile | Awinlink
                                 for="{{ form.sport_category.id_for_label }}"
                                 class="form-label fw-semibold"
                             >
-                                Sport Category
+                                {% if is_scout %}
+                                    Sport Category / Scouting Area
+                                {% else %}
+                                    Sport Category
+                                {% endif %}
                             </label>
 
                             {{ form.sport_category }}
@@ -182,6 +202,12 @@ Sports Talent Profile | Awinlink
                              POSITION
                         ================================================== -->
 
+                                            {% if not is_scout %}
+
+                        <!-- =================================================
+                            POSITION
+                        ================================================== -->
+
                         <div class="mb-4">
 
                             <label
@@ -212,6 +238,8 @@ Sports Talent Profile | Awinlink
                             {% endfor %}
 
                         </div>
+
+                    
 
 
                         <!-- =================================================
@@ -273,27 +301,36 @@ Sports Talent Profile | Awinlink
 
                         </div>
 
-
+                    {% endif %}
                         <!-- =================================================
                              SPORTS BIO
                         ================================================== -->
 
                         <div class="mb-4">
 
-                            <label
-                                for="{{ form.bio.id_for_label }}"
-                                class="form-label fw-semibold"
-                            >
+                            {% if is_scout %}
+                                Scouting Background
+                            {% else %}
                                 About Your Sporting Talent
-                            </label>
+                            {% endif %}
 
                             {{ form.bio }}
 
                             <div class="form-text">
 
-                                Describe yourself freely. Tell organizations
-                                and scouts about your abilities, experience,
-                                style, goals and what makes you unique.
+                        {% if is_scout %}
+
+                            Describe your scouting background, experience,
+                            approach to identifying talent, and the areas
+                            of sporting talent you specialize in evaluating.
+
+                        {% else %}
+
+                            Describe yourself freely. Tell organizations
+                            and scouts about your abilities, experience,
+                            style, goals and what makes you unique.
+
+                        {% endif %}
 
                             </div>
 
@@ -359,7 +396,11 @@ Sports Talent Profile | Awinlink
 
                                 <i class="bi bi-check-circle me-2"></i>
 
-                                Save Sports Profile
+                               {% if is_scout %}
+                                    Save Scout Profile
+                                {% else %}
+                                    Save Sports Profile
+                                {% endif %}
 
                             </button>
 
@@ -391,7 +432,11 @@ Sports Talent Profile | Awinlink
 
                     <i class="bi bi-shield-check me-1"></i>
 
+                   {% if is_scout %}
+                    You can update your scouting information later.
+                {% else %}
                     You can update your sports information later.
+                {% endif %}
 
                 </p>
 

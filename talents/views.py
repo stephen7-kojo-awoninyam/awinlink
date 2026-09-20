@@ -31,6 +31,13 @@ from sports.models import (
     Sport,
     SportCategory,
 )
+
+from .forms import (
+SportsScoutProfileForm,
+ScienceTechnologyScoutProfileForm,
+ArtsScoutProfileForm,
+OtherScoutProfileForm,
+)
 # Create your views here.
 
 
@@ -351,12 +358,20 @@ def talent_profile(request, talent_id):
     # =====================================================
     # CATEGORY-SPECIFIC PROFILE
     # =====================================================
-
+    sports_profile = None
     science_technology_profile = None
     arts_profile = None
     other_profile = None
+    
+    if talent.talent_category == "SPORTS":
 
-    if talent.talent_category == "SCIENCE_TECHNOLOGY":
+        try:
+            sports_profile = talent.sports_profile
+        except Exception:
+            sports_profile = None
+
+
+    elif talent.talent_category == "SCIENCE_TECHNOLOGY":
 
         try:
             science_technology_profile = (
@@ -409,6 +424,7 @@ def talent_profile(request, talent_id):
         "talents/profile.html",
         {
             "talent": talent,
+            "sports_profile": sports_profile,
 
             "portfolio_items": portfolio_items,
 
@@ -1564,6 +1580,12 @@ def select_talent_category(request):
         TalentProfile,
         user=request.user
     )
+    
+    # If the user has already selected a talent category,
+    # they already have a profile and should use Edit Profile.
+    if talent.talent_category:
+        return redirect("talent_dashboard")
+    
 
     if request.method == "POST":
 
@@ -1600,7 +1622,7 @@ def select_talent_category(request):
         {
             "form": form
         }
-    )   
+    )  
     
     
     
@@ -1608,14 +1630,16 @@ def select_talent_category(request):
 # SPORTS TALENT PROFILE SETUP
 # =====================================================
 
+
 @login_required
 def sports_profile_setup(request):
+
     talent = get_object_or_404(
         TalentProfile,
         user=request.user
     )
 
-    # Make sure the talent selected SPORTS
+    # Make sure SPORTS was selected
     if talent.talent_category != "SPORTS":
         return redirect("select_talent_category")
 
@@ -1623,18 +1647,23 @@ def sports_profile_setup(request):
         talent=talent
     )
 
+    # -------------------------------------------------
+    # Use a different form for Scouts
+    # -------------------------------------------------
+    if request.user.role == "SCOUT":
+        FormClass = SportsScoutProfileForm
+    else:
+        FormClass = SportsTalentProfileForm
+
     if request.method == "POST":
 
-        form = SportsTalentProfileForm(
+        form = FormClass(
             request.POST,
             instance=profile
         )
 
         if form.is_valid():
 
-            # -------------------------------------------------
-            # Get user-entered values
-            # -------------------------------------------------
             sport_name = form.cleaned_data["sport"].strip()
             category_name = form.cleaned_data["sport_category"].strip()
 
@@ -1651,8 +1680,7 @@ def sports_profile_setup(request):
                 )
 
             # -------------------------------------------------
-            # Find existing category for this sport
-            # or create a new one
+            # Find existing category or create a new one
             # -------------------------------------------------
             category = SportCategory.objects.filter(
                 sport=sport,
@@ -1666,7 +1694,7 @@ def sports_profile_setup(request):
                 )
 
             # -------------------------------------------------
-            # Save the sports profile
+            # Save profile
             # -------------------------------------------------
             sports_profile = form.save(commit=False)
 
@@ -1679,13 +1707,11 @@ def sports_profile_setup(request):
             return redirect("talent_dashboard")
 
     else:
-        form = SportsTalentProfileForm(
+
+        form = FormClass(
             instance=profile
         )
 
-    # ---------------------------------------------------------
-    # Data used by autocomplete suggestions
-    # ---------------------------------------------------------
     sports = Sport.objects.all().order_by("name")
 
     sport_categories = (
@@ -1697,18 +1723,20 @@ def sports_profile_setup(request):
 
     return render(
         request,
-        "talents/sports_profile_setup.html",
+        "sports/profile_setup.html",
         {
             "form": form,
             "talent": talent,
             "sports": sports,
             "sport_categories": sport_categories,
+            "is_scout": request.user.role == "SCOUT",
         }
     )
 
 # =====================================================
 # SCIENCE & TECHNOLOGY TALENT PROFILE SETUP
 # =====================================================
+
 
 @login_required
 def technology_profile_setup(request):
@@ -1718,7 +1746,6 @@ def technology_profile_setup(request):
         user=request.user
     )
 
-    # Make sure the talent selected SCIENCE & TECHNOLOGY
     if talent.talent_category != "SCIENCE_TECHNOLOGY":
         return redirect("select_talent_category")
 
@@ -1728,9 +1755,14 @@ def technology_profile_setup(request):
         )
     )
 
+    if request.user.role == "SCOUT":
+        FormClass = ScienceTechnologyScoutProfileForm
+    else:
+        FormClass = ScienceTechnologyTalentProfileForm
+
     if request.method == "POST":
 
-        form = ScienceTechnologyTalentProfileForm(
+        form = FormClass(
             request.POST,
             instance=profile
         )
@@ -1745,7 +1777,7 @@ def technology_profile_setup(request):
 
     else:
 
-        form = ScienceTechnologyTalentProfileForm(
+        form = FormClass(
             instance=profile
         )
 
@@ -1755,12 +1787,13 @@ def technology_profile_setup(request):
         {
             "form": form,
             "talent": talent,
+            "is_scout": request.user.role == "SCOUT",
         }
     )
 
 
 # =====================================================
-# ARTS TALENT PROFILE SETUP
+# ARTS TALENT / SCOUT PROFILE SETUP
 # =====================================================
 
 @login_required
@@ -1771,7 +1804,6 @@ def arts_profile_setup(request):
         user=request.user
     )
 
-    # Make sure the talent selected ARTS
     if talent.talent_category != "ARTS":
         return redirect("select_talent_category")
 
@@ -1779,9 +1811,14 @@ def arts_profile_setup(request):
         talent=talent
     )
 
+    if request.user.role == "SCOUT":
+        FormClass = ArtsScoutProfileForm
+    else:
+        FormClass = ArtsTalentProfileForm
+
     if request.method == "POST":
 
-        form = ArtsTalentProfileForm(
+        form = FormClass(
             request.POST,
             instance=profile
         )
@@ -1796,7 +1833,7 @@ def arts_profile_setup(request):
 
     else:
 
-        form = ArtsTalentProfileForm(
+        form = FormClass(
             instance=profile
         )
 
@@ -1806,13 +1843,14 @@ def arts_profile_setup(request):
         {
             "form": form,
             "talent": talent,
+            "is_scout": request.user.role == "SCOUT",
         }
     )
-
 
 # =====================================================
 # OTHER TALENT PROFILE SETUP
 # =====================================================
+
 
 @login_required
 def other_profile_setup(request):
@@ -1822,7 +1860,6 @@ def other_profile_setup(request):
         user=request.user
     )
 
-    # Make sure the talent selected OTHERS
     if talent.talent_category != "OTHERS":
         return redirect("select_talent_category")
 
@@ -1830,9 +1867,14 @@ def other_profile_setup(request):
         talent=talent
     )
 
+    if request.user.role == "SCOUT":
+        FormClass = OtherScoutProfileForm
+    else:
+        FormClass = OtherTalentProfileForm
+
     if request.method == "POST":
 
-        form = OtherTalentProfileForm(
+        form = FormClass(
             request.POST,
             instance=profile
         )
@@ -1847,7 +1889,7 @@ def other_profile_setup(request):
 
     else:
 
-        form = OtherTalentProfileForm(
+        form = FormClass(
             instance=profile
         )
 
@@ -1857,7 +1899,8 @@ def other_profile_setup(request):
         {
             "form": form,
             "talent": talent,
+            "is_scout": request.user.role == "SCOUT",
         }
-    )      
+    )     
     
     

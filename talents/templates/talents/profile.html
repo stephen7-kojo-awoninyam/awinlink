@@ -1416,13 +1416,21 @@
 
     <div>
 
-        <h2>
-            Athletic Profile
-        </h2>
-
-        <p>
-            Athletic background and sporting information
-        </p>
+{% if talent.user.role == "SCOUT" %}
+    <h2>
+        Scouting Profile
+    </h2>
+    <p>
+        Scouting background and sporting talent evaluation information
+    </p>
+{% else %}
+    <h2>
+        Athletic Profile
+    </h2>
+    <p>
+        Athletic background and sporting information
+    </p>
+{% endif %}
 
     </div>
 
@@ -2078,14 +2086,21 @@
     </div>
 
     <div>
-
-        <h2>
-            Athletic Background
-        </h2>
-
-        <p>
-            Sporting biography
-        </p>
+{% if talent.user.role == "SCOUT" %}
+    <h2>
+        Scouting Background
+    </h2>
+    <p>
+        Scouting experience and talent evaluation background
+    </p>
+{% else %}
+    <h2>
+        Athletic Background
+    </h2>
+    <p>
+        Sporting biography
+    </p>
+{% endif %}
 
     </div>
 

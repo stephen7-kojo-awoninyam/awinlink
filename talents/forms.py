@@ -754,3 +754,132 @@ class OtherTalentProfileForm(forms.ModelForm):
                 }
             ),
         }
+        
+        
+# =====================================================
+# SCOUT SPORTS PROFILE FORM
+# =====================================================
+
+class SportsScoutProfileForm(forms.Form):
+
+    sport = forms.CharField(
+        required=True,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "e.g. Football, Basketball, Athletics",
+                "list": "sport-suggestions",
+            }
+        ),
+        label="Sport",
+        help_text="Enter the sport you specialize in scouting.",
+    )
+
+    sport_category = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": (
+                    "e.g. Youth Development, Academy Talent, "
+                    "Goalkeeping"
+                ),
+                "list": "sport-category-suggestions",
+            }
+        ),
+        label="Sport Category / Scouting Area",
+        help_text=(
+            "Describe the category, level, position group, "
+            "or area you specialize in scouting."
+        ),
+    )
+
+    bio = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 6,
+                "placeholder": (
+                    "Describe your scouting background, experience, "
+                    "approach to identifying talent, and areas of expertise."
+                ),
+            }
+        ),
+        label="Scouting Background",
+        help_text=(
+            "Describe your scouting background, experience, "
+            "approach to identifying talent, and the areas of "
+            "sporting talent you specialize in evaluating."
+        ),
+    )
+
+# =====================================================
+# SCOUT SCIENCE & TECHNOLOGY PROFILE FORM
+# =====================================================
+
+class ScienceTechnologyScoutProfileForm(
+    ScienceTechnologyTalentProfileForm
+):
+
+    class Meta(ScienceTechnologyTalentProfileForm.Meta):
+        labels = {
+            "specialization": "Scouting Specialization",
+            "description": "About Your Scouting Background",
+            "education": "Educational Background",
+            "institution": "Institution",
+            "skills_description": "Technical & Evaluation Skills",
+            "projects_description": "Projects / Professional Experience",
+            "research_interests": "Areas You Scout",
+            "years_of_experience": "Years of Professional / Scouting Experience",
+            "website": "Website",
+            "linkedin": "LinkedIn",
+            "github": "GitHub",
+        }
+
+
+# =====================================================
+# SCOUT ARTS PROFILE FORM
+# =====================================================
+
+class ArtsScoutProfileForm(ArtsTalentProfileForm):
+
+    class Meta(ArtsTalentProfileForm.Meta):
+        labels = {
+            "specialization": "Scouting Specialization",
+            "description": "About Your Scouting Background",
+            "discipline": "Artistic Discipline You Scout",
+            "experience_description": "Scouting / Professional Experience",
+            "years_of_experience": "Years of Experience",
+            "skills_description": "Evaluation & Industry Skills",
+            "portfolio_description": "Portfolio / Professional Background",
+            "achievements_description": "Achievements",
+            "creative_interests": "Creative Areas You Scout",
+            "website": "Website",
+            "portfolio_url": "Portfolio",
+            "instagram": "Instagram",
+            "youtube": "YouTube",
+        }
+
+
+# =====================================================
+# SCOUT OTHER TALENT PROFILE FORM
+# =====================================================
+
+class OtherScoutProfileForm(OtherTalentProfileForm):
+
+    class Meta(OtherTalentProfileForm.Meta):
+        labels = {
+            "specialization": "Scouting Specialization",
+            "description": "About Your Scouting Background",
+            "field": "Talent Field You Scout",
+            "experience_description": "Scouting / Professional Experience",
+            "years_of_experience": "Years of Experience",
+            "skills_description": "Evaluation & Professional Skills",
+            "projects_description": "Projects / Professional Experience",
+            "achievements_description": "Achievements",
+            "interests": "Talent Areas You Follow",
+            "website": "Website",
+            "linkedin": "LinkedIn",
+            "other_link": "Other Professional Link",
+        }        

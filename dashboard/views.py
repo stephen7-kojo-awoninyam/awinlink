@@ -69,13 +69,10 @@ def dashboard(request):
             user=user
         ).first()
 
-        return render(
-            request,
-            "dashboard/athlete_dashboard.html",
-            {
-                "profile": profile,
-            }
-        )
+        if profile:
+            return redirect("talent_dashboard")
+
+        return redirect("select_talent_category")
 
 
     # =====================================================
@@ -97,10 +94,18 @@ def dashboard(request):
     # =====================================================
 
     elif user.role == "SCOUT":
+        
+        profile = TalentProfile.objects.filter(
+        user=user
+        ).first()
+
 
         return render(
             request,
-            "dashboard/scout_dashboard.html"
+            "dashboard/scout_dashboard.html",
+            {
+               "profile": profile,
+            }
         )
 
 
