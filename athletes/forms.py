@@ -30,8 +30,6 @@ class AthleteProfileForm(forms.ModelForm):
         model = AthleteProfile
 
         fields = [
-            "sport",
-            "category",
             "date_of_birth",
             "nationality",
             "height",
