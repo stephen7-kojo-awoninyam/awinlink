@@ -1,4 +1,4 @@
-
+from talents.models import TalentProfile
 from django.contrib.auth import login
 from django.shortcuts import redirect, render
 from .forms import UserRegistrationForm
@@ -46,9 +46,13 @@ def register(request):
 
                 )
 
+            TalentProfile.objects.create(
+                user=user
+            )
+
             login(request, user)
 
-            return redirect("dashboard")
+            return redirect("select_talent_category")
         
         else:
 

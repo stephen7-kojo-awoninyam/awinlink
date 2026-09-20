@@ -1,8 +1,18 @@
 from django.shortcuts import render
+from twisted import python
 from talents.models import TalentProfile
 from skills.models import Skill
 from domains.models import TalentDomain
 from opportunities.models import Opportunity
+from django.shortcuts import render
+from django.db.models import Q
+
+from talents.models import TalentProfile
+from skills.models import Skill
+from domains.models import TalentDomain
+from opportunities.models import Opportunity
+
+from django.db.models import Q
 
 
 def talent_search(request):
@@ -20,6 +30,7 @@ def talent_search(request):
     # GET FILTERS
     # ==========================================
 
+    search = request.GET.get("search")
     role = request.GET.get("role")
     skill = request.GET.get("skill")
     domain = request.GET.get("domain")
@@ -28,6 +39,22 @@ def talent_search(request):
     availability = request.GET.get("availability")
     work_type = request.GET.get("work_type")
     verified = request.GET.get("verified")
+
+    # ==========================================
+    # GENERAL SEARCH
+    # ==========================================
+
+    if search:
+        talents = talents.filter(
+            Q(user__first_name__icontains=search)
+            | Q(user__last_name__icontains=search)
+            | Q(user__username__icontains=search)
+            | Q(headline__icontains=search)
+            | Q(talent_area__icontains=search)
+            | Q(biography__icontains=search)
+            | Q(country__icontains=search)
+            | Q(city__icontains=search)
+        )
 
     # ==========================================
     # ROLE
@@ -101,8 +128,10 @@ def talent_search(request):
             verified=True
         )
 
-    # Prevent duplicate results caused by
-    # ManyToMany filtering.
+    # ==========================================
+    # PREVENT DUPLICATE RESULTS
+    # ==========================================
+
     talents = talents.distinct()
 
     # ==========================================
@@ -132,9 +161,14 @@ def talent_search(request):
         "domains": domains,
         "role_choices": role_choices,
 
-        "experience_choices": TalentProfile.EXPERIENCE_LEVELS,
-        "availability_choices": TalentProfile.AVAILABILITY_CHOICES,
-        "work_type_choices": TalentProfile.WORK_TYPES,
+        "experience_choices":
+            TalentProfile.EXPERIENCE_LEVELS,
+
+        "availability_choices":
+            TalentProfile.AVAILABILITY_CHOICES,
+
+        "work_type_choices":
+            TalentProfile.WORK_TYPES,
     }
 
     return render(
@@ -142,7 +176,9 @@ def talent_search(request):
         "search/talent_search.html",
         context
     )
-    
+
+
+
     
     
 

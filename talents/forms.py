@@ -27,6 +27,8 @@ class TalentProfileForm(forms.ModelForm):
         model = TalentProfile
 
         fields = [
+            "talent_category",
+            "talent_area",
             "headline",
             "biography",
             "country",
@@ -38,6 +40,8 @@ class TalentProfileForm(forms.ModelForm):
             "experience_level",
             "preferred_work_type",
         ]
+        
+        
 
         widgets = {
 
@@ -50,6 +54,22 @@ class TalentProfileForm(forms.ModelForm):
                     ),
                 }
             ),
+            
+            "talent_category": forms.Select(
+                    attrs={
+                        "class": "form-control",
+                    }
+                ),
+
+                "talent_area": forms.TextInput(
+                    attrs={
+                        "class": "form-control",
+                        "placeholder": (
+                            "Example: Basketball, Artificial Intelligence, "
+                            "Music Production, Graphic Design"
+                        ),
+                    }
+                ),
 
             "biography": forms.Textarea(
                 attrs={
@@ -228,26 +248,45 @@ class TalentCategoryForm(forms.ModelForm):
 
         fields = [
             "talent_category",
+            "talent_area",
         ]
 
         widgets = {
 
-            "talent_category": forms.RadioSelect(
+            "talent_category": forms.Select(
                 attrs={
-                    "class": "talent-category-select",
+                    "class": "form-control",
+                }
+            ),
+
+            "talent_area": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Example: Basketball, Artificial Intelligence, "
+                        "Music Production, Graphic Design"
+                    ),
                 }
             ),
         }
-
-
 # =====================================================
 # SPORTS TALENT PROFILE FORM
 # =====================================================
-
 class SportsTalentProfileForm(forms.ModelForm):
 
-    class Meta:
+    sport = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": (
+                    "Example: Basketball, Football, Volleyball, Athletics"
+                ),
+            }
+        ),
+    )
 
+    class Meta:
         model = SportsTalentProfile
 
         fields = [
@@ -260,29 +299,19 @@ class SportsTalentProfileForm(forms.ModelForm):
         ]
 
         widgets = {
-
-            "sport": forms.Select(
-                attrs={
-                    "class": "form-control",
-                }
-            ),
-
             "sport_category": forms.Select(
                 attrs={
                     "class": "form-control",
                 }
             ),
-
             "position": forms.TextInput(
                 attrs={
                     "class": "form-control",
                     "placeholder": (
-                        "Example: Forward, Midfielder, "
-                        "Goalkeeper"
+                        "Example: Forward, Midfielder, Goalkeeper"
                     ),
                 }
             ),
-
             "height": forms.NumberInput(
                 attrs={
                     "class": "form-control",
@@ -290,7 +319,6 @@ class SportsTalentProfileForm(forms.ModelForm):
                     "placeholder": "Example: 1.80",
                 }
             ),
-
             "weight": forms.NumberInput(
                 attrs={
                     "class": "form-control",
@@ -298,18 +326,22 @@ class SportsTalentProfileForm(forms.ModelForm):
                     "placeholder": "Example: 75.00",
                 }
             ),
-
             "bio": forms.Textarea(
                 attrs={
                     "class": "form-control",
                     "rows": 5,
                     "placeholder": (
-                        "Tell organizations about your "
-                        "sports background..."
+                        "Tell organizations about your sports background..."
                     ),
                 }
             ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.instance and self.instance.sport:
+            self.fields["sport"].initial = self.instance.sport.name
 
 
 # =====================================================

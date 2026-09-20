@@ -3,8 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 
 from talents.models import TalentProfile
-from .models import SportsTalentProfile
 from .forms import SportsTalentProfileForm
+from .models import (
+    SportsTalentProfile,
+    Sport,
+    SportCategory,
+)
 # Create your views here.
 
 
@@ -56,13 +60,64 @@ def sports_profile_setup(request):
 
         if form.is_valid():
 
+            # --------------------------------------
+            # Get values typed by the user
+            # --------------------------------------
+
+            sport_name = form.cleaned_data["sport"].strip()
+
+            category_name = (
+                form.cleaned_data["sport_category"].strip()
+            )
+
+
+            # --------------------------------------
+            # FIND OR CREATE SPORT
+            # --------------------------------------
+
+            sport = Sport.objects.filter(
+                name__iexact=sport_name
+            ).first()
+
+            if sport is None:
+
+                sport = Sport.objects.create(
+                    name=sport_name
+                )
+
+
+            # --------------------------------------
+            # FIND OR CREATE CATEGORY
+            # FOR THIS SPORT
+            # --------------------------------------
+
+            category = SportCategory.objects.filter(
+                sport=sport,
+                name__iexact=category_name
+            ).first()
+
+            if category is None:
+
+                category = SportCategory.objects.create(
+                    sport=sport,
+                    name=category_name
+                )
+
+
+            # --------------------------------------
+            # SAVE SPORTS PROFILE
+            # --------------------------------------
+
             profile = form.save(
                 commit=False
             )
 
             profile.talent = talent
+            profile.sport = sport
+            profile.sport_category = category
 
             profile.save()
+
 
             return redirect(
                 "talent_dashboard"

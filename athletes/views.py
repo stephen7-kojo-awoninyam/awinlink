@@ -1,10 +1,7 @@
-
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from .forms import AthleteProfileForm
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
+from .forms import AthleteProfileForm, AthleteMediaForm
 from .models import AthleteProfile
-from .forms import AthleteMediaForm
 from sports.models import Sport, SportCategory
 # Create your views here.
 

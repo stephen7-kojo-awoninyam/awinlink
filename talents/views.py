@@ -26,6 +26,11 @@ from others.forms import OtherTalentProfileForm
 from science_technology.forms import ScienceTechnologyTalentProfileForm
 from art.forms import ArtsTalentProfileForm
 from sports.forms import SportsTalentProfileForm
+from sports.models import (
+    SportsTalentProfile,
+    Sport,
+    SportCategory,
+)
 # Create your views here.
 
 
@@ -1605,7 +1610,6 @@ def select_talent_category(request):
 
 @login_required
 def sports_profile_setup(request):
-
     talent = get_object_or_404(
         TalentProfile,
         user=request.user
@@ -1628,21 +1632,68 @@ def sports_profile_setup(request):
 
         if form.is_valid():
 
+            # -------------------------------------------------
+            # Get user-entered values
+            # -------------------------------------------------
+            sport_name = form.cleaned_data["sport"].strip()
+            category_name = form.cleaned_data["sport_category"].strip()
+
+            # -------------------------------------------------
+            # Find existing sport or create a new one
+            # -------------------------------------------------
+            sport = Sport.objects.filter(
+                name__iexact=sport_name
+            ).first()
+
+            if sport is None:
+                sport = Sport.objects.create(
+                    name=sport_name
+                )
+
+            # -------------------------------------------------
+            # Find existing category for this sport
+            # or create a new one
+            # -------------------------------------------------
+            category = SportCategory.objects.filter(
+                sport=sport,
+                name__iexact=category_name
+            ).first()
+
+            if category is None:
+                category = SportCategory.objects.create(
+                    sport=sport,
+                    name=category_name
+                )
+
+            # -------------------------------------------------
+            # Save the sports profile
+            # -------------------------------------------------
             sports_profile = form.save(commit=False)
 
             sports_profile.talent = talent
+            sports_profile.sport = sport
+            sports_profile.sport_category = category
 
             sports_profile.save()
 
-            return redirect(
-                "talent_dashboard"
-            )
+            return redirect("talent_dashboard")
 
     else:
-
         form = SportsTalentProfileForm(
             instance=profile
         )
+
+    # ---------------------------------------------------------
+    # Data used by autocomplete suggestions
+    # ---------------------------------------------------------
+    sports = Sport.objects.all().order_by("name")
+
+    sport_categories = (
+        SportCategory.objects
+        .select_related("sport")
+        .all()
+        .order_by("name")
+    )
 
     return render(
         request,
@@ -1650,6 +1701,8 @@ def sports_profile_setup(request):
         {
             "form": form,
             "talent": talent,
+            "sports": sports,
+            "sport_categories": sport_categories,
         }
     )
 
