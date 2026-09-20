@@ -5,7 +5,7 @@ from .forms import AthleteProfileForm
 from django.shortcuts import render, get_object_or_404
 from .models import AthleteProfile
 from .forms import AthleteMediaForm
-
+from sports.models import Sport, SportCategory
 # Create your views here.
 
 @login_required
@@ -20,9 +20,39 @@ def create_profile(request):
 
         if form.is_valid():
 
-            profile = form.save(commit=False)
+            sport_name = form.cleaned_data["sport"].strip()
+            category_name = form.cleaned_data["category"].strip()
+
+            # Find existing sport or create a new one
+            sport = Sport.objects.filter(
+                name__iexact=sport_name
+            ).first()
+
+            if not sport:
+                sport = Sport.objects.create(
+                    name=sport_name
+                )
+
+            # Find existing category for this sport
+            # or create a new one
+            category = SportCategory.objects.filter(
+                sport=sport,
+                name__iexact=category_name
+            ).first()
+
+            if not category:
+                category = SportCategory.objects.create(
+                    sport=sport,
+                    name=category_name
+                )
+
+            profile = form.save(
+                commit=False
+            )
 
             profile.user = request.user
+            profile.sport = sport
+            profile.category = category
 
             profile.save()
 
@@ -34,7 +64,6 @@ def create_profile(request):
     else:
 
         form = AthleteProfileForm()
-
 
     return render(
         request,

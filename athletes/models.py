@@ -123,43 +123,6 @@ class Achievement(models.Model):
 class AthleteMedia(models.Model):
 
     MEDIA_TYPES = (
-        ("VIDEO", "Video"),
-        ("IMAGE", "Image"),
-    )
-
-    athlete = models.ForeignKey(
-        AthleteProfile,
-        on_delete=models.CASCADE,
-        related_name="media"
-    )
-
-    media_type = models.CharField(
-        max_length=10,
-        choices=MEDIA_TYPES
-    )
-
-    file = models.FileField(
-        upload_to="athletes/media/"
-    )
-
-    title = models.CharField(
-        max_length=200
-    )
-
-
-    uploaded_at = models.DateTimeField(
-        auto_now_add=True
-    )
-
-
-    def __str__(self):
-        return self.title   
-    
-    
-
-class AthleteMedia(models.Model):
-
-    MEDIA_TYPES = (
         ("IMAGE", "Image"),
         ("VIDEO", "Video"),
     )
@@ -191,6 +154,5 @@ class AthleteMedia(models.Model):
         auto_now_add=True
     )
 
-
     def __str__(self):
-        return self.title     
+        return self.title   
