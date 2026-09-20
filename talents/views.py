@@ -1628,7 +1628,11 @@ def sports_profile_setup(request):
 
         if form.is_valid():
 
-            form.save()
+            sports_profile = form.save(commit=False)
+
+            sports_profile.talent = talent
+
+            sports_profile.save()
 
             return redirect(
                 "talent_dashboard"
@@ -1648,7 +1652,6 @@ def sports_profile_setup(request):
             "talent": talent,
         }
     )
-
 
 # =====================================================
 # SCIENCE & TECHNOLOGY TALENT PROFILE SETUP

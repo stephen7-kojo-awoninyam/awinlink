@@ -73,10 +73,20 @@ class SportsTalentProfileForm(forms.ModelForm):
 
         super().__init__(*args, **kwargs)
 
+        # Both fields are required for a sports profile
+        self.fields["sport"].required = True
+        self.fields["sport_category"].required = True
+
+        # Give the user a clear starting option
+        self.fields["sport"].empty_label = "Select a sport..."
+        self.fields["sport_category"].empty_label = "Select a sport first..."
+
+        # Category starts empty until a sport is selected
         self.fields["sport_category"].queryset = (
             SportCategory.objects.none()
         )
 
+        # Editing an existing sports profile
         if self.instance and self.instance.pk:
 
             if self.instance.sport:
@@ -87,6 +97,7 @@ class SportsTalentProfileForm(forms.ModelForm):
                     )
                 )
 
+        # Form was submitted with a selected sport
         elif "sport" in self.data:
 
             try:
