@@ -2,7 +2,6 @@ from django.db import models
 from django.conf import settings
 # Create your models here.
 
-
 class TalentProfile(models.Model):
 
     user = models.OneToOneField(
@@ -10,6 +9,7 @@ class TalentProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="talent_profile"
     )
+
     TALENT_CATEGORY_CHOICES = (
 
         ("SPORTS", "Sports"),
@@ -28,22 +28,28 @@ class TalentProfile(models.Model):
         blank=True,
         null=True
     )
+
+    talent_area = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True
+    )
+
     EXPERIENCE_LEVELS = (
 
-    ("BEGINNER", "Beginner"),
-    ("INTERMEDIATE", "Intermediate"),
-    ("EXPERT", "Expert"),
+        ("BEGINNER", "Beginner"),
+        ("INTERMEDIATE", "Intermediate"),
+        ("EXPERT", "Expert"),
 
     )
-    
+
     WORK_TYPES = (
 
-    ("REMOTE", "Remote"),
-    ("ONSITE", "On Site"),
-    ("HYBRID", "Hybrid"),
+        ("REMOTE", "Remote"),
+        ("ONSITE", "On Site"),
+        ("HYBRID", "Hybrid"),
 
-)
-    
+    )  
     
     AVAILABILITY_CHOICES = (
 
@@ -170,6 +176,19 @@ class TalentProfile(models.Model):
         auto_now_add=True
     )
 
+    @property
+    def display_identity(self):
+        identities = {
+            "SPORTS": "Athlete",
+            "SCIENCE_TECHNOLOGY": "Technology Professional",
+            "ARTS": "Artist",
+            "OTHERS": "Talent",
+        }
+
+        return identities.get(
+            self.talent_category,
+            "Talent"
+        )
 
     def __str__(self):
         return self.user.username

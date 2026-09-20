@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 
 {% block title %}
-Athlete Dashboard | Awinlink
+{% if profile %}
+    {{ profile.display_identity }} Dashboard | Awinlink
+{% else %}
+    Talent Dashboard | Awinlink
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -17,7 +21,11 @@ Athlete Dashboard | Awinlink
     <div>
 
         <p class="text-muted mb-1">
-            Athlete Dashboard
+            {% if profile %}
+                {{ profile.display_identity }} Dashboard
+            {% else %}
+                Talent Dashboard
+            {% endif %}
         </p>
 
         <h1 class="fw-bold mb-1">
@@ -228,15 +236,15 @@ Athlete Dashboard | Awinlink
                     <div>
 
                         <span class="badge bg-primary-subtle text-primary mb-2">
-                            Athlete Profile
+                            {{ profile.display_identity }} Profile
                         </span>
 
                         <h3 class="fw-bold mb-2">
-                            Your Athlete Passport
+                            Your {{ profile.display_identity }} Profile
                         </h3>
 
                         <p class="text-muted">
-                            Your athlete profile is the foundation of your
+                            Your {{ profile.display_identity|lower }} profile is the foundation of your
                             Awinlink talent identity.
                         </p>
 
@@ -543,13 +551,13 @@ Athlete Dashboard | Awinlink
 
 
                 <h2 class="fw-bold">
-                    Create Your Athlete Profile
+                    Create Your {{ profile.display_identity|default:"Talent" }} Profile
                 </h2>
 
 
                 <p class="text-muted mb-4">
 
-                    Your Awinlink athlete profile allows organizations,
+                    Your Awinlink talent profile allows organizations,
                     scouts and coaches to discover your talent.
 
                 </p>
@@ -562,7 +570,7 @@ Athlete Dashboard | Awinlink
 
                     <i class="bi bi-plus-circle me-1"></i>
 
-                    Create Athlete Profile
+                    Create Talent Profile
 
                 </a>
 

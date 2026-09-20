@@ -6,7 +6,7 @@
 
 <head>
 
-```
+
 <meta charset="UTF-8">
 
 <meta
@@ -131,7 +131,7 @@
 
 <nav class="mobile-topbar d-lg-none">
 
-```
+
 <div class="container-fluid d-flex align-items-center justify-content-between">
 
     <button
@@ -171,7 +171,7 @@
     </a>
 
 </div>
-```
+
 
 </nav>
 
@@ -184,7 +184,7 @@
     id="awinlinkSidebar"
 >
 
-```
+
 <!-- BRAND -->
 
 <div class="sidebar-brand">
@@ -248,7 +248,7 @@
                 </strong>
 
                 <small>
-                    {{ user.get_role_display }}
+                    {{ user.talent_profile.display_identity }}
                 </small>
 
             </div>
@@ -659,7 +659,7 @@
     </a>
 
 </div>
-```
+
 
 </aside>
 
@@ -678,7 +678,7 @@
 
 <div class="awinlink-main">
 
-```
+
 <!-- =====================================================
      TOP HEADER
 ====================================================== -->
@@ -776,9 +776,11 @@
                     {{ user.get_full_name|default:user.username }}
                 </strong>
 
-                <small>
-                    {{ user.role|title }}
-                </small>
+                {% if user.role == "ATHLETE" and user.talent_profile %}
+                    <small>{{ user.talent_profile.display_identity }}</small>
+                {% else %}
+                    <small>{{ user.role|title }}</small>
+                {% endif %}
 
             </div>
 
@@ -848,7 +850,7 @@
     </div>
 
 </footer>
-```
+
 
 </div>
 
