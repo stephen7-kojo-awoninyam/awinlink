@@ -13,5 +13,5 @@ urlpatterns = [
     path("organizations/",views.organization_management,name="organization_management"),
     path("organizations/toggle/<int:organization_id>/",views.toggle_organization_status,name="toggle_organization_status"),
     path("reports/",views.admin_reports,name="admin_reports"),
-    path("dashboard/",views.dashboard,name="dashboard")
+    path("",views.dashboard,name="dashboard")
 ]
