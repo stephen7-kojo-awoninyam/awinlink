@@ -5,6 +5,18 @@ from . import views
 
 
 urlpatterns = [
+    
+    path(
+    "profile/category/",
+    views.select_coach_category,
+    name="select_coach_category"
+    ),
+
+    path(
+        "profile/create/",
+        views.create_coach_profile,
+        name="create_coach_profile"
+    ),
 
     path(
         "profile/",
@@ -46,7 +58,7 @@ urlpatterns = [
         path(
             "saved-talents/",
             views.saved_talents,
-            name="saved_talents"
+            name="coach_saved_talents"
         ),
         
       

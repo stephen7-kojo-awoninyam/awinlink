@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 
 from django.contrib.auth import get_user_model
 
+from coaches.models import CoachProfile
 from talents.models import TalentProfile, VerificationRequest
 
 from organizations.models import Organization
@@ -115,10 +116,17 @@ def dashboard(request):
 
     elif user.role == "COACH":
 
-        return render(
-            request,
-            "dashboard/coach_dashboard.html"
-        )
+        profile = CoachProfile.objects.filter(
+            user=user
+        ).first()
+
+        if not profile:
+            return redirect("select_coach_category")
+
+        if not profile.coach_category:
+            return redirect("select_coach_category")
+
+        return redirect("coach_profile")
 
 
     # =====================================================

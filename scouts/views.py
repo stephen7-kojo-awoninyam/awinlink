@@ -6,7 +6,8 @@ from django.db import models
 from datetime import timedelta
 from django.utils import timezone
 from talents.models import TalentProfile
-
+from .forms import ScoutCategoryForm, ScoutProfileForm
+from .forms import ScoutCategoryForm
 from .models import (
     ScoutProfile,
     ScoutTalentView,
@@ -614,4 +615,100 @@ def update_bookmark_notes(request, talent_id):
     return redirect(
         "scout_talent_detail",
         talent_id=talent.id
-    )   
+    )  
+    
+    
+@login_required
+def select_scout_category(request):
+
+    if request.user.role != "SCOUT":
+        return render(
+            request,
+            "analytics/access_denied.html"
+        )
+
+    scout, created = ScoutProfile.objects.get_or_create(
+        user=request.user
+    )
+
+    if scout.scout_category:
+        return redirect("scout_profile")
+
+    if request.method == "POST":
+
+        form = ScoutCategoryForm(
+            request.POST,
+            instance=scout
+        )
+
+        if form.is_valid():
+            form.save()
+
+            return redirect("create_scout_profile")
+
+    else:
+
+        form = ScoutCategoryForm(
+            instance=scout
+        )
+
+    return render(
+        request,
+        "scouts/select_category.html",
+        {
+            "form": form,
+            "scout": scout,
+        }
+    ) 
+    
+    
+@login_required
+def create_scout_profile(request):
+
+    if request.user.role != "SCOUT":
+        return render(
+            request,
+            "analytics/access_denied.html"
+        )
+
+    scout = get_object_or_404(
+        ScoutProfile,
+        user=request.user
+    )
+
+    if not scout.scout_category:
+        return redirect("select_scout_category")
+
+    if request.method == "POST":
+
+        form = ScoutProfileForm(
+            request.POST,
+            instance=scout
+        )
+
+        if form.is_valid():
+
+            form.save()
+
+            messages.success(
+                request,
+                "Scout profile created successfully."
+            )
+
+            return redirect("scout_profile")
+
+    else:
+
+        form = ScoutProfileForm(
+            instance=scout
+        )
+
+    return render(
+        request,
+        "scouts/create_profile.html",
+        {
+            "form": form,
+            "scout": scout,
+        }
+    )       
+     

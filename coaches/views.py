@@ -9,7 +9,8 @@ from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
-
+from .forms import CoachCategoryForm
+from .forms import CoachCategoryForm, CoachProfileForm
 from messaging.models import (
     Conversation,
     ConversationParticipant,
@@ -1494,7 +1495,7 @@ def coach_talent_directory(request):
     # ==========================================
 
     search_query = request.GET.get(
-        "q",
+        "search",
         ""
     ).strip()
 
@@ -1593,10 +1594,100 @@ def coach_talent_directory(request):
         }
     )
 
+@login_required
+def select_coach_category(request):
+
+    if request.user.role != "COACH":
+        return render(
+            request,
+            "analytics/access_denied.html"
+        )
+
+    coach, created = CoachProfile.objects.get_or_create(
+        user=request.user
+    )
+
+    if coach.coach_category:
+        return redirect("coach_profile")
+
+    if request.method == "POST":
+
+        form = CoachCategoryForm(
+            request.POST,
+            instance=coach
+        )
+
+        if form.is_valid():
+            form.save()
+
+            return redirect("create_coach_profile")
+
+    else:
+
+        form = CoachCategoryForm(
+            instance=coach
+        )
+
+    return render(
+        request,
+        "coaches/select_category.html",
+        {
+            "form": form,
+            "coach": coach,
+        }
+    )
 
 
+@login_required
+def create_coach_profile(request):
 
-    
+    if request.user.role != "COACH":
+        return render(
+            request,
+            "analytics/access_denied.html"
+        )
+
+    coach = get_object_or_404(
+        CoachProfile,
+        user=request.user
+    )
+
+    if not coach.coach_category:
+        return redirect("select_coach_category")
+
+    if request.method == "POST":
+
+        form = CoachProfileForm(
+            request.POST,
+            request.FILES,
+            instance=coach
+        )
+
+        if form.is_valid():
+
+            form.save()
+
+            messages.success(
+                request,
+                "Coach profile created successfully."
+            )
+
+            return redirect("coach_profile")
+
+    else:
+
+        form = CoachProfileForm(
+            instance=coach
+        )
+
+    return render(
+        request,
+        "coaches/create_profile.html",
+        {
+            "form": form,
+            "coach": coach,
+        }
+    )    
 
 
 

@@ -19,6 +19,20 @@ class ScoutProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="scout_profile"
     )
+    
+    SCOUT_CATEGORY_CHOICES = (
+        ("SPORTS", "Sports"),
+        ("SCIENCE_TECHNOLOGY", "Science & Technology"),
+        ("ARTS", "Arts"),
+        ("OTHERS", "Others"),
+    )
+
+    scout_category = models.CharField(
+        max_length=30,
+        choices=SCOUT_CATEGORY_CHOICES,
+        blank=True,
+        null=True
+    )
 
     headline = models.CharField(
         max_length=255,

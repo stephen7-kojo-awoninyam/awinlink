@@ -18,6 +18,20 @@ class CoachProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="coach_profile"
     )
+    
+    COACH_CATEGORY_CHOICES = (
+        ("SPORTS", "Sports"),
+        ("SCIENCE_TECHNOLOGY", "Science & Technology"),
+        ("ARTS", "Arts"),
+        ("OTHERS", "Others"),
+    )
+
+    coach_category = models.CharField(
+        max_length=30,
+        choices=COACH_CATEGORY_CHOICES,
+        blank=True,
+        null=True
+    )
 
     headline = models.CharField(
         max_length=200,

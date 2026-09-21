@@ -50,9 +50,28 @@ def register(request):
                 user=user
             )
 
+            
             login(request, user)
 
-            return redirect("select_talent_category")
+            # Redirect users according to their account role
+            if user.role == "ATHLETE":
+                return redirect("select_talent_category")
+
+            elif user.role == "SCOUT":
+                return redirect("select_scout_category")
+
+            elif user.role == "COACH":
+                return redirect("select_coach_category")
+
+            elif user.role == "ORGANIZATION":
+                return redirect("dashboard")
+
+            elif user.role == "ADMIN":
+                return redirect("dashboard")
+
+            return redirect("dashboard")
+
+
         
         else:
 

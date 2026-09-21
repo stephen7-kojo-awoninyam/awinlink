@@ -4,6 +4,18 @@ from . import views
 
 
 urlpatterns = [
+    
+    path(
+    "profile/category/",
+    views.select_scout_category,
+    name="select_scout_category"
+    ),
+
+    path(
+        "profile/create/",
+        views.create_scout_profile,
+        name="create_scout_profile"
+    ),
 
     # Scout dashboard
 
@@ -12,6 +24,7 @@ urlpatterns = [
         views.scout_dashboard,
         name="scout_dashboard"
     ),
+    
 
     # Talent discovery
 
