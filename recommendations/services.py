@@ -38,7 +38,7 @@ from feed.models import (
 
 
 class RecommendationEngine:
-    
+
 
     @staticmethod
     def record_recommendation(
@@ -207,8 +207,8 @@ class RecommendationEngine:
             10
 
         )
-        
-  
+
+
 
 
         # =================================
@@ -497,8 +497,8 @@ class RecommendationEngine:
         score += min(share_count * 2, 10)
 
         return score
-    
-    
+
+
 
     @staticmethod
     def score_talent_for_user(user, talent):
@@ -524,7 +524,7 @@ class RecommendationEngine:
             "talent_profile",
             None
         )
-        
+
         # ============================================
         # COACH-SPECIFIC SCORING
         # ============================================
@@ -541,8 +541,8 @@ class RecommendationEngine:
                 coach_profile,
                 talent
             )
-        
-        
+
+
         # ============================================
         # SCOUT-SPECIFIC SCORING
         # ============================================
@@ -558,7 +558,7 @@ class RecommendationEngine:
             return RecommendationEngine.score_talent_for_scout(
                 scout_profile,
                 talent
-            )    
+            )
 
         # ============================================
         # TALENT / INDIVIDUAL DOMAIN MATCH
@@ -641,7 +641,7 @@ class RecommendationEngine:
                 len(matched_skills) * 5,
                 25
             )
-   
+
         # ============================================
         # ORGANIZATION DOMAIN
         # ============================================
@@ -793,6 +793,1115 @@ class RecommendationEngine:
             score,
             2
         )
+
+
+        # ============================================================
+        # TALENT-TO-TALENT DISCOVERY
+        # ============================================================
+
+    @staticmethod
+    def score_talent_for_discovery(source_talent, candidate):
+        """
+        Calculate how relevant another talent is for discovery.
+
+        This scorer is specifically for talent-to-talent discovery.
+
+        It focuses on:
+            - shared domains
+            - exact skill matches
+            - related skills
+            - genuine cross-category skill relationships
+            - location
+            - verification
+            - Role Model status
+            - profile strength
+            - experience
+        """
+
+        if not source_talent or not candidate:
+            return 0
+
+        # --------------------------------------------------------
+        # DO NOT RECOMMEND THE TALENT TO THEMSELVES
+        # --------------------------------------------------------
+
+        if source_talent.user_id == candidate.user_id:
+            return 0
+
+        score = 0
+
+        # --------------------------------------------------------
+        # SOURCE PROFILE DATA
+        # --------------------------------------------------------
+
+        source_domain_ids = set(
+            source_talent.domains.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        candidate_domain_ids = set(
+            candidate.domains.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        source_skill_ids = set(
+            source_talent.skills.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        candidate_skill_ids = set(
+            candidate.skills.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        # --------------------------------------------------------
+        # SHARED DOMAINS
+        # --------------------------------------------------------
+
+        matched_domain_ids = (
+            source_domain_ids &
+            candidate_domain_ids
+        )
+
+        score += min(
+            len(matched_domain_ids) * 15,
+            30
+        )
+
+        # --------------------------------------------------------
+        # EXACT SKILLS
+        # --------------------------------------------------------
+
+        matched_skill_ids = (
+            source_skill_ids &
+            candidate_skill_ids
+        )
+
+        score += min(
+            len(matched_skill_ids) * 5,
+            25
+        )
+
+        # --------------------------------------------------------
+        # RELATED SKILLS
+        # --------------------------------------------------------
+        #
+        # Use the existing SkillRelationship model.
+        #
+        # Example:
+        #
+        # Passing → Decision Making = 1.00
+        #
+        # The relationship strength contributes to the score.
+        #
+
+        related_skill_matches = (
+            RecommendationEngine
+            .get_related_skill_matches(
+                source_talent,
+                candidate
+            )
+        )
+
+        # Do not double-count exact skill matches.
+        related_skill_matches = [
+            match
+            for match in related_skill_matches
+            if match["related_skill"].id
+            not in matched_skill_ids
+        ]
+
+        if related_skill_matches:
+
+            related_score = sum(
+                match["strength"] * 5
+                for match in related_skill_matches
+            )
+
+            score += min(
+                related_score,
+                15
+            )
+
+        # --------------------------------------------------------
+        # CROSS-CATEGORY DISCOVERY
+        # --------------------------------------------------------
+        #
+        # A different talent category does NOT automatically
+        # receive a bonus.
+        #
+        # A cross-category relationship must have an actual
+        # skill bridge:
+        #
+        #     exact shared skill
+        #     OR
+        #     SkillRelationship
+        #
+        # Shared domains are already handled above and should
+        # not create an additional cross-category bonus.
+        #
+
+        source_category = getattr(
+            source_talent,
+            "talent_category",
+            None
+        )
+
+        candidate_category = getattr(
+            candidate,
+            "talent_category",
+            None
+        )
+
+        is_cross_category = (
+            source_category
+            and candidate_category
+            and source_category != candidate_category
+        )
+
+        if is_cross_category:
+
+            if matched_skill_ids:
+                score += 8
+
+            elif related_skill_matches:
+                score += 5
+
+        # --------------------------------------------------------
+        # LOCATION
+        # --------------------------------------------------------
+
+        if (
+            source_talent.country
+            and candidate.country
+            and source_talent.country.strip().lower()
+            == candidate.country.strip().lower()
+        ):
+            score += 5
+
+        if (
+            source_talent.city
+            and candidate.city
+            and source_talent.city.strip().lower()
+            == candidate.city.strip().lower()
+        ):
+            score += 3
+
+        # --------------------------------------------------------
+        # VERIFIED PROFILE
+        # --------------------------------------------------------
+
+        if candidate.verified:
+            score += 5
+
+        # --------------------------------------------------------
+        # ROLE MODEL
+        # --------------------------------------------------------
+
+        if candidate.is_role_model:
+            score += 8
+
+        # --------------------------------------------------------
+        # PROFILE STRENGTH
+        # --------------------------------------------------------
+
+        try:
+            strength = (
+                ProfileStrengthService.calculate_strength(
+                    candidate
+                )
+            )
+
+            if isinstance(strength, dict):
+                strength = strength.get(
+                    "score",
+                    0
+                )
+
+            score += (
+                float(strength) / 100
+            ) * 5
+
+        except Exception:
+            pass
+
+        # --------------------------------------------------------
+        # EXPERIENCE
+        # --------------------------------------------------------
+
+        experience_count = (
+            candidate.experiences.count()
+        )
+
+        score += min(
+            experience_count * 1.5,
+            6
+        )
+
+        return round(
+            min(score, 100),
+            2
+        )
+
+
+    @staticmethod
+    def explain_talent_match(source_talent, candidate):
+        """
+        Explain why one talent was recommended to another talent.
+
+        Returns a list of human-readable reasons.
+        """
+
+        if not source_talent or not candidate:
+            return []
+
+        reasons = []
+
+        # --------------------------------------------------------
+        # SHARED DOMAINS
+        # --------------------------------------------------------
+
+        source_domain_ids = set(
+            source_talent.domains.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        candidate_domain_ids = set(
+            candidate.domains.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        matched_domain_ids = (
+            source_domain_ids &
+            candidate_domain_ids
+        )
+
+        if matched_domain_ids:
+
+            matched_domains = list(
+                source_talent.domains.filter(
+                    id__in=matched_domain_ids
+                ).values_list(
+                    "name",
+                    flat=True
+                )
+            )
+
+            matched_domains = [
+                name.strip()
+                for name in matched_domains
+                if name and name.strip()
+            ]
+
+            if matched_domains:
+
+                reasons.append(
+                    "You share "
+                    + ", ".join(matched_domains[:3])
+                    + " domain"
+                    + (
+                        "s"
+                        if len(matched_domains) > 1
+                        else ""
+                    )
+                )
+
+        # --------------------------------------------------------
+        # EXACT SKILLS
+        # --------------------------------------------------------
+
+        source_skill_ids = set(
+            source_talent.skills.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        candidate_skill_ids = set(
+            candidate.skills.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        matched_skill_ids = (
+            source_skill_ids &
+            candidate_skill_ids
+        )
+
+        if matched_skill_ids:
+
+            matched_skills = list(
+                source_talent.skills.filter(
+                    id__in=matched_skill_ids
+                ).values_list(
+                    "name",
+                    flat=True
+                )
+            )
+
+            matched_skills = [
+                name.strip()
+                for name in matched_skills
+                if name and name.strip()
+            ]
+
+            if matched_skills:
+
+                reasons.append(
+                    "You share skills such as "
+                    + ", ".join(
+                        matched_skills[:4]
+                    )
+                )
+
+        # --------------------------------------------------------
+        # RELATED SKILLS
+        # --------------------------------------------------------
+
+        related_skill_names = set()
+
+        if source_talent.domains.exists():
+
+            related_skill_names = (
+                RecommendationEngine
+                .get_related_skills_for_domains(
+                    source_talent.domains.all()
+                )
+            )
+
+        related_skills = (
+            RecommendationEngine
+            .get_matching_skills(
+                candidate,
+                related_skill_names
+            )
+        )
+
+        related_skills = [
+            skill
+            for skill in related_skills
+            if skill.id not in matched_skill_ids
+        ]
+
+        if related_skills:
+
+            reasons.append(
+                "Has skills related to your interests, "
+                + ", ".join(
+                    skill.name
+                    for skill in related_skills[:3]
+                )
+            )
+
+        # --------------------------------------------------------
+        # CROSS-CATEGORY DISCOVERY
+        # --------------------------------------------------------
+
+        source_category = getattr(
+            source_talent,
+            "talent_category",
+            None
+        )
+
+        candidate_category = getattr(
+            candidate,
+            "talent_category",
+            None
+        )
+
+        if (
+            source_category
+            and candidate_category
+            and source_category != candidate_category
+            and (
+                matched_domain_ids
+                or matched_skill_ids
+                or related_skills
+            )
+        ):
+
+            reasons.append(
+                "Explore talent from another category"
+            )
+
+        # --------------------------------------------------------
+        # LOCATION
+        # --------------------------------------------------------
+
+        if (
+            source_talent.country
+            and candidate.country
+            and source_talent.country.strip().lower()
+            == candidate.country.strip().lower()
+        ):
+
+            reasons.append(
+                "You are in the same country"
+            )
+
+        if (
+            source_talent.city
+            and candidate.city
+            and source_talent.city.strip().lower()
+            == candidate.city.strip().lower()
+        ):
+
+            reasons.append(
+                "You are in the same city"
+            )
+
+        # --------------------------------------------------------
+        # QUALITY SIGNALS
+        # --------------------------------------------------------
+
+        if candidate.verified:
+            reasons.append(
+                "Verified talent profile"
+            )
+
+        if candidate.is_role_model:
+            reasons.append(
+                "Recognized as a Role Model"
+            )
+
+        # --------------------------------------------------------
+        # FALLBACK
+        # --------------------------------------------------------
+
+        if not reasons:
+
+            reasons.append(
+                "Recommended based on your talent profile"
+            )
+
+        return reasons
+
+
+    @staticmethod
+    def recommend_talents_for_talent(
+        talent,
+        limit=12
+    ):
+        """
+        Recommend other talents for a talent's
+        Discover Talents experience.
+
+        Existing follows and accepted connections are excluded
+        from the primary discovery feed.
+
+        The result contains:
+
+            {
+                "talent": candidate,
+                "score": score,
+                "reasons": [...]
+            }
+        """
+
+        if not talent:
+            return []
+
+        # --------------------------------------------------------
+        # ALL OTHER TALENTS
+        # --------------------------------------------------------
+
+        candidates = (
+            TalentProfile.objects
+            .select_related("user")
+            .prefetch_related(
+                "domains",
+                "skills",
+                "experiences"
+            )
+            .exclude(
+                user_id=talent.user_id
+            )
+        )
+
+        # --------------------------------------------------------
+        # EXISTING FOLLOWS
+        # --------------------------------------------------------
+
+        followed_user_ids = set(
+            Follow.objects.filter(
+                follower=talent.user
+            ).values_list(
+                "following_id",
+                flat=True
+            )
+        )
+
+        # --------------------------------------------------------
+        # EXISTING CONNECTIONS
+        # --------------------------------------------------------
+
+        sent_connection_ids = set(
+            Connection.objects.filter(
+                sender=talent.user,
+                status="ACCEPTED"
+            ).values_list(
+                "receiver_id",
+                flat=True
+            )
+        )
+
+        received_connection_ids = set(
+            Connection.objects.filter(
+                receiver=talent.user,
+                status="ACCEPTED"
+            ).values_list(
+                "sender_id",
+                flat=True
+            )
+        )
+
+        connected_user_ids = (
+            sent_connection_ids |
+            received_connection_ids
+        )
+
+        # --------------------------------------------------------
+        # EXCLUDE ALREADY KNOWN PEOPLE
+        # --------------------------------------------------------
+
+        excluded_user_ids = (
+            followed_user_ids |
+            connected_user_ids |
+            {talent.user_id}
+        )
+
+        candidates = candidates.exclude(
+            user_id__in=excluded_user_ids
+        )
+
+        # --------------------------------------------------------
+        # SCORE CANDIDATES
+        # --------------------------------------------------------
+
+        recommendations = []
+
+        for candidate in candidates:
+
+            score = (
+                RecommendationEngine
+                .score_talent_for_discovery(
+                    talent,
+                    candidate
+                )
+            )
+
+            # --------------------------------------------------------
+            # MEANINGFUL DISCOVERY RELEVANCE
+            # --------------------------------------------------------
+
+            # Shared domain
+            has_domain_match = talent.domains.filter(
+                id__in=candidate.domains.values_list(
+                    "id",
+                    flat=True
+                )
+            ).exists()
+
+            # Exact skill match
+            source_skill_ids = set(
+                talent.skills.values_list(
+                    "id",
+                    flat=True
+                )
+            )
+
+            candidate_skill_ids = set(
+                candidate.skills.values_list(
+                    "id",
+                    flat=True
+                )
+            )
+
+            has_skill_match = bool(
+                source_skill_ids &
+                candidate_skill_ids
+            )
+
+            # Related skill match
+            related_skill_names = (
+                RecommendationEngine
+                .get_related_skills_for_domains(
+                    talent.domains.all()
+                )
+            )
+
+            related_skills = (
+                RecommendationEngine
+                .get_matching_skills(
+                    candidate,
+                    related_skill_names
+                )
+            )
+
+            has_related_skill = bool(
+                related_skills
+            )
+
+            # --------------------------------------------------------
+            # EXCLUDE WEAK DISCOVERY MATCHES
+            # --------------------------------------------------------
+
+            if not (
+                has_domain_match
+                or has_skill_match
+                or has_related_skill
+            ):
+                continue
+
+            # Score must still be positive.
+            if score <= 0:
+                continue
+
+            reasons = (
+                RecommendationEngine
+                .explain_talent_match(
+                    talent,
+                    candidate
+                )
+            )
+
+            # Determine whether this is a cross-category
+            # recommendation.
+            # --------------------------------------------------------
+            # DISCOVERY TYPE
+            # --------------------------------------------------------
+
+            source_category = getattr(
+                talent,
+                "talent_category",
+                None
+            )
+
+            candidate_category = getattr(
+                candidate,
+                "talent_category",
+                None
+            )
+
+            # Shared domain
+            has_domain_match = talent.domains.filter(
+                id__in=candidate.domains.values_list(
+                    "id",
+                    flat=True
+                )
+            ).exists()
+
+            # Exact skill relationship
+            source_skill_ids = set(
+                talent.skills.values_list(
+                    "id",
+                    flat=True
+                )
+            )
+
+            candidate_skill_ids = set(
+                candidate.skills.values_list(
+                    "id",
+                    flat=True
+                )
+            )
+
+            has_skill_match = bool(
+                source_skill_ids &
+                candidate_skill_ids
+            )
+
+            # Related skill relationship
+            related_skill_names = (
+                RecommendationEngine
+                .get_related_skills_for_domains(
+                    talent.domains.all()
+                )
+            )
+
+            related_skills = (
+                RecommendationEngine
+                .get_matching_skills(
+                    candidate,
+                    related_skill_names
+                )
+            )
+
+            has_related_skill = bool(
+                related_skills
+            )
+
+            # --------------------------------------------------------
+            # CLASSIFY DISCOVERY
+            # --------------------------------------------------------
+
+            if (
+                source_category
+                and candidate_category
+                and source_category != candidate_category
+                and (
+                    has_domain_match
+                    or has_skill_match
+                    or has_related_skill
+                )
+            ):
+                discovery_type = "CROSS_CATEGORY"
+
+            elif has_domain_match or has_skill_match:
+                discovery_type = "SIMILAR"
+
+            elif has_related_skill:
+                discovery_type = "RELATED"
+
+            else:
+                discovery_type = "RELATED"
+
+            recommendations.append({
+                "talent": candidate,
+                "score": score,
+                "reasons": reasons,
+                "discovery_type": discovery_type,
+            })
+
+        # --------------------------------------------------------
+        # SORT
+        # --------------------------------------------------------
+
+        recommendations.sort(
+            key=lambda item: item["score"],
+            reverse=True
+        )
+
+        return recommendations[:limit]
+
+
+    @staticmethod
+    def recommend_feed_users(
+        user,
+        limit=12
+    ):
+        """
+        Recommend users whose talent profiles have meaningful
+        relevance to the current user's talent profile.
+
+        This is used by the Feed to discover public content
+        from people with meaningful common interests.
+
+        The actual matching logic is delegated to the existing
+        talent-to-talent discovery engine.
+        """
+
+        if not user:
+            return []
+
+        user_talent = getattr(
+            user,
+            "talent_profile",
+            None
+        )
+
+        if not user_talent:
+            return []
+
+        recommendations = (
+            RecommendationEngine
+            .recommend_talents_for_talent(
+                user_talent,
+                limit=limit
+            )
+        )
+
+        return [
+            {
+                "user": item["talent"].user,
+                "talent": item["talent"],
+                "score": item["score"],
+                "reasons": item["reasons"],
+                "discovery_type": item["discovery_type"],
+            }
+            for item in recommendations
+        ]
+
+
+    @staticmethod
+    def score_talent_for_discovery(
+        source_talent,
+        candidate
+    ):
+        """
+        Score how relevant one talent is to another
+        for the Discover Talents experience.
+
+        Maximum score: 100
+
+        Scoring:
+            Shared domains       = 25
+            Exact skills         = 25
+            Related skills       = 15
+            Same talent category = 10
+            Experience           = 5
+            Achievements         = 5
+            Certifications       = 5
+            Profile strength     = 5
+            Same country         = 3
+            Same city            = 2
+        """
+
+        if not source_talent or not candidate:
+            return 0
+
+        # --------------------------------------------------------
+        # DO NOT RECOMMEND SELF
+        # --------------------------------------------------------
+
+        if source_talent.user_id == candidate.user_id:
+            return 0
+
+        score = 0
+
+        # --------------------------------------------------------
+        # SHARED DOMAINS — 25 POINTS
+        # --------------------------------------------------------
+
+        source_domain_ids = set(
+            source_talent.domains.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        candidate_domain_ids = set(
+            candidate.domains.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        matched_domain_ids = (
+            source_domain_ids &
+            candidate_domain_ids
+        )
+
+        if matched_domain_ids:
+            score += min(
+                len(matched_domain_ids) * 12.5,
+                25
+            )
+
+        # --------------------------------------------------------
+        # EXACT SKILLS — 25 POINTS
+        # --------------------------------------------------------
+
+        source_skill_ids = set(
+            source_talent.skills.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        candidate_skill_ids = set(
+            candidate.skills.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        matched_skill_ids = (
+            source_skill_ids &
+            candidate_skill_ids
+        )
+
+        if matched_skill_ids:
+            score += min(
+                len(matched_skill_ids) * 5,
+                25
+            )
+
+        # --------------------------------------------------------
+        # RELATED SKILLS — 15 POINTS
+        # --------------------------------------------------------
+
+        related_skill_names = set()
+
+        if source_domain_ids:
+
+            related_skill_names = (
+                RecommendationEngine
+                .get_related_skills_for_domains(
+                    source_talent.domains.all()
+                )
+            )
+
+        related_skills = (
+            RecommendationEngine
+            .get_matching_skills(
+                candidate,
+                related_skill_names
+            )
+        )
+
+        # Remove exact matches so they are not counted twice.
+        related_skills = [
+            skill
+            for skill in related_skills
+            if skill.id not in matched_skill_ids
+        ]
+
+        if related_skills:
+            score += min(
+                len(related_skills) * 5,
+                15
+            )
+
+        # --------------------------------------------------------
+        # TALENT CATEGORY — 10 POINTS
+        # --------------------------------------------------------
+
+        source_category = getattr(
+            source_talent,
+            "talent_category",
+            None
+        )
+
+        candidate_category = getattr(
+            candidate,
+            "talent_category",
+            None
+        )
+
+        if (
+            source_category
+            and candidate_category
+            and source_category == candidate_category
+        ):
+            score += 10
+
+        # IMPORTANT:
+        # Different categories are NOT penalized.
+        #
+        # Awinlink supports cross-category discovery.
+        # A technology talent can discover an arts talent,
+        # for example, if their skills/domains are relevant.
+
+        # --------------------------------------------------------
+        # EXPERIENCE — 5 POINTS
+        # --------------------------------------------------------
+
+        experience_count = candidate.experiences.count()
+
+        score += min(
+            experience_count,
+            5
+        )
+
+        # --------------------------------------------------------
+        # ACHIEVEMENTS — 5 POINTS
+        # --------------------------------------------------------
+
+        achievements_manager = getattr(
+            candidate,
+            "achievements",
+            None
+        )
+
+        if achievements_manager:
+            achievement_count = achievements_manager.count()
+
+            score += min(
+                achievement_count,
+                5
+            )
+
+        # --------------------------------------------------------
+        # CERTIFICATIONS — 5 POINTS
+        # --------------------------------------------------------
+
+        certificates_manager = getattr(
+            candidate,
+            "certificates",
+            None
+        )
+
+        if certificates_manager:
+            certificate_count = certificates_manager.count()
+
+            score += min(
+                certificate_count,
+                5
+            )
+
+        # --------------------------------------------------------
+        # PROFILE STRENGTH — 5 POINTS
+        # --------------------------------------------------------
+
+        try:
+            profile_strength = (
+                ProfileStrengthService
+                .calculate_strength(candidate)
+            )
+
+            if isinstance(profile_strength, dict):
+                strength_value = profile_strength.get(
+                    "score",
+                    0
+                )
+            else:
+                strength_value = profile_strength
+
+            score += min(
+                float(strength_value) / 20,
+                5
+            )
+
+        except Exception:
+            pass
+
+        # --------------------------------------------------------
+        # SAME COUNTRY — 3 POINTS
+        # --------------------------------------------------------
+
+        if (
+            source_talent.country
+            and candidate.country
+            and source_talent.country.strip().lower()
+            == candidate.country.strip().lower()
+        ):
+            score += 3
+
+        # --------------------------------------------------------
+        # SAME CITY — 2 POINTS
+        # --------------------------------------------------------
+
+        if (
+            source_talent.city
+            and candidate.city
+            and source_talent.city.strip().lower()
+            == candidate.city.strip().lower()
+        ):
+            score += 2
+
+        # --------------------------------------------------------
+        # FINAL SCORE
+        # --------------------------------------------------------
+
+        return round(
+            min(score, 100),
+            2
+        )
+
     @staticmethod
     def score_role_model_for_talent(talent, role_model):
         """
@@ -921,7 +2030,7 @@ class RecommendationEngine:
             len(matched_skills) * 5,
             20
         )
-        
+
         # ============================================
         # RELEVANCE GATE
         # ============================================
@@ -1071,7 +2180,7 @@ class RecommendationEngine:
                     role_model
                 )
             )
-            
+
             if score <= 0:
                continue
 
@@ -1094,10 +2203,10 @@ class RecommendationEngine:
         # RETURN TOP RESULTS
         # ============================================
 
-        return recommendations[:limit]  
-    
-    
-    
+        return recommendations[:limit]
+
+
+
     @staticmethod
     def explain_role_model_match(talent, role_model):
         """
@@ -1546,8 +2655,8 @@ class RecommendationEngine:
             min(score, 100),
             2
         )
-        
-        
+
+
     def score_course_for_talent(self, talent, course):
         """
         Score how relevant a learning course is to a talent.
@@ -1781,8 +2890,8 @@ class RecommendationEngine:
         # =====================================================
 
         return min(score, 100)
-    
-    
+
+
     def get_course_recommendation_reason(self, talent, course):
         """
         Explain why a course is recommended to a talent.
@@ -1886,7 +2995,7 @@ class RecommendationEngine:
             )
 
         return " ".join(reasons)
-        
+
     def recommend_courses_for_talent(self, talent, limit=10):
         """
         Return the most relevant approved learning courses
@@ -1932,9 +3041,9 @@ class RecommendationEngine:
             reverse=True
         )
 
-        return recommendations[:limit] 
-    
-    
+        return recommendations[:limit]
+
+
     def score_event_for_talent(self, talent, event):
         """
         Score how relevant an event is to a talent.
@@ -2085,8 +3194,8 @@ class RecommendationEngine:
         # ==========================================
 
         return min(score, 100)
-    
-    
+
+
     def recommend_events_for_talent(self, talent, limit=10):
         """
         Return the most relevant published events
@@ -2132,9 +3241,9 @@ class RecommendationEngine:
             reverse=True
         )
 
-        return recommendations[:limit] 
+        return recommendations[:limit]
 
-        
+
     def get_event_recommendation_reason(self, talent, event):
         """
         Explain why an event is recommended to a talent.
@@ -2249,7 +3358,7 @@ class RecommendationEngine:
             )
 
         return " ".join(reasons)
-            
+
     @staticmethod
     def get_talent_relationships(talent):
         """
@@ -2435,10 +3544,10 @@ class RecommendationEngine:
             organization_ids
         )
 
-        return relationships      
-    
-    
-    
+        return relationships
+
+
+
     @staticmethod
     def get_domain_skill_relevance(domain, skills):
         """
@@ -2485,8 +3594,8 @@ class RecommendationEngine:
                 matched_skills += 1
 
         return matched_skills
-    
-    
+
+
     @staticmethod
     def get_related_skills_for_domain(domain):
         """
@@ -2508,9 +3617,9 @@ class RecommendationEngine:
         return Skill.objects.filter(
             category__name__icontains=domain_name
         ).distinct()
-        
-        
-        
+
+
+
     @staticmethod
     def normalize_text(value):
         """
@@ -2551,37 +3660,107 @@ class RecommendationEngine:
         return matching_domains
 
 
+
     @staticmethod
     def get_related_skills_for_domains(domains):
         """
-        Return all skills belonging to categories related
-        to the supplied domains.
+        Return skill names that are related to skills
+        associated with the supplied talent domains.
+
+        Uses the existing SkillRelationship model while
+        supporting domain-specific SkillCategory names.
         """
 
-        from skills.models import Skill
+        from skills.models import Skill, SkillRelationship
 
         related_skill_names = set()
 
-        for domain in domains:
+        if not domains:
+            return related_skill_names
 
-            domain_name = RecommendationEngine.normalize_text(
-                domain.name
-            )
+        domain_names = {
+            RecommendationEngine.normalize_text(domain.name)
+            for domain in domains
+            if domain.name
+        }
 
-            if not domain_name:
-                continue
+        domain_names.discard("")
 
-            skills = Skill.objects.filter(
+        if not domain_names:
+            return related_skill_names
+
+        domain_skills = Skill.objects.none()
+
+        for domain_name in domain_names:
+            domain_skills = domain_skills | Skill.objects.filter(
                 category__name__icontains=domain_name
             )
 
-            related_skill_names.update(
-                skill.name.strip().lower()
-                for skill in skills
-            )
+        relationships = SkillRelationship.objects.filter(
+            skill__in=domain_skills
+        ).select_related(
+            "related_skill"
+        )
+
+        related_skill_names.update(
+            relationship.related_skill.name.strip().lower()
+            for relationship in relationships
+            if relationship.related_skill.name
+        )
 
         return related_skill_names
-    
+
+
+    @staticmethod
+    def get_related_skill_matches(source_talent, candidate):
+        """
+        Find candidate skills that are related to the source
+        talent's skills.
+
+        Returns:
+            A list of dictionaries containing:
+            - source_skill
+            - related_skill
+            - strength
+        """
+
+        from skills.models import SkillRelationship
+
+        if not source_talent or not candidate:
+            return []
+
+        source_skill_ids = source_talent.skills.values_list(
+            "id",
+            flat=True
+        )
+
+        candidate_skill_ids = set(
+            candidate.skills.values_list(
+                "id",
+                flat=True
+            )
+        )
+
+        if not source_skill_ids or not candidate_skill_ids:
+            return []
+
+        relationships = SkillRelationship.objects.filter(
+            skill_id__in=source_skill_ids,
+            related_skill_id__in=candidate_skill_ids
+        ).select_related(
+            "skill",
+            "related_skill"
+        )
+
+        return [
+            {
+                "source_skill": relationship.skill,
+                "related_skill": relationship.related_skill,
+                "strength": float(relationship.strength),
+            }
+            for relationship in relationships
+        ]
+
     @staticmethod
     def get_related_skill_matches_for_role_model(
         talent,
@@ -2675,8 +3854,8 @@ class RecommendationEngine:
                 matches.append(skill)
 
         return matches
-    
-    
+
+
     @staticmethod
     def score_talent_for_scout(scout, talent):
         """
@@ -2862,8 +4041,8 @@ class RecommendationEngine:
         return round(
             score,
             2
-        )   
-    
+        )
+
     @staticmethod
     def score_talent_for_coach(coach, talent):
         """
@@ -3094,7 +4273,7 @@ class RecommendationEngine:
         )
 
         return recommendations[:limit]
-     
+
 
 
     @staticmethod
@@ -3289,8 +4468,8 @@ class RecommendationEngine:
 
 
         return results[:10]
-    
-    
+
+
     # =====================================================
     # GENERATE ORGANIZATION RECOMMENDATIONS
     # =====================================================
@@ -3337,8 +4516,8 @@ class RecommendationEngine:
             )
 
         return generated
-    
-    
+
+
     @staticmethod
     def recommend_organizations_for_user(user, limit=10):
         """
@@ -3377,8 +4556,8 @@ class RecommendationEngine:
             reverse=True
         )
 
-        return recommendations[:limit]  
-      
+        return recommendations[:limit]
+
     @staticmethod
     def recommend_opportunities_for_user(user, limit=10):
         """

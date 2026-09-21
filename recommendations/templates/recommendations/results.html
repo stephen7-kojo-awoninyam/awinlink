@@ -1,248 +1,219 @@
 {% extends "base.html" %}
 
-
 {% block content %}
-
 
 <div class="container mt-5">
 
+    <!-- =========================
+         PAGE HEADER
+    ========================== -->
 
-<h2>
-Recommended Talents
-</h2>
+    <div class="mb-4">
+        <h2 class="fw-bold">Recommended Talents</h2>
 
+        <h5 class="text-muted">
+            Opportunity:
+            <span class="text-dark">
+                {{ opportunity.title }}
+            </span>
+        </h5>
+    </div>
 
-<h4 class="mb-4">
-Opportunity:
-{{ opportunity.title }}
-</h4>
 
+    <!-- =========================
+         TALENT GRID
+    ========================== -->
 
+    <div class="row">
 
-<div class="row">
+        {% for item in results %}
 
+        <div class="col-lg-4 col-md-6 mb-4">
 
-{% for item in results %}
+            <div class="card h-100 shadow-sm border-0">
 
+                <!-- =========================
+                     PROFILE PHOTO
+                ========================== -->
 
+                {% if item.talent.profile_photo %}
 
-<div class="col-md-4">
+                    <img
+                        src="{{ item.talent.profile_photo.url }}"
+                        class="card-img-top"
+                        alt="{{ item.talent.user.get_full_name }}"
+                        style="
+                            height: 250px;
+                            object-fit: cover;
+                        "
+                    >
 
+                {% else %}
 
-<div class="card mb-4 shadow-sm">
+                    <div
+                        class="d-flex align-items-center justify-content-center bg-light"
+                        style="height: 250px;"
+                    >
+                        <span class="text-muted">
+                            No profile photo
+                        </span>
+                    </div>
 
+                {% endif %}
 
 
-{% if item.talent.profile_photo %}
+                <!-- =========================
+                     CARD BODY
+                ========================== -->
 
+                <div class="card-body">
 
-<img 
-src="{{ item.talent.profile_photo.url }}"
-class="card-img-top"
-height="250"
->
+                    <!-- NAME -->
 
+                    <h5 class="card-title mb-2">
 
-{% endif %}
+                        {{ item.talent.user.get_full_name }}
 
+                        {% if item.talent.verified %}
 
+                            <span class="badge bg-success">
+                                ✓ Verified
+                            </span>
 
-<div class="card-body">
+                        {% endif %}
 
+                    </h5>
 
 
-<h5 class="card-title">
+                    <!-- MATCH SCORE -->
 
-{{ item.talent.user.get_full_name }}
+                    <div class="mb-3">
 
+                        <strong>Match Score:</strong>
 
-{% if item.talent.verified %}
+                        <span class="badge bg-success">
+                            {{ item.score }}%
+                        </span>
 
-<span class="badge bg-success">
+                    </div>
 
-✓ Verified
 
-</span>
+                    <hr>
 
 
-{% endif %}
+                    <!-- LOCATION -->
 
+                    <p class="mb-3">
 
-</h5>
+                        <strong>Location:</strong><br>
 
+                        {% if item.talent.city %}
+                            {{ item.talent.city }},
+                        {% endif %}
 
-{% if item.talent.verified %}
+                        {% if item.talent.country %}
+                            {{ item.talent.country }}
+                        {% else %}
+                            Location not provided
+                        {% endif %}
 
-<span class="badge bg-success">
+                    </p>
 
-Verified Talent
 
-</span>
+                    <!-- DOMAINS -->
 
-{% endif %}
+                    <div class="mb-3">
 
+                        <strong>Domains:</strong>
 
+                        <div class="mt-2">
 
+                            {% for domain in item.talent.domains.all %}
 
-<hr>
+                                <span class="badge bg-primary me-1 mb-1">
+                                    {{ domain.name }}
+                                </span>
 
+                            {% empty %}
 
+                                <span class="text-muted">
+                                    No domains added.
+                                </span>
 
-<p>
+                            {% endfor %}
 
-<strong>
-Match Score:
-</strong>
+                        </div>
 
-<span class="text-success">
+                    </div>
 
-{{ item.score }}%
 
-</span>
+                    <!-- SKILLS -->
 
-</p>
+                    <div class="mb-3">
 
+                        <strong>Skills:</strong>
 
+                        <div class="mt-2">
 
+                            {% for skill in item.talent.skills.all %}
 
-<p>
+                                <span class="badge bg-secondary me-1 mb-1">
+                                    {{ skill.name }}
+                                </span>
 
-<strong>
-Location:
-</strong>
+                            {% empty %}
 
-{{ item.talent.city }},
-{{ item.talent.country }}
+                                <span class="text-muted">
+                                    No skills added.
+                                </span>
 
-</p>
+                            {% endfor %}
 
+                        </div>
 
+                    </div>
 
 
+                    <!-- ACTIONS -->
 
-<p>
+                    <div class="mt-4 d-flex gap-2">
 
-<strong>
-Domains:
-</strong>
+                        <a
+                            href="{% url 'talent_profile' item.talent.id %}"
+                            class="btn btn-outline-primary btn-sm"
+                        >
+                            View Profile
+                        </a>
 
-<br>
+                        <a
+                            href="{% url 'invite_talent' opportunity.id item.talent.id %}"
+                            class="btn btn-success btn-sm"
+                        >
+                            Invite Talent
+                        </a>
 
+                    </div>
 
-{% for domain in item.talent.domains.all %}
+                </div>
 
+            </div>
 
-<span class="badge bg-primary">
+        </div>
 
-{{ domain.name }}
+        {% empty %}
 
-</span>
+            <div class="col-12">
 
+                <div class="alert alert-warning">
+                    No matching talents found for this opportunity.
+                </div>
 
-{% empty %}
+            </div>
 
-No domains added.
+        {% endfor %}
 
-
-{% endfor %}
-
-
-</p>
-
-
-
-
-
-<p>
-
-<strong>
-Skills:
-</strong>
-
-<br>
-
-
-{% for skill in item.talent.skills.all %}
-
-
-<span class="badge bg-secondary">
-
-{{ skill.name }}
-
-</span>
-
-
-{% empty %}
-
-No skills added.
-
-
-{% endfor %}
-
-
-</p>
-
-
-
-
-
-<div class="mt-3">
-
-
-
-<a href="{% url 'talent_profile' item.talent.id %}"
-class="btn btn-outline-primary btn-sm">
-
-View Profile
-
-</a>
-
-
-
-
-
-<a href="{% url 'invite_talent' opportunity.id item.talent.id %}"
-class="btn btn-success btn-sm">
-
-Invite Talent
-
-</a>
-
-
+    </div>
 
 </div>
-
-
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-{% empty %}
-
-
-<div class="alert alert-warning">
-
-No matching talents found.
-
-</div>
-
-
-{% endfor %}
-
-
-
-</div>
-
-
-</div>
-
 
 {% endblock %}

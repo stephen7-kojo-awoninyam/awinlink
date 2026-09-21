@@ -113,6 +113,23 @@ def home_feed(request):
         set(feed_authors)
     )
 
+    # ==================================
+    # FEED RECOMMENDED USERS
+    # ==================================
+
+    feed_user_recommendations = (
+        RecommendationEngine
+        .recommend_feed_users(
+            request.user,
+            limit=12
+        )
+    )
+
+    recommended_feed_user_ids = {
+        item["user"].id
+        for item in feed_user_recommendations
+    }
+
 
     # ==================================
     # POSTS
@@ -143,6 +160,13 @@ def home_feed(request):
         Q(
             author_id__in=following_organizations,
             visibility="ORGANIZATIONS"
+        )
+
+        |
+
+        Q(
+            author_id__in=recommended_feed_user_ids,
+            visibility="PUBLIC"
         )
 
     ).select_related(
@@ -527,6 +551,8 @@ def home_feed(request):
 
 
     recommended_talents = talent_scores[:5]
+
+
     # =====================================
     # CONNECTION STATUS
     # =====================================
@@ -634,8 +660,8 @@ def home_feed(request):
         "recommended_organizations": recommended_organizations,
 
         "saved_post_ids": saved_post_ids,
-        
-   
+
+
 
     }
 
