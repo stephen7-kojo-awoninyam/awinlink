@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}
+Choose Your Scout Category | Awinlink
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+
+<div class="row justify-content-center">
+
+    <div class="col-lg-8">
+
+        <div class="card border-0 shadow-sm">
+
+            <div class="card-body p-4 p-md-5 text-center">
+
+                <div class="mb-4">
+
+                    <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex p-4">
+
+                        <i class="bi bi-search text-primary fs-1"></i>
+
+                    </div>
+
+                </div>
+
+                <h1 class="fw-bold mb-3">
+                    What kind of scout are you?
+                </h1>
+
+                <p class="text-muted mb-4">
+                    Awinlink supports talent discovery across many
+                    fields. Choose the category that best represents
+                    the type of talent you scout and discover.
+                </p>
+
+                <form method="post">
+
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+
+                    {% endif %}
+
+                    <div class="row g-3 text-start">
+
+                        <!-- SPORTS -->
+
+                        <div class="col-md-6">
+
+                            <label class="w-100">
+
+                                <div class="card border h-100">
+
+                                    <div class="card-body p-4">
+
+                                        <div class="d-flex align-items-center">
+
+                                            <div class="me-3">
+
+                                                <i class="bi bi-trophy fs-1 text-primary"></i>
+
+                                            </div>
+
+                                            <div>
+
+                                                <h4 class="mb-1">
+                                                    Sports
+                                                </h4>
+
+                                                <p class="text-muted mb-0 small">
+                                                    Discover athletes and
+                                                    sporting talents.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                        <div class="mt-3">
+
+                                            <input
+                                                type="radio"
+                                                name="scout_category"
+                                                value="SPORTS"
+                                                class="form-check-input"
+                                                {% if form.scout_category.value == "SPORTS" %}checked{% endif %}
+                                            >
+
+                                            <span class="ms-2">
+                                                Select Sports
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </label>
+
+                        </div>
+
+
+                        <!-- SCIENCE & TECHNOLOGY -->
+
+                        <div class="col-md-6">
+
+                            <label class="w-100">
+
+                                <div class="card border h-100">
+
+                                    <div class="card-body p-4">
+
+                                        <div class="d-flex align-items-center">
+
+                                            <div class="me-3">
+
+                                                <i class="bi bi-cpu fs-1 text-success"></i>
+
+                                            </div>
+
+                                            <div>
+
+                                                <h4 class="mb-1">
+                                                    Science &amp; Technology
+                                                </h4>
+
+                                                <p class="text-muted mb-0 small">
+                                                    Discover technology,
+                                                    engineering, science
+                                                    and innovation talent.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                        <div class="mt-3">
+
+                                            <input
+                                                type="radio"
+                                                name="scout_category"
+                                                value="SCIENCE_TECHNOLOGY"
+                                                class="form-check-input"
+                                                {% if form.scout_category.value == "SCIENCE_TECHNOLOGY" %}checked{% endif %}
+                                            >
+
+                                            <span class="ms-2">
+                                                Select Science &amp; Technology
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </label>
+
+                        </div>
+
+
+                        <!-- ARTS -->
+
+                        <div class="col-md-6">
+
+                            <label class="w-100">
+
+                                <div class="card border h-100">
+
+                                    <div class="card-body p-4">
+
+                                        <div class="d-flex align-items-center">
+
+                                            <div class="me-3">
+
+                                                <i class="bi bi-palette fs-1 text-danger"></i>
+
+                                            </div>
+
+                                            <div>
+
+                                                <h4 class="mb-1">
+                                                    Arts
+                                                </h4>
+
+                                                <p class="text-muted mb-0 small">
+                                                    Discover music, painting,
+                                                    design, performance and
+                                                    creative talent.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                        <div class="mt-3">
+
+                                            <input
+                                                type="radio"
+                                                name="scout_category"
+                                                value="ARTS"
+                                                class="form-check-input"
+                                                {% if form.scout_category.value == "ARTS" %}checked{% endif %}
+                                            >
+
+                                            <span class="ms-2">
+                                                Select Arts
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </label>
+
+                        </div>
+
+
+                        <!-- OTHERS -->
+
+                        <div class="col-md-6">
+
+                            <label class="w-100">
+
+                                <div class="card border h-100">
+
+                                    <div class="card-body p-4">
+
+                                        <div class="d-flex align-items-center">
+
+                                            <div class="me-3">
+
+                                                <i class="bi bi-stars fs-1 text-warning"></i>
+
+                                            </div>
+
+                                            <div>
+
+                                                <h4 class="mb-1">
+                                                    Others
+                                                </h4>
+
+                                                <p class="text-muted mb-0 small">
+                                                    Discover any other talent,
+                                                    profession or ability.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                        <div class="mt-3">
+
+                                            <input
+                                                type="radio"
+                                                name="scout_category"
+                                                value="OTHERS"
+                                                class="form-check-input"
+                                                {% if form.scout_category.value == "OTHERS" %}checked{% endif %}
+                                            >
+
+                                            <span class="ms-2">
+                                                Select Others
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                    {% if form.scout_category.errors %}
+
+                        <div class="text-danger small mt-3">
+                            {{ form.scout_category.errors }}
+                        </div>
+
+                    {% endif %}
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary btn-lg w-100 mt-4"
+                    >
+                        Continue
+
+                        <i class="bi bi-arrow-right ms-2"></i>
+
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+{% endblock %}

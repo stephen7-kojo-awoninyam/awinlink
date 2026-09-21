@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+
+            <h2>Create Scout Profile</h2>
+
+            <p class="text-muted">
+                Complete your Scout profile to help others understand
+                what type of talent you discover and support.
+            </p>
+
+            <p>
+                <strong>Category:</strong>
+                {{ scout.get_scout_category_display }}
+            </p>
+
+            <form method="post">
+                {% csrf_token %}
+
+                {{ form.as_p }}
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Create Profile
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
