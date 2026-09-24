@@ -307,36 +307,45 @@ Create Account | Awinlink
 
             <!-- USERNAME -->
 
-            <div class="col-12">
+           <div class="col-12">
 
-                <label
-                    for="{{ form.username.id_for_label }}"
-                    class="form-label"
-                >
-                    Username
-                </label>
+            <label
+                for="{{ form.username.id_for_label }}"
+                class="form-label"
+            >
+                Username
+            </label>
 
-                <div class="input-group">
+            <div class="input-group">
 
-                    <span class="input-group-text">
-                        @
-                    </span>
+                <span class="input-group-text">
+                    @
+                </span>
 
-                    {{ form.username }}
-
-                </div>
-
-
-                {% for error in form.username.errors %}
-
-                    <div class="text-danger small mt-1">
-                        {{ error }}
-                    </div>
-
-                {% endfor %}
+                {{ form.username }}
 
             </div>
 
+            <div
+                id="username-feedback"
+                class="small mt-1"
+            ></div>
+
+            <div
+                id="username-suggestions"
+                class="mt-2"
+                style="display: none;"
+            ></div>
+
+            {% for error in form.username.errors %}
+
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+        </div>
 
             <!-- EMAIL -->
 
@@ -349,7 +358,31 @@ Create Account | Awinlink
                     Email address
                 </label>
 
-                {{ form.email }}
+          <div class="col-12">
+
+    <label
+        for="{{ form.email.id_for_label }}"
+        class="form-label"
+    >
+        Email address
+    </label>
+
+    {{ form.email }}
+
+    <div
+        id="email-feedback"
+        class="small mt-1"
+    ></div>
+
+    {% for error in form.email.errors %}
+
+        <div class="text-danger small mt-1">
+            {{ error }}
+        </div>
+
+    {% endfor %}
+
+</div>
 
                 {% for error in form.email.errors %}
 
@@ -366,29 +399,45 @@ Create Account | Awinlink
 
             <div class="col-md-6">
 
-                <label
-                    for="{{ form.phone_number.id_for_label }}"
-                    class="form-label"
+            <label
+                for="{{ form.phone_number.id_for_label }}"
+                class="form-label"
+            >
+                Phone number
+            </label>
+
+            <div class="input-group">
+
+                <span
+                    class="input-group-text"
+                    id="phone-country-code"
                 >
-                    Phone number
-                </label>
+                    +--
+                </span>
 
                 {{ form.phone_number }}
 
-                {% for error in form.phone_number.errors %}
-
-                    <div class="text-danger small mt-1">
-                        {{ error }}
-                    </div>
-
-                {% endfor %}
-
             </div>
+
+            <div
+                id="phone-feedback"
+                class="small mt-1"
+            ></div>
+
+            {% for error in form.phone_number.errors %}
+
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+
+            {% endfor %}
+
+        </div>
 
 
             <!-- COUNTRY -->
 
-            <div class="col-md-6">
+                <div class="col-md-6">
 
                 <label
                     for="{{ form.country.id_for_label }}"
@@ -398,6 +447,11 @@ Create Account | Awinlink
                 </label>
 
                 {{ form.country }}
+
+                <div
+                    id="country-feedback"
+                    class="small mt-1"
+                ></div>
 
                 {% for error in form.country.errors %}
 
@@ -412,6 +466,87 @@ Create Account | Awinlink
         </div>
 
     </div>
+
+
+    <!-- =================================================
+     ORGANIZATION INFORMATION
+================================================== -->
+
+<div
+    class="form-section"
+    id="organization-section"
+    style="display: none;"
+>
+    <div class="section-heading">
+        <i class="bi bi-building"></i>
+        <div>
+            <h5>
+                Organization information
+            </h5>
+            <p>
+                Provide the details of your organization.
+            </p>
+        </div>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- ORGANIZATION NAME -->
+        <div class="col-12">
+            <label
+                for="{{ form.organization_name.id_for_label }}"
+                class="form-label"
+            >
+                Organization name
+            </label>
+
+            {{ form.organization_name }}
+
+            {% for error in form.organization_name.errors %}
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- ORGANIZATION EMAIL -->
+        <div class="col-md-6">
+            <label
+                for="{{ form.organization_email.id_for_label }}"
+                class="form-label"
+            >
+                Organization email
+            </label>
+
+            {{ form.organization_email }}
+
+            {% for error in form.organization_email.errors %}
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- WEBSITE -->
+        <div class="col-md-6">
+            <label
+                for="{{ form.website.id_for_label }}"
+                class="form-label"
+            >
+                Website
+            </label>
+
+            {{ form.website }}
+
+            {% for error in form.website.errors %}
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
 
 
 
@@ -553,8 +688,382 @@ Create Account | Awinlink
     </a>
 
 </div>
-```
+
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const usernameInput = document.getElementById("id_username");
+    const usernameFeedback = document.getElementById("username-feedback");
+
+    const emailInput = document.getElementById("id_email");
+    const emailFeedback = document.getElementById("email-feedback");
+
+    const countryInput = document.getElementById("id_country");
+
+    const phoneInput = document.getElementById("id_phone_number");
+    const phoneCountryCode = document.getElementById("phone-country-code");
+    const phoneFeedback = document.getElementById("phone-feedback");
+
+    const roleInputs = document.querySelectorAll(
+    'input[name="role"]'
+    );
+
+    const organizationSection =
+        document.getElementById("organization-section");
+
+
+    /*
+    =========================================================
+    COUNTRY PHONE CODES
+    =========================================================
+    */
+
+    const countryCodes = {
+        "GH": "+233",
+        "NG": "+234",
+        "US": "+1",
+        "CA": "+1",
+        "GB": "+44",
+        "DE": "+49",
+        "FR": "+33",
+        "IT": "+39",
+        "ES": "+34",
+        "PT": "+351",
+        "NL": "+31",
+        "BE": "+32",
+        "CH": "+41",
+        "AT": "+43",
+        "SE": "+46",
+        "NO": "+47",
+        "DK": "+45",
+        "FI": "+358",
+        "IE": "+353",
+        "ZA": "+27",
+        "KE": "+254",
+        "UG": "+256",
+        "TZ": "+255",
+        "RW": "+250",
+        "ET": "+251",
+        "ZM": "+260",
+        "ZW": "+263",
+        "SL": "+232",
+        "LR": "+231",
+        "GM": "+220",
+        "SN": "+221",
+        "CI": "+225",
+        "CM": "+237",
+        "IN": "+91",
+        "CN": "+86",
+        "JP": "+81",
+        "KR": "+82",
+        "AU": "+61",
+        "NZ": "+64",
+        "BR": "+55",
+        "AR": "+54",
+        "MX": "+52",
+        "AE": "+971",
+        "SA": "+966",
+        "QA": "+974",
+        "IL": "+972",
+        "TR": "+90"
+    };
+function updateOrganizationSection() {
+    const selectedRole =
+        document.querySelector(
+            'input[name="role"]:checked'
+        );
+
+    if (!selectedRole) {
+        organizationSection.style.display = "none";
+        return;
+    }
+
+    if (selectedRole.value === "ORGANIZATION") {
+        organizationSection.style.display = "block";
+    } else {
+        organizationSection.style.display = "none";
+    }
+}
+
+roleInputs.forEach(function (input) {
+    input.addEventListener(
+        "change",
+        updateOrganizationSection
+    );
+});
+
+    /*
+    =========================================================
+    COUNTRY CHANGE
+    =========================================================
+    */
+
+    function updatePhoneCountryCode() {
+
+        const country = countryInput.value;
+
+        if (countryCodes[country]) {
+
+            phoneCountryCode.textContent = countryCodes[country];
+
+        } else {
+
+            phoneCountryCode.textContent = "+--";
+
+        }
+
+        validatePhone();
+
+    }
+
+
+    countryInput.addEventListener(
+        "change",
+        updatePhoneCountryCode
+    );
+
+
+    /*
+    =========================================================
+    EMAIL VALIDATION
+    =========================================================
+    */
+
+    function validateEmail() {
+
+        const email = emailInput.value.trim();
+
+        if (!email) {
+
+            emailFeedback.textContent = "";
+
+            return;
+
+        }
+
+        const emailPattern =
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+        if (!emailPattern.test(email)) {
+
+            emailFeedback.textContent =
+                "✗ Please enter a valid email address.";
+
+            emailFeedback.className =
+                "text-danger small mt-1";
+
+        } else {
+
+            emailFeedback.textContent =
+                "✓ Email format looks valid.";
+
+            emailFeedback.className =
+                "text-success small mt-1";
+
+        }
+
+    }
+
+
+    emailInput.addEventListener(
+        "input",
+        validateEmail
+    );
+
+
+    /*
+    =========================================================
+    PHONE VALIDATION
+    =========================================================
+    */
+
+    function validatePhone() {
+
+        const phone = phoneInput.value.trim();
+        const country = countryInput.value;
+
+
+        if (!phone) {
+
+            phoneFeedback.textContent = "";
+
+            return;
+
+        }
+
+
+        if (!country) {
+
+            phoneFeedback.textContent =
+                "✗ Select your country first.";
+
+            phoneFeedback.className =
+                "text-danger small mt-1";
+
+            return;
+
+        }
+
+
+        if (!/^[0-9\s().+-]+$/.test(phone)) {
+
+            phoneFeedback.textContent =
+                "✗ Please enter a valid phone number.";
+
+            phoneFeedback.className =
+                "text-danger small mt-1";
+
+            return;
+
+        }
+
+
+        if (phone.replace(/\D/g, "").length < 6) {
+
+            phoneFeedback.textContent =
+                "✗ Phone number appears too short.";
+
+            phoneFeedback.className =
+                "text-danger small mt-1";
+
+            return;
+
+        }
+
+
+        phoneFeedback.textContent =
+            "✓ Phone number format looks valid.";
+
+        phoneFeedback.className =
+            "text-success small mt-1";
+
+    }
+
+
+    phoneInput.addEventListener(
+        "input",
+        validatePhone
+    );
+
+
+    /*
+    =========================================================
+    USERNAME BASIC VALIDATION
+    =========================================================
+    */
+
+    let usernameTimer;
+
+
+    function validateUsername() {
+
+        const username =
+            usernameInput.value.trim().replace(/^@/, "");
+
+
+        if (!username) {
+
+            usernameFeedback.textContent = "";
+
+            return;
+
+        }
+
+
+        if (username.length < 3) {
+
+            usernameFeedback.textContent =
+                "✗ Username must contain at least 3 characters.";
+
+            usernameFeedback.className =
+                "text-danger small mt-1";
+
+            return;
+
+        }
+
+
+        if (!/^[A-Za-z0-9._]+$/.test(username)) {
+
+            usernameFeedback.textContent =
+                "✗ Use only letters, numbers, dots and underscores.";
+
+            usernameFeedback.className =
+                "text-danger small mt-1";
+
+            return;
+
+        }
+
+
+        usernameFeedback.textContent =
+            "Checking username...";
+
+        usernameFeedback.className =
+            "text-muted small mt-1";
+
+
+        clearTimeout(usernameTimer);
+
+
+        usernameTimer = setTimeout(function () {
+
+            /*
+             * Username availability endpoint will be connected
+             * in the next step.
+             */
+
+            usernameFeedback.textContent =
+                "✓ Username format is valid.";
+
+            usernameFeedback.className =
+                "text-success small mt-1";
+
+        }, 500);
+
+    }
+
+
+    usernameInput.addEventListener(
+        "input",
+        validateUsername
+    );
+
+
+    /*
+    =========================================================
+    REMOVE @ FROM USERNAME
+    =========================================================
+    */
+
+    usernameInput.addEventListener(
+        "blur",
+        function () {
+
+            usernameInput.value =
+                usernameInput.value
+                    .trim()
+                    .replace(/^@/, "");
+
+        }
+    );
+
+
+    /*
+    =========================================================
+    INITIAL STATE
+    =========================================================
+    */
+
+    updatePhoneCountryCode();
+    updatePhoneCountryCode();
+    updateOrganizationSection();
+
+});
+</script>
 
 {% endblock %}

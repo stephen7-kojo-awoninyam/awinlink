@@ -332,3 +332,38 @@ if os.environ.get("RENDER"):
         CSRF_TRUSTED_ORIGINS = [
             f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}"
         ]
+# =====================================================
+# EMAIL CONFIGURATION
+# =====================================================
+
+if os.environ.get("RENDER"):
+
+    # Production email backend
+    EMAIL_BACKEND = (
+        "django.core.mail.backends.smtp.EmailBackend"
+    )
+
+else:
+
+    # Local development: print emails in terminal
+    EMAIL_BACKEND = (
+        "django.core.mail.backends.console.EmailBackend"
+    )
+
+
+# SMTP configuration (provided through environment variables)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+
+EMAIL_USE_TLS = (
+    os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
+)
+
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    "Awinlink <noreply@awinlink.com>"
+)                        
+        
