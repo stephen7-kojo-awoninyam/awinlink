@@ -271,6 +271,19 @@ class UserRegistrationForm(UserCreationForm):
         required=False,
         label="Organization Name",
     )
+    
+    
+    organization_username = forms.CharField(
+    required=False,
+    label="Organization Username",
+    widget=forms.TextInput(
+        attrs={
+            "class": "form-control",
+            "placeholder": "Choose a unique organization username",
+            "autocomplete": "off",
+        }
+    ),
+)
 
     organization_email = forms.EmailField(
         required=False,
@@ -292,6 +305,7 @@ class UserRegistrationForm(UserCreationForm):
             "phone_number",
             "country",
             "role",
+            "organization_username",
             "password1",
             "password2",
         )
@@ -315,6 +329,29 @@ class UserRegistrationForm(UserCreationForm):
             )
 
         return username
+    
+    def clean_organization_username(self):  
+        organization_username = (
+        self.cleaned_data.get("organization_username", "")
+        .strip()
+        .lower()
+        )
+
+        if not organization_username:
+            return organization_username
+
+        # Remove accidental @ symbol.
+        organization_username = organization_username.lstrip("@")
+
+        if User.objects.filter(
+        organization_username__iexact=organization_username
+        ).exists():
+                raise ValidationError(
+                "This organization username is already taken. "
+                "Please choose another one."
+                )
+
+        return organization_username
 
     # -----------------------------------------------------
     # EMAIL VALIDATION
@@ -379,6 +416,7 @@ class UserRegistrationForm(UserCreationForm):
         if role == "ORGANIZATION":
 
             organization_name = cleaned_data.get("organization_name")
+            organization_username = cleaned_data.get("organization_username")
             organization_email = cleaned_data.get("organization_email")
 
             if not organization_name:
@@ -386,6 +424,13 @@ class UserRegistrationForm(UserCreationForm):
                     "organization_name",
                     "Organization name is required."
                 )
+                
+            if not organization_username:
+                self.add_error(
+                    "organization_username",
+                    "Organization username is required."
+                )
+        
 
             if not organization_email:
                 self.add_error(

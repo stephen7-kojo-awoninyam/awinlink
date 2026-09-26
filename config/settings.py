@@ -42,6 +42,7 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "192.168.100.108",
+    "awinlink-production.up.railway.app",
 ]
 
 if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
@@ -55,7 +56,6 @@ if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
 # =====================================================
 
 INSTALLED_APPS = [
-    "daphne",
 
     # Django
     "django.contrib.admin",
@@ -366,4 +366,7 @@ DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL",
     "Awinlink <noreply@awinlink.com>"
 )                        
-        
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://awinlink-production.up.railway.app",
+]        

@@ -3,6 +3,7 @@ from django.contrib.auth import views as auth_views
 
 from . import views
 
+
 urlpatterns = [
 # Registration, login and logout
 path("register/", views.register, name="register"),
@@ -46,6 +47,11 @@ path(
     ),
     name="password_reset_complete",
 ),
-
+path("loading/", views.loading_page, name="loading"),
+path(
+    "check-organization-username/",
+    views.check_organization_username,
+    name="check_organization_username",
+),
 
 ]

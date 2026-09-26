@@ -22,6 +22,13 @@ class User(AbstractUser):
         choices=ROLE_CHOICES,
         default="ATHLETE"
     )
+    
+    organization_username = models.CharField(
+    max_length=150,
+    unique=True,
+    blank=True,
+    null=True
+    )
 
     profile_picture = models.ImageField(
         upload_to="profiles/",

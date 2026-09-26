@@ -5,9 +5,16 @@ from .forms import UserRegistrationForm
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login, logout
 from organizations.models import Organization
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+
+from .models import User
+
 
 # Create your views here.
 
+def loading_page(request):
+    return render(request, "loading.html")
 
 def register(request):
 
@@ -126,3 +133,36 @@ def user_logout(request):
     logout(request)
 
     return redirect("home")
+
+
+
+
+
+
+@require_GET
+def check_organization_username(request):
+    username = request.GET.get(
+        "organization_username",
+        ""
+    ).strip().lstrip("@").lower()
+
+    if not username:
+        return JsonResponse({
+            "available": False,
+            "message": "Please enter an organization username."
+        })
+
+    exists = User.objects.filter(
+        organization_username__iexact=username
+    ).exists()
+
+    if exists:
+        return JsonResponse({
+            "available": False,
+            "message": "This organization username is already taken."
+        })
+
+    return JsonResponse({
+        "available": True,
+        "message": "Organization username is available."
+    })

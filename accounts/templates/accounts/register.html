@@ -233,81 +233,86 @@ Create Account | Awinlink
          PERSONAL INFORMATION
     ================================================== -->
 
-    <div class="form-section">
+ <!-- =================================================
+     PERSONAL INFORMATION
+================================================== -->
 
-        <div class="section-heading">
+<div
+    class="form-section"
+    id="personal-information-section"
+>
 
-            <i class="bi bi-person-vcard"></i>
+    <div class="section-heading">
 
-            <div>
+        <i class="bi bi-person-vcard"></i>
 
-                <h5>
-                    Personal information
-                </h5>
+        <div>
 
-                <p>
-                    Tell us a little about yourself.
-                </p>
+            <h5>
+                Personal information
+            </h5>
 
-            </div>
+            <p>
+                Tell us a little about yourself.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="row g-3">
+
+        <!-- FIRST NAME -->
+        <div
+            class="col-md-6"
+            id="first-name-field"
+        >
+
+            <label
+                for="{{ form.first_name.id_for_label }}"
+                class="form-label"
+            >
+                First name
+            </label>
+
+            {{ form.first_name }}
+
+            {% for error in form.first_name.errors %}
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+            {% endfor %}
 
         </div>
 
 
-        <div class="row g-3">
+        <!-- LAST NAME -->
+        <div
+            class="col-md-6"
+            id="last-name-field"
+        >
+
+            <label
+                for="{{ form.last_name.id_for_label }}"
+                class="form-label"
+            >
+                Last name
+            </label>
+
+            {{ form.last_name }}
+
+            {% for error in form.last_name.errors %}
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+            {% endfor %}
+
+        </div>
 
 
-            <!-- FIRST NAME -->
-
-            <div class="col-md-6">
-
-                <label
-                    for="{{ form.first_name.id_for_label }}"
-                    class="form-label"
-                >
-                    First name
-                </label>
-
-                {{ form.first_name }}
-
-                {% for error in form.first_name.errors %}
-
-                    <div class="text-danger small mt-1">
-                        {{ error }}
-                    </div>
-
-                {% endfor %}
-
-            </div>
-
-
-            <!-- LAST NAME -->
-
-            <div class="col-md-6">
-
-                <label
-                    for="{{ form.last_name.id_for_label }}"
-                    class="form-label"
-                >
-                    Last name
-                </label>
-
-                {{ form.last_name }}
-
-                {% for error in form.last_name.errors %}
-
-                    <div class="text-danger small mt-1">
-                        {{ error }}
-                    </div>
-
-                {% endfor %}
-
-            </div>
-
-
-            <!-- USERNAME -->
-
-           <div class="col-12">
+        <!-- USERNAME -->
+        <div class="col-12">
 
             <label
                 for="{{ form.username.id_for_label }}"
@@ -338,66 +343,42 @@ Create Account | Awinlink
             ></div>
 
             {% for error in form.username.errors %}
-
                 <div class="text-danger small mt-1">
                     {{ error }}
                 </div>
-
             {% endfor %}
 
         </div>
 
-            <!-- EMAIL -->
 
-            <div class="col-12">
+        <!-- EMAIL -->
+        <div class="col-12">
 
-                <label
-                    for="{{ form.email.id_for_label }}"
-                    class="form-label"
-                >
-                    Email address
-                </label>
+            <label
+                for="{{ form.email.id_for_label }}"
+                class="form-label"
+            >
+                Email address
+            </label>
 
-          <div class="col-12">
+            {{ form.email }}
 
-    <label
-        for="{{ form.email.id_for_label }}"
-        class="form-label"
-    >
-        Email address
-    </label>
+            <div
+                id="email-feedback"
+                class="small mt-1"
+            ></div>
 
-    {{ form.email }}
+            {% for error in form.email.errors %}
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+            {% endfor %}
 
-    <div
-        id="email-feedback"
-        class="small mt-1"
-    ></div>
-
-    {% for error in form.email.errors %}
-
-        <div class="text-danger small mt-1">
-            {{ error }}
         </div>
 
-    {% endfor %}
 
-</div>
-
-                {% for error in form.email.errors %}
-
-                    <div class="text-danger small mt-1">
-                        {{ error }}
-                    </div>
-
-                {% endfor %}
-
-            </div>
-
-
-            <!-- PHONE -->
-
-            <div class="col-md-6">
+        <!-- PHONE -->
+        <div class="col-md-6">
 
             <label
                 for="{{ form.phone_number.id_for_label }}"
@@ -425,50 +406,49 @@ Create Account | Awinlink
             ></div>
 
             {% for error in form.phone_number.errors %}
-
                 <div class="text-danger small mt-1">
                     {{ error }}
                 </div>
-
             {% endfor %}
 
         </div>
 
 
-            <!-- COUNTRY -->
+        <!-- COUNTRY -->
+        <div class="col-md-6">
 
-                <div class="col-md-6">
+            <label
+                for="{{ form.country.id_for_label }}"
+                class="form-label"
+            >
+                Country
+            </label>
 
-                <label
-                    for="{{ form.country.id_for_label }}"
-                    class="form-label"
-                >
-                    Country
-                </label>
+            {{ form.country }}
 
-                {{ form.country }}
+            <div
+                id="country-feedback"
+                class="small mt-1"
+            ></div>
 
-                <div
-                    id="country-feedback"
-                    class="small mt-1"
-                ></div>
-
-                {% for error in form.country.errors %}
-
-                    <div class="text-danger small mt-1">
-                        {{ error }}
-                    </div>
-
-                {% endfor %}
-
-            </div>
+            {% for error in form.country.errors %}
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+            {% endfor %}
 
         </div>
 
     </div>
 
+</div>
 
-    <!-- =================================================
+
+<!-- =================================================
+     ORGANIZATION INFORMATION
+================================================== -->
+
+<!-- =================================================
      ORGANIZATION INFORMATION
 ================================================== -->
 
@@ -477,22 +457,31 @@ Create Account | Awinlink
     id="organization-section"
     style="display: none;"
 >
+
     <div class="section-heading">
+
         <i class="bi bi-building"></i>
+
         <div>
+
             <h5>
                 Organization information
             </h5>
+
             <p>
                 Provide the details of your organization.
             </p>
+
         </div>
+
     </div>
+
 
     <div class="row g-3">
 
         <!-- ORGANIZATION NAME -->
         <div class="col-12">
+
             <label
                 for="{{ form.organization_name.id_for_label }}"
                 class="form-label"
@@ -507,10 +496,47 @@ Create Account | Awinlink
                     {{ error }}
                 </div>
             {% endfor %}
+
         </div>
+
+
+        <!-- ORGANIZATION USERNAME -->
+        <div class="col-12">
+
+            <label
+                for="{{ form.organization_username.id_for_label }}"
+                class="form-label"
+            >
+                Organization username
+            </label>
+
+            <div class="input-group">
+
+                <span class="input-group-text">
+                    @
+                </span>
+
+                {{ form.organization_username }}
+
+            </div>
+
+            <div
+                id="organization-username-feedback"
+                class="small mt-1"
+            ></div>
+
+            {% for error in form.organization_username.errors %}
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+            {% endfor %}
+
+        </div>
+
 
         <!-- ORGANIZATION EMAIL -->
         <div class="col-md-6">
+
             <label
                 for="{{ form.organization_email.id_for_label }}"
                 class="form-label"
@@ -525,10 +551,13 @@ Create Account | Awinlink
                     {{ error }}
                 </div>
             {% endfor %}
+
         </div>
+
 
         <!-- WEBSITE -->
         <div class="col-md-6">
+
             <label
                 for="{{ form.website.id_for_label }}"
                 class="form-label"
@@ -543,18 +572,17 @@ Create Account | Awinlink
                     {{ error }}
                 </div>
             {% endfor %}
+
         </div>
 
     </div>
+
 </div>
-
-
-
     <!-- =================================================
          SECURITY
     ================================================== -->
 
-    <div class="form-section">
+<div class="form-section" style="width: 100%;">
 
         <div class="section-heading">
 
@@ -575,7 +603,7 @@ Create Account | Awinlink
         </div>
 
 
-        <div class="row g-3">
+        <div class="row g-3 w-100">
 
 
             <!-- PASSWORD -->
@@ -715,6 +743,9 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("organization-section");
 
 
+
+
+
     /*
     =========================================================
     COUNTRY PHONE CODES
@@ -771,28 +802,55 @@ document.addEventListener("DOMContentLoaded", function () {
         "TR": "+90"
     };
 function updateOrganizationSection() {
+
     const selectedRole =
         document.querySelector(
             'input[name="role"]:checked'
         );
 
+    const personalInformationSection =
+        document.getElementById(
+            "personal-information-section"
+        );
+
     if (!selectedRole) {
+        personalInformationSection.style.display = "block";
         organizationSection.style.display = "none";
         return;
     }
 
     if (selectedRole.value === "ORGANIZATION") {
+
+        // Hide the entire personal information section
+        personalInformationSection.style.display = "none";
+
+        // Show organization information
         organizationSection.style.display = "block";
+
     } else {
+
+        // Show personal information
+        personalInformationSection.style.display = "block";
+
+        // Hide organization information
         organizationSection.style.display = "none";
     }
 }
 
 roleInputs.forEach(function (input) {
+
     input.addEventListener(
         "change",
         updateOrganizationSection
     );
+
+    input.closest(".role-option").addEventListener(
+        "click",
+        function () {
+            setTimeout(updateOrganizationSection, 0);
+        }
+    );
+
 });
 
     /*
@@ -1064,6 +1122,96 @@ roleInputs.forEach(function (input) {
     updateOrganizationSection();
 
 });
+
+
+const organizationUsernameInput =
+    document.getElementById("id_organization_username");
+
+const organizationUsernameFeedback =
+    document.getElementById(
+        "organization-username-feedback"
+    );
+
+
+if (organizationUsernameInput) {
+
+    organizationUsernameInput.addEventListener(
+        "input",
+        function () {
+
+            let username =
+                organizationUsernameInput.value
+                    .trim()
+                    .replace(/^@+/, "")
+                    .toLowerCase();
+
+            organizationUsernameInput.value = username;
+
+            if (!username) {
+
+                organizationUsernameFeedback.textContent = "";
+
+                return;
+            }
+
+            if (username.length < 3) {
+
+                organizationUsernameFeedback.textContent =
+                    "Organization username must be at least 3 characters.";
+
+                organizationUsernameFeedback.className =
+                    "text-warning small mt-1";
+
+                return;
+            }
+
+            organizationUsernameFeedback.textContent =
+                "Checking availability...";
+
+            organizationUsernameFeedback.className =
+                "text-muted small mt-1";
+
+
+            fetch(
+                "{% url 'check_organization_username' %}" +
+                "?organization_username=" +
+                encodeURIComponent(username)
+            )
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+
+                    organizationUsernameFeedback.textContent =
+                        data.message;
+
+                    if (data.available) {
+
+                        organizationUsernameFeedback.className =
+                            "text-success small mt-1";
+
+                    } else {
+
+                        organizationUsernameFeedback.className =
+                            "text-danger small mt-1";
+
+                    }
+
+                })
+                .catch(function () {
+
+                    organizationUsernameFeedback.textContent =
+                        "Unable to check username availability.";
+
+                    organizationUsernameFeedback.className =
+                        "text-danger small mt-1";
+
+                });
+
+        }
+    );
+
+}
 </script>
 
 {% endblock %}

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Welcome to Awinlink</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            background: #ffffff;
+        }
+
+        /* ==============================
+           TOP NAVIGATION
+        ============================== */
+
+        .top-nav {
+            height: 82px;
+            background: #ffffff;
+
+            display: flex;
+            align-items: center;
+
+            padding: 0 55px;
+
+            position: relative;
+            z-index: 10;
+        }
+
+        .awinlink-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            text-decoration: none;
+        }
+
+        .awinlink-logo {
+            width: 42px;
+            height: 42px;
+
+            background: #0b63ce;
+
+            color: #ffffff;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 25px;
+            font-weight: 800;
+
+            border-radius: 8px;
+        }
+
+        .awinlink-name {
+            color: #0b63ce;
+
+            font-size: 25px;
+            font-weight: 700;
+
+            letter-spacing: -0.5px;
+        }
+
+
+        /* ==============================
+           BLUE HERO AREA
+        ============================== */
+
+        .loading-main {
+            height: calc(100vh - 132px);
+
+            background: #0866d8;
+
+            position: relative;
+
+            overflow: hidden;
+
+            display: flex;
+            align-items: center;
+        }
+
+
+        /* ==============================
+           WELCOME MESSAGE
+        ============================== */
+
+        .welcome-section {
+            width: 52%;
+
+            padding-left: 9%;
+
+            position: relative;
+            z-index: 3;
+        }
+
+        .welcome-title {
+            color: #ffffff;
+
+            font-size: clamp(42px, 5vw, 76px);
+
+            font-weight: 700;
+
+            line-height: 1.05;
+
+            letter-spacing: -2px;
+
+            margin-bottom: 20px;
+        }
+
+        .welcome-subtitle {
+            color: #ffffff;
+
+            font-size: clamp(20px, 2vw, 31px);
+
+            font-weight: 400;
+
+            line-height: 1.4;
+
+            max-width: 650px;
+        }
+
+
+        /* ==============================
+           PEOPLE
+        ============================== */
+
+        .people-section {
+            position: absolute;
+
+            right: 5%;
+
+            top: 50%;
+
+            transform: translateY(-50%);
+
+            width: 43%;
+
+            height: 75%;
+
+            display: grid;
+
+            grid-template-columns: repeat(2, 1fr);
+
+            gap: 18px;
+
+            z-index: 2;
+        }
+
+        .person {
+            position: relative;
+
+            overflow: hidden;
+
+            border-radius: 24px;
+
+            background: rgba(255, 255, 255, 0.12);
+
+            box-shadow:
+                0 15px 40px rgba(0, 0, 0, 0.15);
+
+            border: 3px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .person img {
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+
+            display: block;
+        }
+
+
+        /* ==============================
+           LOADING INDICATOR
+        ============================== */
+
+        .loading-indicator {
+            position: absolute;
+
+            bottom: 30px;
+
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            color: #ffffff;
+
+            font-size: 17px;
+
+            font-weight: 500;
+
+            z-index: 5;
+        }
+
+        .dots {
+            display: flex;
+
+            align-items: center;
+
+            gap: 5px;
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+
+            background: #ffffff;
+
+            border-radius: 50%;
+
+            animation: loadingDots 1.4s infinite ease-in-out;
+        }
+
+        .dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes loadingDots {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+
+                opacity: 0.4;
+            }
+
+            30% {
+                transform: translateY(-7px);
+
+                opacity: 1;
+            }
+        }
+
+
+        /* ==============================
+           BOTTOM NAVIGATION
+        ============================== */
+
+        .bottom-nav {
+            height: 50px;
+
+            background: #ffffff;
+
+            position: relative;
+
+            z-index: 10;
+        }
+
+
+        /* ==============================
+           RESPONSIVE DESIGN
+        ============================== */
+
+        @media (max-width: 900px) {
+
+            .top-nav {
+                height: 70px;
+
+                padding: 0 25px;
+            }
+
+            .awinlink-logo {
+                width: 36px;
+                height: 36px;
+
+                font-size: 21px;
+            }
+
+            .awinlink-name {
+                font-size: 21px;
+            }
+
+            .loading-main {
+                height: calc(100vh - 120px);
+            }
+
+            .welcome-section {
+                width: 100%;
+
+                padding: 60px 30px 200px;
+
+                text-align: center;
+            }
+
+            .welcome-title {
+                font-size: 45px;
+            }
+
+            .welcome-subtitle {
+                margin: auto;
+
+                font-size: 21px;
+            }
+
+            .people-section {
+                width: 72%;
+
+                height: 38%;
+
+                right: 50%;
+
+                top: auto;
+
+                bottom: 90px;
+
+                transform: translateX(50%);
+
+                gap: 10px;
+            }
+
+            .person {
+                border-radius: 15px;
+            }
+
+            .loading-indicator {
+                bottom: 25px;
+            }
+        }
+
+
+        @media (max-width: 500px) {
+
+            .top-nav {
+                padding: 0 18px;
+            }
+
+            .welcome-title {
+                font-size: 36px;
+
+                letter-spacing: -1px;
+            }
+
+            .welcome-subtitle {
+                font-size: 18px;
+            }
+
+            .people-section {
+                width: 85%;
+
+                height: 32%;
+
+                bottom: 85px;
+            }
+
+            .loading-indicator {
+                font-size: 15px;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- TOP WHITE NAVIGATION BAR -->
+    <nav class="top-nav">
+
+        <a href="#" class="awinlink-brand">
+
+            <div class="awinlink-logo">
+                A
+            </div>
+
+            <span class="awinlink-name">
+                awinlink
+            </span>
+
+        </a>
+
+    </nav>
+
+
+    <!-- BLUE LOADING AREA -->
+    <main class="loading-main">
+
+        <!-- WELCOME MESSAGE -->
+        <section class="welcome-section">
+
+            <h1 class="welcome-title">
+                Welcome to Awinlink
+            </h1>
+
+            <p class="welcome-subtitle">
+                Where Talent Meets Opportunities
+            </p>
+
+        </section>
+
+
+        <!-- PEOPLE -->
+        <section class="people-section">
+
+            <div class="person">
+                <img
+                    src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=700&q=85"
+                    alt="Awinlink talent"
+                >
+            </div>
+
+            <div class="person">
+                <img
+                    src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=700&q=85"
+                    alt="Awinlink talent"
+                >
+            </div>
+
+            <div class="person">
+                <img
+                    src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=700&q=85"
+                    alt="Awinlink talent"
+                >
+            </div>
+
+            <div class="person">
+                <img
+                    src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=85"
+                    alt="Awinlink talent"
+                >
+            </div>
+
+        </section>
+
+
+        <!-- LOADING -->
+        <div class="loading-indicator">
+
+            <span>Loading</span>
+
+            <div class="dots">
+
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+    <!-- BOTTOM WHITE NAVIGATION BAR -->
+    <div class="bottom-nav"></div>
+
+
+</body>
+</html>

@@ -50,3 +50,24 @@ htmlcov/
 *.pem
 *.key
 *.crt
+
+# Cloudflare Wrangler generated files
+.wrangler/
+.wrangler-test/
+.wrangler-dry-run/
+
+
+# Cloudflare / Wrangler deployment files
+.wrangler-inspect/
+.wrangler-test-inspect/
+python_modules/
+index.py
+realtime/
+worker/
+wrangler-files.txt
+wrangler-test.jsonc
+wrangler.jsonc
+pyproject.toml
+pylock.toml
+uv.lock
+requirements.render.txt
