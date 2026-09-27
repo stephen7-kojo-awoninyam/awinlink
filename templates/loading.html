@@ -1,443 +1,614 @@
+{% load static %}
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Awinlink</title>
 
+    <title>Awinlink | Where Talent Meets Opportunities</title>
 
-<style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    html,
-    body {
-        width: 100%;
-        height: 100%;
-        font-family: Arial, Helvetica, sans-serif;
-    }
-
-    body {
-        background: #ffffff;
-    }
-
-    /* ==============================
-       TOP NAVIGATION
-    ============================== */
-
-    .top-nav {
-        height: 82px;
-        background: #ffffff;
-        display: flex;
-        align-items: center;
-        padding: 0 55px;
-        position: relative;
-        z-index: 10;
-    }
-
-    .awinlink-brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        text-decoration: none;
-    }
-
-    .awinlink-logo {
-        width: 42px;
-        height: 42px;
-        background: #0b63ce;
-        color: #ffffff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 25px;
-        font-weight: 800;
-        border-radius: 8px;
-    }
-
-    .awinlink-name {
-        color: #0b63ce;
-        font-size: 25px;
-        font-weight: 700;
-        letter-spacing: -0.5px;
-    }
-
-    /* ==============================
-       HERO AREA
-    ============================== */
-
-    .landing-main {
-        min-height: calc(100vh - 82px);
-        background: #0866d8;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-    }
-
-    /* ==============================
-       WELCOME MESSAGE
-    ============================== */
-
-    .welcome-section {
-        width: 52%;
-        padding-left: 9%;
-        position: relative;
-        z-index: 3;
-    }
-
-    .welcome-title {
-        color: #ffffff;
-        font-size: clamp(42px, 5vw, 76px);
-        font-weight: 700;
-        line-height: 1.05;
-        letter-spacing: -2px;
-        margin-bottom: 20px;
-    }
-
-    .welcome-subtitle {
-        color: #ffffff;
-        font-size: clamp(20px, 2vw, 31px);
-        font-weight: 400;
-        line-height: 1.4;
-        max-width: 650px;
-        margin-bottom: 20px;
-    }
-
-    .welcome-description {
-        color: rgba(255, 255, 255, 0.92);
-        font-size: 18px;
-        line-height: 1.7;
-        max-width: 610px;
-        margin-bottom: 32px;
-    }
-    /* Hidden until loading is complete */
-    #welcome-content {
-        opacity: 0;
-        transform: translateY(15px);
-        transition: opacity 0.8s ease, transform 0.8s ease;
-    }
-
-    #welcome-content.show {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    /* ==============================
-       BUTTONS
-    ============================== */
-
-    .action-buttons {
-        display: flex;
-        gap: 15px;
-        align-items: center;
-    }
-
-    .action-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 145px;
-        padding: 14px 28px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 17px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-
-    .login-button {
-        background: #ffffff;
-        color: #0866d8;
-    }
-
-    .register-button {
-        background: transparent;
-        color: #ffffff;
-        border: 2px solid #ffffff;
-    }
-
-    .action-button:hover {
-        transform: translateY(-2px);
-    }
-
-    .login-button:hover {
-        background: #f2f6ff;
-    }
-
-    .register-button:hover {
-        background: rgba(255, 255, 255, 0.12);
-    }
-
-    /* ==============================
-       PEOPLE
-    ============================== */
-
-    .people-section {
-        position: absolute;
-        right: 5%;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 43%;
-        height: 75%;
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 18px;
-        z-index: 2;
-    }
-
-    .person {
-        position: relative;
-        overflow: hidden;
-        border-radius: 24px;
-        background: rgba(255, 255, 255, 0.12);
-        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-        border: 3px solid rgba(255, 255, 255, 0.25);
-    }
-
-    .person img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-
-    /* ==============================
-       RESPONSIVE DESIGN
-    ============================== */
-
-    @media (max-width: 900px) {
-
-        .top-nav {
-            height: 70px;
-            padding: 0 25px;
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .awinlink-logo {
-            width: 36px;
-            height: 36px;
-            font-size: 21px;
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+            font-family: Arial, Helvetica, sans-serif;
         }
 
-        .awinlink-name {
-            font-size: 21px;
+        body {
+            background: #ffffff;
+            overflow-x: hidden;
         }
+
+        /* =========================
+           NAVIGATION
+        ========================== */
+
+        .landing-nav {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 0 30px;
+        }
+
+        .landing-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #ffffff;
+        }
+
+        .logo-symbol {
+            width: 42px;
+            height: 42px;
+            border: 3px solid #ffffff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 25px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .logo-name {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-top: 3px;
+        }
+
+        /* =========================
+           MAIN LANDING AREA
+        ========================== */
 
         .landing-main {
-            min-height: calc(100vh - 70px);
-            overflow-y: auto;
-            align-items: flex-start;
-        }
-
-        .welcome-section {
+            min-height: 100vh;
             width: 100%;
-            padding: 55px 30px 250px;
-            text-align: center;
+            background:
+                linear-gradient(
+                    135deg,
+                    #0757c8 0%,
+                    #0a6df0 45%,
+                    #1683ff 100%
+                );
+            position: relative;
+            overflow: hidden;
         }
 
-        .welcome-title {
-            font-size: 45px;
+        .landing-main::before {
+            content: "";
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            top: -250px;
+            right: -180px;
         }
 
-        .welcome-subtitle {
-            margin: auto auto 20px;
-            font-size: 21px;
+        .landing-main::after {
+            content: "";
+            position: absolute;
+            width: 450px;
+            height: 450px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.04);
+            bottom: -200px;
+            left: -150px;
         }
 
-        .welcome-description {
-            margin-left: auto;
-            margin-right: auto;
-            font-size: 16px;
-        }
+        /* =========================
+           LOADING SCREEN
+        ========================== */
 
-        .action-buttons {
+        .loading-screen {
+            position: absolute;
+            inset: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
             justify-content: center;
-            flex-wrap: wrap;
+            flex-direction: column;
+            z-index: 20;
+            background:
+                linear-gradient(
+                    135deg,
+                    #0757c8 0%,
+                    #0a6df0 50%,
+                    #1683ff 100%
+                );
+            transition:
+                opacity 0.8s ease,
+                visibility 0.8s ease;
         }
 
-        .people-section {
-            width: 72%;
-            height: 38%;
-            right: 50%;
-            top: auto;
-            bottom: 35px;
-            transform: translateX(50%);
-            gap: 10px;
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
         }
 
-        .person {
-            border-radius: 15px;
+        .loading-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #ffffff;
+            margin-bottom: 35px;
         }
-    }
 
-    @media (max-width: 500px) {
-
-        .top-nav {
-            padding: 0 18px;
+        .loading-logo .logo-symbol {
+            width: 75px;
+            height: 75px;
+            border-width: 5px;
+            border-radius: 18px;
+            font-size: 48px;
         }
+
+        .loading-logo .logo-name {
+            font-size: 19px;
+            letter-spacing: 2px;
+            margin-top: 8px;
+        }
+
+        .loading-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .dots {
+            display: flex;
+            margin-left: 6px;
+            gap: 4px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ffffff;
+            animation: loadingDots 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0s;
+        }
+
+        @keyframes loadingDots {
+            0%,
+            80%,
+            100% {
+                transform: scale(0.6);
+                opacity: 0.5;
+            }
+
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* =========================
+           WELCOME CONTENT
+        ========================== */
 
         .welcome-section {
-            padding: 45px 20px 220px;
-        }
-
-        .welcome-title {
-            font-size: 36px;
-            letter-spacing: -1px;
-        }
-
-        .welcome-subtitle {
-            font-size: 18px;
-        }
-
-        .welcome-description {
-            font-size: 15px;
-            line-height: 1.6;
-        }
-
-        .action-button {
-            width: 100%;
-            min-width: 0;
-        }
-
-        .action-buttons {
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+            display: flex;
             flex-direction: column;
-            width: 100%;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 110px 25px 70px;
+            color: #ffffff;
+
+            opacity: 0;
+            transform: translateY(25px);
+            transition:
+                opacity 1s ease,
+                transform 1s ease;
         }
+
+        .welcome-section.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .welcome-section h1 {
+            font-size: clamp(38px, 6vw, 72px);
+            font-weight: 800;
+            line-height: 1.05;
+            margin-bottom: 18px;
+            max-width: 900px;
+        }
+
+        .welcome-section h2 {
+            font-size: clamp(20px, 3vw, 34px);
+            font-weight: 500;
+            margin-bottom: 22px;
+        }
+
+        .welcome-section p {
+            max-width: 720px;
+            font-size: 17px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.92);
+            margin-bottom: 35px;
+        }
+
+        /* =========================
+           BUTTONS
+        ========================== */
+
+        .landing-buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 55px;
+        }
+
+        .landing-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 150px;
+            padding: 14px 28px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 700;
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease,
+                background 0.2s ease;
+        }
+
+        .landing-button:hover {
+            transform: translateY(-3px);
+        }
+
+        .login-button {
+            background: #ffffff;
+            color: #0757c8;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .login-button:hover {
+            background: #f4f8ff;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .register-button {
+            background: transparent;
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.9);
+        }
+
+        .register-button:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* =========================
+           PEOPLE / TALENT SECTION
+        ========================== */
 
         .people-section {
-            width: 85%;
-            height: 32%;
-            bottom: 25px;
+            width: 100%;
+            max-width: 1100px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
         }
-    }
-</style>
 
+        .person-card {
+            position: relative;
+            height: 210px;
+            overflow: hidden;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        }
 
+        .person-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.5s ease;
+        }
+
+        .person-card:hover img {
+            transform: scale(1.06);
+        }
+
+        .person-overlay {
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(
+                    to top,
+                    rgba(0, 0, 0, 0.55),
+                    rgba(0, 0, 0, 0.05)
+                );
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================== */
+
+        @media (max-width: 900px) {
+            .people-section {
+                grid-template-columns: repeat(2, 1fr);
+                max-width: 700px;
+            }
+
+            .person-card {
+                height: 190px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .landing-nav {
+                height: 70px;
+            }
+
+            .welcome-section {
+                padding: 95px 18px 45px;
+            }
+
+            .welcome-section h1 {
+                font-size: 40px;
+            }
+
+            .welcome-section h2 {
+                font-size: 22px;
+            }
+
+            .welcome-section p {
+                font-size: 15px;
+                line-height: 1.6;
+            }
+
+            .landing-buttons {
+                width: 100%;
+                margin-bottom: 40px;
+            }
+
+            .landing-button {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .people-section {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .person-card {
+                height: 145px;
+                border-radius: 12px;
+            }
+
+            .loading-logo .logo-symbol {
+                width: 65px;
+                height: 65px;
+                font-size: 42px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .welcome-section h1 {
+                font-size: 34px;
+            }
+
+            .welcome-section h2 {
+                font-size: 19px;
+            }
+
+            .people-section {
+                grid-template-columns: 1fr;
+                max-width: 300px;
+            }
+
+            .person-card {
+                height: 180px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
+    <main class="landing-main">
 
-<!-- TOP NAVIGATION -->
-<nav class="top-nav">
+        <!-- =========================
+             NAVIGATION
+        ========================== -->
 
-    <a href="#" class="awinlink-brand">
+        <nav class="landing-nav">
+            <a href="/" class="landing-logo">
+                <div class="logo-symbol">A</div>
+                <div class="logo-name">awinlink</div>
+            </a>
+        </nav>
 
-        <div class="awinlink-logo">
-            A
+
+        <!-- =========================
+             LOADING SCREEN
+        ========================== -->
+
+        <div class="loading-screen" id="loading-screen">
+
+            <div class="loading-logo">
+                <div class="logo-symbol">A</div>
+                <div class="logo-name">awinlink</div>
+            </div>
+
+            <div class="loading-indicator">
+                <span>Loading</span>
+
+                <div class="dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            </div>
+
         </div>
 
-        <span class="awinlink-name">
-            awinlink
-        </span>
 
-    </a>
+        <!-- =========================
+             WELCOME SECTION
+        ========================== -->
 
-</nav>
+        <section class="welcome-section" id="welcome-content">
 
+            <h1>Welcome to Awinlink</h1>
 
-<!-- LANDING AREA -->
-<main class="landing-main">
+            <h2>Where Talent Meets Opportunities</h2>
 
-    <!-- WELCOME MESSAGE -->
-    <section class="welcome-section" id="welcome-content">
-
-
-    <h1 class="welcome-title">
-        Welcome to Awinlink
-    </h1>
-
-    <p class="welcome-subtitle">
-        Where Talent Meets Opportunities
-    </p>
-
-    <p class="welcome-description">
-        Awinlink helps talented people showcase what they can do,
-        connect with the right people, discover opportunities,
-        learn, compete, and grow.
-    </p>
-
-    <div class="action-buttons">
-
-        <a href="{% url 'login' %}" class="action-button login-button">
-            Login
-        </a>
-
-        <a href="{% url 'register' %}" class="action-button register-button">
-            Create Account
-        </a>
-
-    </div>
+            <p>
+                Awinlink is a platform built to help talents become visible,
+                connect with the right people, discover opportunities, and
+                grow. Whether your talent is in sports, science and
+                technology, arts, or other fields, Awinlink helps bring your
+                abilities to the people and opportunities that matter.
+            </p>
 
 
-    </section>
+            <!-- =========================
+                 ACTION BUTTONS
+            ========================== -->
+
+            <div class="landing-buttons">
+
+                <a
+                    href="{% url 'accounts:login' %}"
+                    class="landing-button login-button"
+                >
+                    Login
+                </a>
+
+                <a
+                    href="{% url 'accounts:register' %}"
+                    class="landing-button register-button"
+                >
+                    Create Account
+                </a>
+
+            </div>
 
 
+            <!-- =========================
+                 TALENT IMAGES
+            ========================== -->
 
-    <!-- PEOPLE -->
-    <section class="people-section">
+            <div class="people-section">
 
-        <div class="person">
-            <img
-                src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=700&q=85"
-                alt="Awinlink talent"
-            >
-        </div>
+                <!-- Technology -->
+                <div class="person-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=700&q=85"
+                        alt="Technology talent"
+                    >
+                    <div class="person-overlay"></div>
+                </div>
 
-        <div class="person">
-            <img
-                src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=700&q=85"
-                alt="Awinlink talent"
-            >
-        </div>
 
-        <div class="person">
-            <img
-                src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=700&q=85"
-                alt="Awinlink talent"
-            >
-        </div>
+                <!-- Sports -->
+                <div class="person-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=700&q=85"
+                        alt="Sports talent"
+                    >
+                    <div class="person-overlay"></div>
+                </div>
 
-        <div class="person">
-            <img
-                src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=85"
-                alt="Awinlink talent"
-            >
-        </div>
 
-    </section>
+                <!-- Arts -->
+                <div class="person-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=700&q=85"
+                        alt="Arts talent"
+                    >
+                    <div class="person-overlay"></div>
+                </div>
 
-</main>
 
+                <!-- Science -->
+                <div class="person-card">
+                    <img
+                        src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=700&q=85"
+                        alt="Science talent"
+                    >
+                    <div class="person-overlay"></div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- =========================
+         LOADING TRANSITION
+    ========================== -->
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const loadingScreen =
+                document.getElementById("loading-screen");
+
+            const welcomeContent =
+                document.getElementById("welcome-content");
+
+
+            /*
+             * Keep the loading screen visible for
+             * approximately 3 seconds.
+             */
+
+            setTimeout(function () {
+
+                loadingScreen.classList.add("hidden");
+
+                welcomeContent.classList.add("show");
+
+            }, 3000);
+
+        });
+    </script>
 
 </body>
-
 </html>
-
-<script>
-    setTimeout(function () {
-
-        const loadingIndicator =
-            document.querySelector(".loading-indicator");
-
-        const welcomeContent =
-            document.getElementById("welcome-content");
-
-        // Hide loading
-        loadingIndicator.style.opacity = "0";
-
-        setTimeout(function () {
-            loadingIndicator.style.display = "none";
-
-            // Show landing content
-            welcomeContent.classList.add("show");
-
-        }, 500);
-
-    }, 3000);
-</script>
