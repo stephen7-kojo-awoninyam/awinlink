@@ -371,7 +371,7 @@ class UserRegistrationForm(UserCreationForm):
 
     def clean_phone_number(self):
         phone = self.cleaned_data.get("phone_number", "").strip()
-        country = self.cleaned_data.get("country")
+        country = self.data.get("country")
 
         if not phone:
             raise ValidationError("Please enter your phone number.")
