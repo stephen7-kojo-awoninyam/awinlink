@@ -1,6 +1,6 @@
 
 {% extends "base.html" %}
-
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 {% block title %}
 Sports Talent Profile | Awinlink
 {% endblock %}
@@ -115,21 +115,8 @@ Sports Talent Profile | Awinlink
                             {{ form.sport }}
 
                             <!-- Existing sports appear as suggestions -->
-                            <datalist id="sport-suggestions">
-
-                                {% for sport in sports %}
-
-                                    <option value="{{ sport.name }}"></option>
-
-                                {% endfor %}
-
-                            </datalist>
-
                             <div class="form-text">
-
-                                Start typing to search existing sports,
-                                or enter a new sport.
-
+                                Search and select your sport from the list.
                             </div>
 
                             {% for error in form.sport.errors %}
@@ -448,7 +435,7 @@ Sports Talent Profile | Awinlink
 
 </div>
 
-
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/js/tom-select.complete.min.js"></script>
 <!-- =============================================================
      SPORT / CATEGORY AUTOCOMPLETE
 ============================================================== -->
@@ -459,7 +446,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const sportInput = document.getElementById(
         "{{ form.sport.id_for_label }}"
     );
-
+    const sportSelect = new TomSelect(sportInput, {
+        placeholder: "Search for a sport...",
+        allowEmptyOption: true,
+        create: false,
+        maxOptions: null,
+        searchField: ["text"],
+    });
+    
     const categoryInput = document.getElementById(
         "{{ form.sport_category.id_for_label }}"
     );
@@ -491,42 +485,39 @@ document.addEventListener("DOMContentLoaded", function () {
     }));
 
 
+
+
     /*
-     * Update category suggestions according to
-     * the sport currently typed by the user.
+     * Update category suggestions while the
+     * user types the sport.
      */
 
-    function updateCategorySuggestions() {
+     function updateCategorySuggestions() {
 
-        const typedSport = sportInput.value.trim().toLowerCase();
+        const typedSport = sportSelect.getValue().toString().trim().toLowerCase();
 
         // Remove the current category suggestions.
         categoryDatalist.innerHTML = "";
 
-
-        // No sport entered yet.
+        // No sport selected yet.
         if (!typedSport) {
             return;
         }
 
-
         /*
-         * Only show categories belonging to the
-         * sport currently entered.
-         */
-
+        * Only show categories belonging to
+        * the selected sport.
+        */
         const matchingCategories = allCategories.filter(category => {
 
             return category.sport.toLowerCase() === typedSport;
 
         });
 
-
         /*
-         * Add matching categories back into
-         * the datalist.
-         */
-
+        * Add the matching categories back
+        * into the datalist.
+        */
         matchingCategories.forEach(category => {
 
             const option = document.createElement("option");
@@ -539,14 +530,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     }
 
-
-    /*
-     * Update category suggestions while the
-     * user types the sport.
-     */
-
-    sportInput.addEventListener(
-        "input",
+    sportSelect.addEventListener(
+        "change",
         updateCategorySuggestions
     );
 
