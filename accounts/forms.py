@@ -371,7 +371,7 @@ class UserRegistrationForm(UserCreationForm):
 
     def clean_phone_number(self):
         phone = self.cleaned_data.get("phone_number", "").strip()
-        country = self.data.get("country")
+        country = self.data.get("country", "").strip().upper()
 
         if not phone:
             raise ValidationError("Please enter your phone number.")
@@ -408,13 +408,11 @@ class UserRegistrationForm(UserCreationForm):
     # -----------------------------------------------------
 
     def clean(self):
-
         cleaned_data = super().clean()
 
         role = cleaned_data.get("role")
 
         if role == "ORGANIZATION":
-
             organization_name = cleaned_data.get("organization_name")
             organization_username = cleaned_data.get("organization_username")
             organization_email = cleaned_data.get("organization_email")
@@ -424,19 +422,22 @@ class UserRegistrationForm(UserCreationForm):
                     "organization_name",
                     "Organization name is required."
                 )
-                
+
             if not organization_username:
                 self.add_error(
                     "organization_username",
                     "Organization username is required."
                 )
-        
 
             if not organization_email:
                 self.add_error(
                     "organization_email",
                     "Organization email is required."
                 )
+
+        else:
+            # Organization username is not used by non-organization accounts.
+            cleaned_data["organization_username"] = None
 
         return cleaned_data
 
