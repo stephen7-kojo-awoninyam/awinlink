@@ -13,7 +13,7 @@ from sports.models import SportsTalentProfile
 from science_technology.models import ScienceTechnologyTalentProfile
 from art.models import ArtsTalentProfile
 from others.models import OtherTalentProfile
-
+from sports.models import Sport
 
 
 # =====================================================
@@ -274,18 +274,15 @@ class TalentCategoryForm(forms.ModelForm):
 # =====================================================
 class SportsTalentProfileForm(forms.ModelForm):
 
-    sport = forms.CharField(
+    sport = forms.ModelChoiceField(
+        queryset=Sport.objects.all(),
         required=False,
-        widget=forms.TextInput(
+        widget=forms.Select(
             attrs={
                 "class": "form-control",
-                "placeholder": (
-                    "Example: Basketball, Football, Volleyball, Athletics"
-                ),
             }
         ),
-    )
-
+    )                                                                                                                            
     class Meta:
         model = SportsTalentProfile
 
