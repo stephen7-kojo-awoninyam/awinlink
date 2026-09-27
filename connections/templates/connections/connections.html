@@ -62,14 +62,14 @@
                     <div>
 
                         <a
-                            href="{% url 'accept_connection_request' connection.id %}"
+                            href="{% url 'connections:accept_connection_request' connection.id %}"
                             class="btn btn-success btn-sm"
                         >
                             ✓ Accept
                         </a>
 
                         <a
-                            href="{% url 'reject_connection_request' connection.id %}"
+                            href="{% url 'connections:reject_connection_request' connection.id %}"
                             class="btn btn-outline-danger btn-sm"
                         >
                             ✕ Reject
@@ -156,7 +156,7 @@
 
 
                             <a
-                                href="{% url 'remove_connection' connection.id %}"
+                                href="{% url 'connections:remove_connection' connection.id %}"
                                 class="btn btn-outline-danger btn-sm"
                             >
                                 Remove
@@ -199,7 +199,7 @@
                     <div>
 
                         <a
-                            href="#"
+                            href="{% url 'talent_profile' connection.sender.talent_profile.id %}"
                             class="btn btn-outline-secondary btn-sm"
                         >
                             👤 Profile
@@ -213,7 +213,7 @@
                         </a>
 
                         <a
-                            href="{% url 'remove_connection' connection.id %}"
+                            href="{% url 'connections:remove_connection' connection.id %}"
                             class="btn btn-outline-danger btn-sm"
                         >
                             Remove
@@ -247,7 +247,7 @@
             👥 Create Group
         </h5>
 
-        <form method="POST" action="{% url 'create_group' %}">
+        <form method="POST" action="{% url 'connections:create_group' %}">
 
             {% csrf_token %}
 
@@ -583,7 +583,7 @@
                     <div>
 
                         <a
-                            href="{% url 'cancel_connection_request' connection.id %}"
+                            href="{% url 'connections:cancel_connection_request' connection.id %}"
                             class="btn btn-outline-danger btn-sm"
                         >
                             Cancel
