@@ -350,6 +350,24 @@ def home_feed(request):
     # SAVED POSTS + LIKED POSTS
     # ==================================
 
+    events = Event.objects.filter(
+        status="PUBLISHED"
+    ).select_related(
+        "organizer",
+        "category",
+    ).order_by(
+        "-created_at"
+    )[:5]
+
+    learning_content = LearningContent.objects.filter(
+        status="APPROVED"
+    ).select_related(
+        "category",
+        "creator",
+    ).order_by(
+        "-created_at"
+    )[:5]
+
     saved_post_ids = set(
 
         SavedPost.objects.filter(
@@ -421,40 +439,6 @@ def home_feed(request):
         )
 
     )
-
-
-    # ==================================
-    # EVENTS
-    # ==================================
-
-    events = Event.objects.filter(
-
-        status="PUBLISHED"
-
-    ).select_related(
-
-        "organizer",
-        "category"
-
-    ).order_by(
-
-        "-created_at"
-
-    )[:5]
-
-
-    # ==================================
-    # LEARNING CONTENT
-    # ==================================
-
-    learning_content = LearningContent.objects.filter(
-        status="APPROVED"
-    ).select_related(
-        "category",
-        "creator"
-    ).order_by(
-        "-created_at"
-    )[:5]
 
 
     # ==================================
