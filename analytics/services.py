@@ -27,13 +27,14 @@ class TalentCalculator:
         # the information exists.
         # =================================================
 
-        physical_fields = 0
-
-        if getattr(profile, "height", None):
-            physical_fields += 1
-
-        if getattr(profile, "weight", None):
-            physical_fields += 1
+        sports_profile = getattr(profile, "sports_profile", None)
+        physical_fields = sum(
+            bool(
+                getattr(profile, field, None)
+                or getattr(sports_profile, field, None)
+            )
+            for field in ("height", "weight")
+        )
 
         if physical_fields:
             physical = Decimal(
@@ -46,6 +47,8 @@ class TalentCalculator:
 
         levels = {
             "BEGINNER": Decimal("20"),
+            "INTERMEDIATE": Decimal("50"),
+            "EXPERT": Decimal("80"),
             "AMATEUR": Decimal("50"),
             "PROFESSIONAL": Decimal("80"),
             "ELITE": Decimal("100"),

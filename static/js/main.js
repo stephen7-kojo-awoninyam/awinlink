@@ -995,6 +995,10 @@ function initializeRegistrationPage() {
 let localStream = null;
 let callSocket = null;
 let currentCallId = null;
+let currentCallType = null;
+let callTimerInterval = null;
+let callConnectedAt = null;
+let isCallStarting = false;
 
 
 /*
@@ -1512,6 +1516,15 @@ async function createPeerConnection(
                 peerConnection.connectionState
             );
 
+            if (peerConnection.connectionState === "connected") {
+                setCallStatus("Connected");
+                startCallTimer();
+            } else if (peerConnection.connectionState === "connecting") {
+                setCallStatus("Connecting audio and video…");
+            } else if (peerConnection.connectionState === "disconnected") {
+                setCallStatus("Reconnecting…");
+            }
+
 
             if (
                 peerConnection.connectionState ===
@@ -1521,6 +1534,10 @@ async function createPeerConnection(
                 removePeerConnection(
                     remoteUserId
                 );
+
+                if (!Object.keys(peerConnections).length) {
+                    setCallStatus("Connection failed. Check your network and try again.");
+                }
 
             }
 
@@ -1714,6 +1731,8 @@ if (data.type === "call_ended") {
                 "Participant"
 
         };
+
+        setCallStatus("Connecting audio and video…");
 
 
         console.log(
@@ -2126,6 +2145,12 @@ async function startCall(
     conversationId
 ) {
 
+    if (isCallStarting || currentCallId) {
+        return;
+    }
+
+    isCallStarting = true;
+
     try {
 
         if (!conversationId) {
@@ -2224,6 +2249,7 @@ async function startCall(
 
         currentCallId =
             Number(callData.id);
+        currentCallType = callType;
 
 
         /*
@@ -2264,7 +2290,8 @@ async function startCall(
 
         showCallInterface(
             callType,
-            callData.participants || []
+            callData.participants || [],
+            "Calling…"
         );
 
 
@@ -2394,13 +2421,20 @@ async function startCall(
         );
 
 
-        cleanupWebRTC();
+        if (currentCallId) {
+            await endWebRTCCall();
+        } else {
+            cleanupWebRTC();
+        }
 
 
         alert(
             error.message ||
             "Unable to start call."
         );
+
+    } finally {
+        isCallStarting = false;
 
     }
 
@@ -2439,269 +2473,127 @@ window.startVideoCall =
 
 function showCallInterface(
     callType,
-    participants = []
+    participants = [],
+    initialStatus = "Connecting…"
 ) {
+    currentCallType = callType;
 
-    let container =
-        document.getElementById(
-            "awinlinkCallContainer"
-        );
-
-
+    let container = document.getElementById("awinlinkCallContainer");
     if (!container) {
-
-        container =
-            document.createElement(
-                "div"
-            );
-
-
-        container.id =
-            "awinlinkCallContainer";
-
-
-        container.style.position =
-            "fixed";
-
-        container.style.inset =
-            "0";
-
-        container.style.background =
-            "rgba(0,0,0,0.90)";
-
-        container.style.zIndex =
-            "9999";
-
-        container.style.display =
-            "flex";
-
-        container.style.flexDirection =
-            "column";
-
-        container.style.alignItems =
-            "center";
-
-        container.style.justifyContent =
-            "center";
-
-        container.style.padding =
-            "20px";
-
-
+        container = document.createElement("div");
+        container.id = "awinlinkCallContainer";
+        container.className = "awinlink-call-overlay";
+        container.setAttribute("role", "dialog");
+        container.setAttribute("aria-modal", "true");
+        container.setAttribute("aria-label", "Active call");
         container.innerHTML = `
-
-            <div
-                style="
-                    width:100%;
-                    max-width:900px;
-                    text-align:center;
-                    color:white;
-                "
-            >
-
-                <h3 id="awinlinkCallTitle">
-                    Awinlink Call
-                </h3>
-
-                <p id="awinlinkCallStatus">
-                    Connecting...
-                </p>
-
-                <div
-                    id="remoteVideos"
-                    style="
-                        display:flex;
-                        flex-wrap:wrap;
-                        gap:15px;
-                        justify-content:center;
-                        margin:20px 0;
-                    "
-                ></div>
-
-                <div
-                    style="
-                        position:relative;
-                        display:inline-block;
-                    "
-                >
-
-                    <video
-                        id="localVideo"
-                        autoplay
-                        muted
-                        playsinline
-                        style="
-                            width:220px;
-                            max-width:80vw;
-                            border-radius:12px;
-                            background:#111;
-                        "
-                    ></video>
-
-                    <div
-                        id="voicePlaceholder"
-                        style="
-                            display:none;
-                            width:220px;
-                            height:150px;
-                            border-radius:12px;
-                            background:#222;
-                            align-items:center;
-                            justify-content:center;
-                            font-size:60px;
-                        "
-                    >
-                        📞
+            <section class="awinlink-call-panel">
+                <header class="awinlink-call-header">
+                    <div class="awinlink-call-heading">
+                        <span class="call-live-indicator" aria-hidden="true"></span>
+                        <div>
+                            <p class="call-eyebrow" id="awinlinkCallTitle">Video call</p>
+                            <h1 id="callRemoteName">Connecting…</h1>
+                        </div>
                     </div>
+                    <div class="call-state-group">
+                        <span id="awinlinkCallStatus" class="call-status">Connecting…</span>
+                        <span id="awinlinkCallTimer" class="call-duration">00:00</span>
+                    </div>
+                </header>
 
-                </div>
+                <main class="awinlink-call-stage">
+                    <div id="callVoiceStage" class="call-voice-stage">
+                        <div id="callRemoteAvatar" class="call-avatar" aria-hidden="true">?</div>
+                        <p class="call-voice-caption">Your call is ready when they join</p>
+                    </div>
+                    <div id="remoteVideos" class="call-video-grid" aria-live="polite"></div>
+                    <div id="callLocalTile" class="call-local-tile">
+                        <video id="localVideo" autoplay muted playsinline></video>
+                        <span class="call-tile-label">You</span>
+                    </div>
+                </main>
 
-                <div
-                    id="awinlinkCallTimer"
-                    style="
-                        margin:15px;
-                        font-size:18px;
-                    "
-                >
-                    00:00
-                </div>
-
-                <button
-                    type="button"
-                    id="endAwinlinkCall"
-                    class="btn btn-danger"
-                >
-                    End Call
-                </button>
-
-            </div>
-
+                <footer class="awinlink-call-footer">
+                    <div class="call-controls" aria-label="Call controls">
+                        <button type="button" id="toggleCallMicrophone" class="call-control-button" aria-label="Mute microphone" aria-pressed="false" title="Mute microphone">
+                            <i class="bi bi-mic-fill" aria-hidden="true"></i>
+                            <span>Mute</span>
+                        </button>
+                        <button type="button" id="toggleCallCamera" class="call-control-button" aria-label="Turn camera off" aria-pressed="false" title="Turn camera off">
+                            <i class="bi bi-camera-video-fill" aria-hidden="true"></i>
+                            <span>Camera</span>
+                        </button>
+                        <button type="button" id="endAwinlinkCall" class="call-control-button call-end-button" aria-label="End call" title="End call">
+                            <i class="bi bi-telephone-x-fill" aria-hidden="true"></i>
+                            <span>End</span>
+                        </button>
+                    </div>
+                </footer>
+            </section>
         `;
+        document.body.appendChild(container);
 
+        const microphoneButton = document.getElementById("toggleCallMicrophone");
+        microphoneButton.addEventListener("click", function () {
+            const tracks = localStream ? localStream.getAudioTracks() : [];
+            const shouldMute = tracks.some(function (track) { return track.enabled; });
+            tracks.forEach(function (track) { track.enabled = !shouldMute; });
+            microphoneButton.classList.toggle("is-muted", shouldMute);
+            microphoneButton.setAttribute("aria-pressed", String(shouldMute));
+            microphoneButton.setAttribute("aria-label", shouldMute ? "Unmute microphone" : "Mute microphone");
+            microphoneButton.title = shouldMute ? "Unmute microphone" : "Mute microphone";
+            microphoneButton.querySelector("i").className = shouldMute ? "bi bi-mic-mute-fill" : "bi bi-mic-fill";
+            microphoneButton.querySelector("span").textContent = shouldMute ? "Unmute" : "Mute";
+        });
 
-        document.body.appendChild(
-            container
-        );
+        const cameraButton = document.getElementById("toggleCallCamera");
+        cameraButton.addEventListener("click", function () {
+            const tracks = localStream ? localStream.getVideoTracks() : [];
+            const shouldDisable = tracks.some(function (track) { return track.enabled; });
+            tracks.forEach(function (track) { track.enabled = !shouldDisable; });
+            cameraButton.classList.toggle("is-muted", shouldDisable);
+            cameraButton.setAttribute("aria-pressed", String(shouldDisable));
+            cameraButton.setAttribute("aria-label", shouldDisable ? "Turn camera on" : "Turn camera off");
+            cameraButton.title = shouldDisable ? "Turn camera on" : "Turn camera off";
+            cameraButton.querySelector("i").className = shouldDisable ? "bi bi-camera-video-off-fill" : "bi bi-camera-video-fill";
+            cameraButton.querySelector("span").textContent = shouldDisable ? "Camera on" : "Camera";
+        });
 
-
-        document
-            .getElementById(
-                "endAwinlinkCall"
-            )
-            .addEventListener(
-                "click",
-                endWebRTCCall
-            );
-
+        document.getElementById("endAwinlinkCall").addEventListener("click", endWebRTCCall);
     }
 
+    const isVideoCall = callType === "VIDEO";
+    container.classList.toggle("is-video-call", isVideoCall);
+    document.getElementById("awinlinkCallTitle").textContent = isVideoCall ? "Video call" : "Voice call";
+    setCallStatus(initialStatus);
 
-    const title =
-        document.getElementById(
-            "awinlinkCallTitle"
-        );
+    const remoteUsers = participants
+        .map(function (participant) { return participant.user; })
+        .filter(function (user) { return user && Number(user.id) !== currentUserId; });
 
+    remoteUsers.forEach(function (user) {
+        callParticipants[Number(user.id)] = user;
+    });
 
-    const status =
-        document.getElementById(
-            "awinlinkCallStatus"
-        );
+    const remoteName = remoteUsers.length > 1
+        ? `${remoteUsers.length} participants`
+        : remoteUsers.length === 1
+            ? [remoteUsers[0].first_name, remoteUsers[0].last_name].filter(Boolean).join(" ") || remoteUsers[0].username || "Contact"
+            : "Waiting for participant";
 
+    const nameElement = document.getElementById("callRemoteName");
+    const avatarElement = document.getElementById("callRemoteAvatar");
+    nameElement.textContent = remoteName;
+    avatarElement.textContent = remoteName === "Waiting for participant"
+        ? "…"
+        : remoteName.trim().charAt(0).toUpperCase();
 
-    const localVideo =
-        document.getElementById(
-            "localVideo"
-        );
-
-
-    const voicePlaceholder =
-        document.getElementById(
-            "voicePlaceholder"
-        );
-
-
-    if (callType === "VIDEO") {
-
-        if (localVideo) {
-
-            localVideo.style.display =
-                "block";
-
-        }
-
-        if (voicePlaceholder) {
-
-            voicePlaceholder.style.display =
-                "none";
-
-        }
-
-        if (title) {
-
-            title.textContent =
-                "Video Call";
-
-        }
-
-    } else {
-
-        if (localVideo) {
-
-            localVideo.style.display =
-                "none";
-
-        }
-
-        if (voicePlaceholder) {
-
-            voicePlaceholder.style.display =
-                "flex";
-
-        }
-
-        if (title) {
-
-            title.textContent =
-                "Voice Call";
-
-        }
-
-    }
-
-
-    if (status) {
-
-        status.textContent =
-            "Connected";
-
-    }
-
-
-    /*
-     * Save participant information.
-     */
-
-    participants.forEach(
-        function (participant) {
-
-            const user =
-                participant.user;
-
-            if (
-                user &&
-                Number(user.id) !==
-                currentUserId
-            ) {
-
-                callParticipants[
-                    Number(user.id)
-                ] = user;
-
-            }
-
-        }
-    );
-
+    document.getElementById("callVoiceStage").hidden = isVideoCall;
+    document.getElementById("remoteVideos").hidden = !isVideoCall;
+    document.getElementById("callLocalTile").hidden = !isVideoCall;
+    document.getElementById("toggleCallCamera").hidden = !isVideoCall;
+    document.getElementById("localVideo").srcObject = localStream;
 }
 
 
@@ -2713,147 +2605,59 @@ function addRemoteVideo(
     remoteUserId,
     stream
 ) {
+    remoteUserId = Number(remoteUserId);
 
-    remoteUserId =
-        Number(remoteUserId);
+    const remoteVideos = document.getElementById("remoteVideos");
+    if (!remoteVideos) return;
 
+    const user = callParticipants[remoteUserId] || {};
+    const remoteName = [user.first_name, user.last_name].filter(Boolean).join(" ")
+        || user.username
+        || `Participant ${remoteUserId}`;
 
-    const remoteVideos =
-        document.getElementById(
-            "remoteVideos"
-        );
-
-
-    if (!remoteVideos) {
-
-        return;
-
-    }
-
-
-    let wrapper =
-        document.getElementById(
-            `remote-wrapper-${remoteUserId}`
-        );
-
-
-    if (!wrapper) {
-
-        wrapper =
-            document.createElement(
-                "div"
-            );
-
-
-        wrapper.id =
-            `remote-wrapper-${remoteUserId}`;
-
-
-        wrapper.style.position =
-            "relative";
-
-
-        const video =
-            document.createElement(
-                "video"
-            );
-
-
-        video.id =
-            `remote-video-${remoteUserId}`;
-
-
-        video.autoplay =
-            true;
-
-        video.playsInline =
-            true;
-
-
-        video.style.width =
-            "280px";
-
-
-        video.style.maxWidth =
-            "80vw";
-
-
-        video.style.borderRadius =
-            "12px";
-
-
-        video.style.background =
-            "#111";
-
-
-        video.srcObject =
-            stream;
-
-
-        wrapper.appendChild(
-            video
-        );
-
-
-        const name =
-            document.createElement(
-                "div"
-            );
-
-
-        const user =
-            callParticipants[
-                remoteUserId
-            ];
-
-
-        name.textContent =
-            user?.first_name ||
-            user?.username ||
-            `User ${remoteUserId}`;
-
-
-        name.style.color =
-            "white";
-
-
-        name.style.marginTop =
-            "5px";
-
-
-        wrapper.appendChild(
-            name
-        );
-
-
-        remoteVideos.appendChild(
-            wrapper
-        );
-
-
-    } else {
-
-        const video =
-            wrapper.querySelector(
-                "video"
-            );
-
-
-        if (video) {
-
-            video.srcObject =
-                stream;
-
+    if (currentCallType === "VOICE") {
+        let audio = document.getElementById(`remote-audio-${remoteUserId}`);
+        if (!audio) {
+            audio = document.createElement("audio");
+            audio.id = `remote-audio-${remoteUserId}`;
+            audio.className = "call-remote-audio";
+            audio.autoplay = true;
+            audio.playsInline = true;
+            remoteVideos.appendChild(audio);
         }
-
+        audio.srcObject = stream;
+        audio.play().catch(function (error) {
+            console.warn("Remote audio playback was blocked:", error);
+            setCallStatus("Tap the page to enable call audio");
+        });
+        return;
     }
 
+    let wrapper = document.getElementById(`remote-wrapper-${remoteUserId}`);
+    if (!wrapper) {
+        wrapper = document.createElement("div");
+        wrapper.id = `remote-wrapper-${remoteUserId}`;
+        wrapper.className = "call-video-tile";
 
-    console.log(
-        "Remote media attached for user:",
-        remoteUserId
-    );
+        const video = document.createElement("video");
+        video.id = `remote-video-${remoteUserId}`;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.className = "call-remote-video";
+        wrapper.appendChild(video);
 
+        const name = document.createElement("span");
+        name.className = "call-video-name";
+        name.textContent = remoteName;
+        wrapper.appendChild(name);
+
+        remoteVideos.appendChild(wrapper);
+    }
+
+    const video = wrapper.querySelector("video");
+    if (video && video.srcObject !== stream) {
+        video.srcObject = stream;
+    }
 }
 
 
@@ -2912,6 +2716,9 @@ function removePeerConnection(
 
     }
 
+    const remoteAudio = document.getElementById(`remote-audio-${userId}`);
+    if (remoteAudio) remoteAudio.remove();
+
 }
 
 
@@ -2928,6 +2735,7 @@ function cleanupWebRTC() {
 
     clearIncomingCallTimeout();
     clearOutgoingCallTimeout();
+    stopCallTimer();
 
 
     Object.keys(
@@ -3017,6 +2825,7 @@ function cleanupWebRTC() {
 
     currentCallId =
         null;
+    currentCallType = null;
 
 
     const container =
@@ -3168,7 +2977,7 @@ function showIncomingCall(call) {
 
 
     if (
-        currentCallId
+        currentCallId || isCallStarting
     ) {
 
         return;
@@ -3229,9 +3038,7 @@ function showIncomingCall(call) {
             </h4>
 
             <p>
-                <strong>
-                    ${callerName}
-                </strong>
+                <strong id="globalIncomingCallerName"></strong>
                 is calling you.
             </p>
 
@@ -3270,6 +3077,8 @@ function showIncomingCall(call) {
     document.body.appendChild(
         overlay
     );
+
+    document.getElementById("globalIncomingCallerName").textContent = callerName;
 
 
     document
@@ -3336,7 +3145,7 @@ function showIncomingCall(call) {
                     secondsRemaining <= 0
                 ) {
 
-                    clearGlobalIncomingCall();
+                    rejectIncomingCall(call.call_id);
 
                 }
 
@@ -3412,6 +3221,7 @@ async function answerIncomingCall(call) {
 
     clearGlobalIncomingCall();
 
+    currentCallType = call.call_type;
 
     try {
 
@@ -3523,7 +3333,8 @@ async function answerIncomingCall(call) {
 
         showCallInterface(
             call.call_type,
-            callData.participants || []
+            callData.participants || [],
+            "Connecting audio and video…"
         );
 
 
@@ -3559,7 +3370,12 @@ async function answerIncomingCall(call) {
         );
 
 
-        cleanupWebRTC();
+        if (currentCallId === callId) {
+            await endWebRTCCall();
+        } else {
+            await rejectIncomingCall(callId);
+            cleanupWebRTC();
+        }
 
 
         alert(
@@ -3786,4 +3602,36 @@ if (currentUserId) {
 
     connectGlobalUserSocket();
 
+}
+
+
+function setCallStatus(message) {
+    const status = document.getElementById("awinlinkCallStatus");
+    if (status) status.textContent = message;
+}
+
+
+function startCallTimer() {
+    if (callTimerInterval) return;
+
+    callConnectedAt = Date.now();
+    const timer = document.getElementById("awinlinkCallTimer");
+
+    const updateTimer = function () {
+        if (!timer || !callConnectedAt) return;
+        const elapsedSeconds = Math.floor((Date.now() - callConnectedAt) / 1000);
+        const minutes = String(Math.floor(elapsedSeconds / 60)).padStart(2, "0");
+        const seconds = String(elapsedSeconds % 60).padStart(2, "0");
+        timer.textContent = `${minutes}:${seconds}`;
+    };
+
+    updateTimer();
+    callTimerInterval = setInterval(updateTimer, 1000);
+}
+
+
+function stopCallTimer() {
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    callTimerInterval = null;
+    callConnectedAt = null;
 }

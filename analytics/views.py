@@ -966,15 +966,7 @@ def admin_analytics(request):
     # SHORTLISTS
     # -----------------------------------------------------
 
-    total_shortlists = 0
-
-    try:
-
-        total_shortlists = Shortlist.objects.count()
-
-    except Exception:
-
-        total_shortlists = 0
+    total_shortlists = Shortlist.objects.count()
 
     # -----------------------------------------------------
     # TALENT SCORES

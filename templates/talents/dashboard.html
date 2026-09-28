@@ -3,23 +3,61 @@
 
 {% block content %}
 
+<main class="container-fluid px-3 px-md-4 py-4">
 
-<h2>
-Welcome {{ talent.user.get_full_name }}
-</h2>
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+	<div>
+		<p class="text-muted mb-1">Talent dashboard</p>
+		<h1 class="h2 mb-1">Welcome, {{ talent.user.get_full_name|default:talent.user.username }}</h1>
+		<p class="text-muted mb-0">Your profile information and career activity.</p>
+	</div>
+	<div class="d-flex gap-2">
+		<a href="{% url 'edit_profile' %}" class="btn btn-outline-primary">Edit profile</a>
+		<a href="{% url 'talent_profile' talent.id %}" class="btn btn-primary">View profile</a>
+	</div>
+</div>
 
 
 <hr>
 
 
-<h4>
-My Profile
-</h4>
-
-
-<p>
-{{ talent.biography }}
-</p>
+<section class="card border-0 shadow-sm mb-4">
+	{% if talent.cover_photo %}
+		<img src="{{ talent.cover_photo.url }}" alt="Profile cover" class="w-100" style="height: 160px; object-fit: cover;">
+	{% endif %}
+	<div class="card-body p-4">
+		<div class="d-flex flex-column flex-md-row align-items-md-start gap-4">
+			<div class="flex-shrink-0">
+				{% if talent.profile_photo %}
+					<img src="{{ talent.profile_photo.url }}" alt="{{ talent.user.get_full_name|default:talent.user.username }}" class="rounded-circle border" width="112" height="112" style="object-fit: cover;">
+				{% else %}
+					<div class="rounded-circle bg-light border d-grid place-items-center text-secondary" style="width:112px;height:112px;font-size:2rem;">
+						{{ talent.user.first_name|default:talent.user.username|slice:":1"|upper }}
+					</div>
+				{% endif %}
+			</div>
+			<div class="flex-grow-1">
+				<div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+					<h2 class="h4 mb-0">{{ talent.user.get_full_name|default:talent.user.username }}</h2>
+					{% if talent.verified %}<span class="badge bg-success">Verified</span>{% endif %}
+					{% if talent.talent_category %}<span class="badge bg-primary-subtle text-primary">{{ talent.get_talent_category_display }}</span>{% endif %}
+				</div>
+				{% if talent.headline %}
+					<p class="fs-5 mb-2">{{ talent.headline }}</p>
+				{% else %}
+					<p class="text-muted mb-2">Add a headline to introduce your talent.</p>
+				{% endif %}
+				{% if talent.talent_area %}<p class="text-muted mb-2">{{ talent.talent_area }}</p>{% endif %}
+				{% if talent.city or talent.country %}<p class="text-muted mb-3">{% if talent.city %}{{ talent.city }}{% endif %}{% if talent.city and talent.country %}, {% endif %}{{ talent.country }}</p>{% endif %}
+				{% if talent.biography %}
+					<p class="mb-0">{{ talent.biography|linebreaksbr }}</p>
+				{% else %}
+					<p class="text-muted mb-0">Add a short biography to tell people about your background.</p>
+				{% endif %}
+			</div>
+		</div>
+	</div>
+</section>
 
 
 <h4>
@@ -41,6 +79,17 @@ My Skills
 No skills added yet.
 </p>
 
+{% endfor %}
+
+
+<h4 class="mt-4">
+My Domains
+</h4>
+
+{% for domain in talent.domains.all %}
+	<span class="badge bg-secondary me-1">{{ domain.name }}</span>
+{% empty %}
+	<p class="text-muted">No domains added yet.</p>
 {% endfor %}
 
 
@@ -82,7 +131,7 @@ Recommended Opportunities
 
 
 
-{% for item in opportunities %}
+{% for item in recommended_opportunities %}
 
 
 <div class="card mb-3">
@@ -138,5 +187,7 @@ No recommended opportunities available.
 
 {% endfor %}
 
+
+ </main>
 
 {% endblock %}

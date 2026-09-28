@@ -2055,267 +2055,155 @@ document.addEventListener("DOMContentLoaded", function () {
     );
 
 
-    /* =========================================================
-       FORM SUBMISSION
-    ========================================================= */
-
-    messageForm.addEventListener(
-        "submit",
-        async function (event) {
-
-            /*
-             * =====================================================
-             * AUDIO MESSAGE
-             * =====================================================
-             */
-
-            if (
-                audioBlob &&
-                audioBlob.size > 0
-            ) {
-
-                event.preventDefault();
-
-
-                console.log(
-                    "Preparing audio message..."
-                );
-
-
-                /*
-                 * Build multipart FormData.
-                 */
-
-                const formData =
-                    new FormData(
-                        messageForm
-                    );
-
-
-                /*
-                 * Force AUDIO type.
-                 */
-
-                formData.set(
-                    "message_type",
-                    "AUDIO"
-                );
-
-
-                /*
-                 * Determine file extension.
-                 */
-
-                let extension =
-                    "webm";
-
-
-                if (
-                    audioBlob.type.includes(
-                        "ogg"
-                    )
-                ) {
-
-                    extension =
-                        "ogg";
-
-                }
-                else if (
-                    audioBlob.type.includes(
-                        "mp4"
-                    )
-                ) {
-
-                    extension =
-                        "mp4";
-
-                }
-
-
-                console.log(
-                    "Uploading audio as:",
-                    "voice_message." +
-                    extension
-                );
-
-
-                /*
-                 * Add audio file.
-                 */
-
-                formData.set(
-                    "audio",
-                    audioBlob,
-                    "voice_message." +
-                    extension
-                );
-
-
-                /*
-                 * Disable Send button.
-                 */
-
-                sendButton.disabled =
-                    true;
-
-
-                try {
-
-                    const response =
-                        await fetch(
-                            messageForm.action,
-                            {
-                                method: "POST",
-
-                                body: formData,
-
-                                credentials:
-                                    "same-origin",
-
-                                headers: {
-                                    "X-Requested-With":
-                                        "XMLHttpRequest"
-                                }
-                            }
-                        );
-
-
-                    /*
-                     * Django redirects after
-                     * successful submission.
-                     */
-
-                    if (response.ok) {
-
-                        console.log(
-                            "Audio message sent successfully."
-                        );
-
-
-                        window.location.href =
-                            response.url;
-
-                        return;
-
-                    }
-
-
-                    /*
-                     * Server error.
-                     */
-
-                    const text =
-                        await response.text();
-
-
-                    console.error(
-                        "Voice message upload failed:",
-                        response.status,
-                        text
-                    );
-
-
-                    alert(
-                        "Unable to send voice message."
-                    );
-
-
-                    sendButton.disabled =
-                        false;
-
-                } catch (error) {
-
-                    console.error(
-                        "Voice message upload error:",
-                        error
-                    );
-
-
-                    alert(
-                        "An error occurred while sending the voice message."
-                    );
-
-
-                    sendButton.disabled =
-                        false;
-
-                }
-
-
-                return;
-
-            }
-
-
-            /* =====================================================
-               NORMAL TEXT / ATTACHMENT MESSAGE
-            ===================================================== */
-
-            const hasText =
-                messageInput.value.trim() !== "";
-
-
-            const hasImage =
-                imageInput.files.length > 0;
-
-
-            const hasVideo =
-                videoInput.files.length > 0;
-
-
-            const hasFile =
-                fileInput.files.length > 0;
-
-
-            /*
-             * Prevent empty message.
-             */
-
-            if (
-                !hasText &&
-                !hasImage &&
-                !hasVideo &&
-                !hasFile
-            ) {
-
-                event.preventDefault();
-
-                return;
-
-            }
-
-
-            /*
-             * Determine message type.
-             */
-
-            if (hasImage) {
-
-                messageType.value =
-                    "IMAGE";
-
-            }
-            else if (hasVideo) {
-
-                messageType.value =
-                    "VIDEO";
-
-            }
-            else if (hasFile) {
-
-                messageType.value =
-                    "FILE";
-
-            }
-            else {
-
-                messageType.value =
-                    "TEXT";
-
-            }
-
+    function appendSentMessage(message) {
+        const emptyState = document.getElementById("emptyConversation");
+        if (emptyState) emptyState.remove();
+
+        const row = document.createElement("div");
+        row.className = "message-row mine";
+
+        const bubble = document.createElement("div");
+        bubble.className = "message-bubble";
+
+        const sender = document.createElement("div");
+        sender.className = "sender-name";
+        sender.textContent = "You";
+        bubble.appendChild(sender);
+
+        if (message.content) {
+            const text = document.createElement("div");
+            text.className = "mb-1";
+            text.textContent = message.content;
+            bubble.appendChild(text);
         }
-    );
+
+        if (message.image_url) {
+            const wrapper = document.createElement("div");
+            wrapper.className = "mt-2";
+            const image = document.createElement("img");
+            image.src = message.image_url;
+            image.className = "message-image";
+            image.alt = "Image";
+            wrapper.appendChild(image);
+            bubble.appendChild(wrapper);
+        }
+
+        if (message.video_url) {
+            const wrapper = document.createElement("div");
+            wrapper.className = "mt-2";
+            const video = document.createElement("video");
+            video.controls = true;
+            video.className = "message-video";
+            const source = document.createElement("source");
+            source.src = message.video_url;
+            video.appendChild(source);
+            wrapper.appendChild(video);
+            bubble.appendChild(wrapper);
+        }
+
+        if (message.audio_url) {
+            const wrapper = document.createElement("div");
+            wrapper.className = "mt-2";
+            const audio = document.createElement("audio");
+            audio.controls = true;
+            audio.className = "message-audio";
+            const source = document.createElement("source");
+            source.src = message.audio_url;
+            audio.appendChild(source);
+            wrapper.appendChild(audio);
+            bubble.appendChild(wrapper);
+        }
+
+        if (message.file_url) {
+            const wrapper = document.createElement("div");
+            wrapper.className = "mt-2";
+            const link = document.createElement("a");
+            link.href = message.file_url;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.className = "btn btn-sm btn-light";
+            link.textContent = `📎 ${message.file_name || "Download File"}`;
+            wrapper.appendChild(link);
+            bubble.appendChild(wrapper);
+        }
+
+        const time = document.createElement("span");
+        time.className = "message-time";
+        time.textContent = message.created_at;
+        bubble.appendChild(time);
+        row.appendChild(bubble);
+        chatBody.appendChild(row);
+        scrollToBottom();
+    }
+
+    messageForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const hasText = messageInput.value.trim() !== "";
+        const hasImage = imageInput.files.length > 0;
+        const hasVideo = videoInput.files.length > 0;
+        const hasFile = fileInput.files.length > 0;
+        const hasAudio = audioBlob && audioBlob.size > 0;
+
+        if (!hasText && !hasImage && !hasVideo && !hasFile && !hasAudio) {
+            return;
+        }
+
+        if (hasAudio) {
+            messageType.value = "AUDIO";
+        } else if (hasImage) {
+            messageType.value = "IMAGE";
+        } else if (hasVideo) {
+            messageType.value = "VIDEO";
+        } else if (hasFile) {
+            messageType.value = "FILE";
+        } else {
+            messageType.value = "TEXT";
+        }
+
+        const formData = new FormData(messageForm);
+        if (hasAudio) {
+            const extension = audioBlob.type.includes("ogg")
+                ? "ogg"
+                : audioBlob.type.includes("mp4") ? "mp4" : "webm";
+            formData.set("audio", audioBlob, `voice_message.${extension}`);
+            formData.set("message_type", "AUDIO");
+        }
+
+        sendButton.disabled = true;
+        sendButton.textContent = "Sending...";
+
+        try {
+            const response = await fetch(messageForm.action, {
+                method: "POST",
+                body: formData,
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Accept": "application/json"
+                }
+            });
+            const data = await response.json();
+
+            if (!response.ok || data.status !== "success") {
+                throw new Error(data.message || "Unable to send message.");
+            }
+
+            appendSentMessage(data.message);
+            messageForm.reset();
+            audioBlob = null;
+            audioChunks = [];
+            messageType.value = "TEXT";
+            clearAudioPreview();
+            updateAttachmentPreview();
+        } catch (error) {
+            console.error("Message send failed:", error);
+            alert(error.message || "Unable to send message.");
+        } finally {
+            sendButton.textContent = "Send";
+            updateSendButton();
+        }
+    });
 
 
 /* =========================================================

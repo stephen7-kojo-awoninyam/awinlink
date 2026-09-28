@@ -16,8 +16,8 @@ from organizations.models import Organization
 from domains.models import TalentDomain
 from skills.models import Skill
 
-from events.models import Event
-from learning.models import Course as LearningContent
+from events.models import Event, EventLike
+from learning.models import Course as LearningContent, CourseLike
 
 
 

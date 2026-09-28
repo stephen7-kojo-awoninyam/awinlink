@@ -1,7 +1,9 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.db.models import Q
 from django.urls import reverse
+from django.utils import timezone
 from applications.models import Application
 from accounts.models import User
 
@@ -320,6 +322,11 @@ def send_message(request, conversation_id):
 
     if request.method == "POST":
 
+        is_ajax = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("accept", "").lower()
+        )
+
         # ======================================
         # GET MESSAGE DATA
         # ======================================
@@ -380,12 +387,24 @@ def send_message(request, conversation_id):
 
         if message_type == "TEXT" and not content:
 
+            if is_ajax:
+                return JsonResponse(
+                    {"status": "error", "message": "A message or attachment is required."},
+                    status=400
+                )
+
             return redirect(
                 "messaging:conversation",
                 conversation_id
             )
 
         if message_type == "IMAGE" and not image:
+
+            if is_ajax:
+                return JsonResponse(
+                    {"status": "error", "message": "An image is required."},
+                    status=400
+                )
 
             return redirect(
                 "messaging:conversation",
@@ -394,6 +413,12 @@ def send_message(request, conversation_id):
 
         if message_type == "VIDEO" and not video:
 
+            if is_ajax:
+                return JsonResponse(
+                    {"status": "error", "message": "A video is required."},
+                    status=400
+                )
+
             return redirect(
                 "messaging:conversation",
                 conversation_id
@@ -401,12 +426,24 @@ def send_message(request, conversation_id):
 
         if message_type == "FILE" and not file:
 
+            if is_ajax:
+                return JsonResponse(
+                    {"status": "error", "message": "A file is required."},
+                    status=400
+                )
+
             return redirect(
                 "messaging:conversation",
                 conversation_id
             )
 
         if message_type == "AUDIO" and not audio:
+
+            if is_ajax:
+                return JsonResponse(
+                    {"status": "error", "message": "An audio recording is required."},
+                    status=400
+                )
 
             return redirect(
                 "messaging:conversation",
@@ -480,6 +517,28 @@ def send_message(request, conversation_id):
         # ======================================
 
         conversation.save()
+
+        if is_ajax:
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "message": {
+                        "content": message.content,
+                        "created_at": timezone.localtime(
+                            message.created_at
+                        ).strftime("%b %d, %Y %I:%M %p"),
+                        "image_url": message.image.url if message.image else None,
+                        "video_url": message.video.url if message.video else None,
+                        "audio_url": message.audio.url if message.audio else None,
+                        "file_url": message.file.url if message.file else None,
+                        "file_name": (
+                            message.file.name.rsplit("/", 1)[-1]
+                            if message.file else None
+                        ),
+                    },
+                },
+                status=201
+            )
 
     return redirect(
         "messaging:conversation",

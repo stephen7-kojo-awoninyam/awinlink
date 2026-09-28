@@ -18,6 +18,364 @@
 
 
 /* =========================================================
+   VOICE AND VIDEO CALLS
+========================================================= */
+
+.awinlink-call-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    color: #f4f7f6;
+    background:
+        radial-gradient(ellipse at 50% 30%, rgba(45, 87, 77, 0.45), transparent 52%),
+        #0a1419;
+}
+
+.awinlink-call-panel {
+    width: min(1280px, 100%);
+    height: min(860px, calc(100dvh - 40px));
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    background: #111d22;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.48);
+}
+
+.awinlink-call-header {
+    min-height: 88px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 28px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(12, 24, 28, 0.88);
+}
+
+.awinlink-call-heading,
+.call-state-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.call-live-indicator {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 10px;
+    border-radius: 50%;
+    background: #25d366;
+    box-shadow: 0 0 0 5px rgba(37, 211, 102, 0.12);
+}
+
+.call-eyebrow {
+    margin: 0 0 2px;
+    color: #91a29e;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.awinlink-call-header h1 {
+    margin: 0;
+    overflow: hidden;
+    color: #f4f7f6;
+    font-size: 17px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.call-state-group {
+    justify-content: flex-end;
+    color: #b7c5c1;
+    font-size: 13px;
+}
+
+.call-status {
+    padding: 7px 11px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.call-duration {
+    min-width: 48px;
+    font-variant-numeric: tabular-nums;
+    color: #f4f7f6;
+}
+
+.awinlink-call-stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse at 50% 45%, rgba(36, 70, 65, 0.42), transparent 48%),
+        #0d181d;
+}
+
+.call-voice-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 30px;
+    text-align: center;
+}
+
+.call-avatar {
+    width: 132px;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(206, 240, 223, 0.26);
+    border-radius: 50%;
+    color: #e8f7ed;
+    background: linear-gradient(145deg, #357c69, #1b4945);
+    box-shadow: 0 0 0 12px rgba(37, 211, 102, 0.055), 0 18px 50px rgba(0, 0, 0, 0.3);
+    font-size: 46px;
+    font-weight: 600;
+    animation: call-avatar-breathe 2.8s ease-in-out infinite;
+}
+
+.call-voice-caption {
+    margin: 0;
+    color: #aebdb9;
+    font-size: 14px;
+}
+
+.call-video-grid {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+    align-content: center;
+    gap: 14px;
+    overflow: auto;
+    padding: 24px;
+}
+
+.call-video-tile {
+    position: relative;
+    min-height: 180px;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    background: #17252a;
+    animation: call-tile-enter 220ms ease-out both;
+}
+
+.call-video-tile video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    background: #17252a;
+}
+
+.call-video-name,
+.call-tile-label {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(5, 13, 16, 0.72);
+    font-size: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.call-local-tile {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 2;
+    width: clamp(140px, 20vw, 230px);
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 14px;
+    background: #17252a;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.36);
+}
+
+.call-local-tile video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.awinlink-call-footer {
+    display: flex;
+    justify-content: center;
+    padding: 18px 20px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: #101a1f;
+}
+
+.call-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+
+.call-control-button {
+    width: 72px;
+    min-height: 68px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
+    color: #eaf0ee;
+    background: #26353a;
+    font: inherit;
+    cursor: pointer;
+    transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.call-control-button:hover {
+    transform: translateY(-2px);
+    background: #34454a;
+}
+
+.call-control-button:focus-visible {
+    outline: 3px solid #82e4a5;
+    outline-offset: 3px;
+}
+
+.call-control-button i {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.call-control-button span {
+    font-size: 11px;
+}
+
+.call-control-button.is-muted {
+    color: #ffd9d9;
+    background: #5a3336;
+}
+
+.call-control-button.call-end-button {
+    width: 82px;
+    color: #fff;
+    background: #df3945;
+}
+
+.call-control-button.call-end-button:hover {
+    background: #f04450;
+}
+
+.call-remote-audio {
+    display: none;
+}
+
+@keyframes call-avatar-breathe {
+    0%, 100% { box-shadow: 0 0 0 12px rgba(37, 211, 102, 0.055), 0 18px 50px rgba(0, 0, 0, 0.3); }
+    50% { box-shadow: 0 0 0 20px rgba(37, 211, 102, 0.025), 0 18px 50px rgba(0, 0, 0, 0.3); }
+}
+
+@keyframes call-tile-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+    .awinlink-call-overlay {
+        padding: 0;
+    }
+
+    .awinlink-call-panel {
+        width: 100%;
+        height: 100dvh;
+        min-height: 0;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .awinlink-call-header {
+        min-height: 76px;
+        padding: 14px 16px;
+    }
+
+    .call-state-group {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 5px;
+        font-size: 11px;
+    }
+
+    .call-status {
+        padding: 5px 8px;
+    }
+
+    .call-video-grid {
+        grid-template-columns: 1fr;
+        align-content: stretch;
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .call-video-tile {
+        min-height: 130px;
+        border-radius: 12px;
+    }
+
+    .call-local-tile {
+        top: 14px;
+        right: 14px;
+        width: 112px;
+        border-radius: 10px;
+    }
+
+    .awinlink-call-footer {
+        padding: 14px 12px max(18px, env(safe-area-inset-bottom));
+    }
+
+    .call-controls {
+        gap: 10px;
+    }
+
+    .call-control-button {
+        width: 64px;
+        min-height: 62px;
+        border-radius: 16px;
+    }
+
+    .call-control-button.call-end-button {
+        width: 74px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .call-avatar,
+    .call-video-tile {
+        animation: none;
+    }
+}
+
+
+/* =========================================================
    GLOBAL
 ========================================================= */
 

@@ -489,24 +489,6 @@ urlpatterns = [
     # =====================================================
 
     path(
-        "shortlists/",
-        MyShortlistsAPIView.as_view(),
-        name="my_shortlists"
-    ),
-
-    path(
-        "shortlists/create/",
-        ShortlistCreateAPIView.as_view(),
-        name="shortlist_create"
-    ),
-
-    path(
-        "shortlists/<int:shortlist_id>/",
-        ShortlistDetailAPIView.as_view(),
-        name="shortlist_detail"
-    ),
-
-    path(
         "shortlists/<int:shortlist_id>/update/",
         ShortlistUpdateAPIView.as_view(),
         name="shortlist_update"
@@ -522,27 +504,9 @@ urlpatterns = [
     # =====================================================
 
     path(
-        "recruitment/",
+        "recruitment/pipeline/",
         MyRecruitmentPipelineAPIView.as_view(),
         name="recruitment_pipeline"
-    ),
-
-    path(
-        "recruitment/create/",
-        RecruitmentStageCreateAPIView.as_view(),
-        name="recruitment_create"
-    ),
-
-    path(
-        "recruitment/<int:recruitment_id>/",
-        RecruitmentStageDetailAPIView.as_view(),
-        name="recruitment_detail"
-    ),
-
-    path(
-        "recruitment/<int:recruitment_id>/update/",
-        RecruitmentStageUpdateAPIView.as_view(),
-        name="recruitment_update"
     ),
 
     path(
@@ -556,30 +520,6 @@ urlpatterns = [
     # =====================================================
 
     path(
-        "invitations/received/",
-        ReceivedInvitationsAPIView.as_view(),
-        name="received_invitations"
-    ),
-
-    path(
-        "invitations/sent/",
-        SentInvitationsAPIView.as_view(),
-        name="sent_invitations"
-    ),
-
-    path(
-        "invitations/create/",
-        InvitationCreateAPIView.as_view(),
-        name="invitation_create"
-    ),
-
-    path(
-        "invitations/<int:invitation_id>/",
-        InvitationDetailAPIView.as_view(),
-        name="invitation_detail"
-    ),
-
-    path(
         "invitations/<int:invitation_id>/respond/",
         InvitationRespondAPIView.as_view(),
         name="invitation_respond"
@@ -587,12 +527,6 @@ urlpatterns = [
     # =====================================================
     # CONNECTIONS
     # =====================================================
-
-    path(
-        "connections/",
-        MyConnectionsAPIView.as_view(),
-        name="my_connections"
-    ),
 
     path(
         "connections/received/",
@@ -613,12 +547,6 @@ urlpatterns = [
     ),
 
     path(
-        "connections/<int:connection_id>/",
-        ConnectionDetailAPIView.as_view(),
-        name="connection_detail"
-    ),
-
-    path(
         "connections/<int:connection_id>/respond/",
         ConnectionRespondAPIView.as_view(),
         name="connection_respond"
@@ -631,25 +559,25 @@ urlpatterns = [
     path(
         "follows/following/",
         MyFollowingAPIView.as_view(),
-        name="my_following"
+        name="following_list"
     ),
 
     path(
         "follows/followers/",
         MyFollowersAPIView.as_view(),
-        name="my_followers"
+        name="followers_list"
     ),
 
     path(
         "follows/create/",
         FollowUserAPIView.as_view(),
-        name="follow_user"
+        name="follow_user_create"
     ),
 
     path(
         "follows/<int:user_id>/remove/",
         UnfollowUserAPIView.as_view(),
-        name="unfollow_user"
+        name="unfollow_user_remove"
     ),
 
 
@@ -660,19 +588,19 @@ urlpatterns = [
     path(
         "organizations/following/",
         MyFollowedOrganizationsAPIView.as_view(),
-        name="my_followed_organizations"
+        name="followed_organizations_list"
     ),
 
     path(
         "organizations/<int:organization_id>/follow/",
         FollowOrganizationAPIView.as_view(),
-        name="follow_organization"
+        name="organization_follow"
     ),
 
     path(
         "organizations/<int:organization_id>/unfollow/",
         UnfollowOrganizationAPIView.as_view(),
-        name="unfollow_organization"
+        name="organization_unfollow"
     ),
     # =====================================================
     # ROLE MODEL MANAGEMENT

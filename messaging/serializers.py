@@ -80,6 +80,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
         read_only_fields = [
             "id",
+            "conversation",
             "sender",
             "created_at",
             "is_read",

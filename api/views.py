@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from django.db import models
+from django.db.models import Q
 from talents.models import TalentProfile, RoleModelAssignment
 from talents.services import FollowerAnalyticsService
 from .serializers import EventRecommendationSerializer, RoleModelAssignmentSerializer
@@ -64,6 +65,15 @@ from .serializers import (
     EventRecommendationSerializer,
     serializers,
 )
+
+
+def visible_talent_profiles_for(user):
+    visibility = Q(profile_visibility="PUBLIC") | Q(user=user)
+
+    if user.role == "ORGANIZATION":
+        visibility |= Q(profile_visibility="ORGANIZATIONS")
+
+    return TalentProfile.objects.filter(visibility)
 
 # =====================================================
 # LOGIN
@@ -149,7 +159,7 @@ class TalentListAPIView(APIView):
     def get(self, request):
 
         talents = (
-            TalentProfile.objects
+            visible_talent_profiles_for(request.user)
             .select_related("user")
             .prefetch_related(
                 "domains",
@@ -184,7 +194,7 @@ class TalentDetailAPIView(APIView):
         try:
 
             talent = (
-                TalentProfile.objects
+                    visible_talent_profiles_for(request.user)
                 .select_related("user")
                 .prefetch_related(
                     "domains",
@@ -715,6 +725,20 @@ class ApplicationDetailAPIView(APIView):
                     "detail": "Application not found."
                 },
                 status=status.HTTP_404_NOT_FOUND
+            )
+
+        is_applicant = application.talent.user_id == request.user.id
+        is_hiring_organization = (
+            application.opportunity.organization.user_id == request.user.id
+        )
+
+        if not (is_applicant or is_hiring_organization):
+
+            return Response(
+                {
+                    "detail": "You do not have permission to view this application."
+                },
+                status=status.HTTP_403_FORBIDDEN
             )
 
         serializer = ApplicationSerializer(
@@ -3284,7 +3308,24 @@ class FollowUserAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, user_id):
+    def post(self, request, user_id=None):
+
+        if user_id is None:
+            user_id = request.data.get("user_id")
+
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "A valid user_id is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if user_id < 1:
+            return Response(
+                {"detail": "A valid user_id is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # ---------------------------------------------
         # Get target user

@@ -768,6 +768,22 @@ class SendMessageAPIView(APIView):
             sender=request.user
         )
 
+        recipients = conversation.participants.select_related(
+            "user"
+        ).exclude(
+            user=request.user
+        )
+
+        sender_name = request.user.get_full_name() or request.user.username
+        for participant in recipients:
+            Notification.objects.create(
+                user=participant.user,
+                sender=request.user,
+                notification_type="MESSAGE",
+                message=f"{sender_name} sent you a message.",
+                conversation=conversation,
+            )
+
         # ----------------------------------------------------
         # UPDATE CONVERSATION
         # ----------------------------------------------------
@@ -833,6 +849,14 @@ class MessageReadAPIView(APIView):
                         "You do not have access "
                         "to this message."
                     )
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if message.sender_id == request.user.id:
+            return Response(
+                {
+                    "detail": "You cannot mark your own message as read."
                 },
                 status=status.HTTP_403_FORBIDDEN
             )
@@ -1353,11 +1377,13 @@ class RejectCallAPIView(APIView):
             }
         )
 
-        # If nobody else is still being invited/rung,
-        # and no participant is active, end the call.
+        # The caller stays JOINED while waiting, so only
+        # other participants determine whether the call continues.
         remaining = CallParticipant.objects.filter(
             call=call,
             status__in=["RINGING", "JOINED"]
+        ).exclude(
+            user=call.initiated_by
         ).exists()
 
         if not remaining:
