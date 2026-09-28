@@ -1,11 +1,16 @@
 import json
+import logging
 
 from django.utils import timezone
+from redis.exceptions import RedisError
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .models import CallParticipant
+
+
+logger = logging.getLogger(__name__)
 
 
 class CallConsumer(AsyncWebsocketConsumer):
@@ -337,10 +342,19 @@ class UserConsumer(AsyncWebsocketConsumer):
 
         self.user_group_name = f"user_{self.user.id}"
 
-        await self.channel_layer.group_add(
-            self.user_group_name,
-            self.channel_name
-        )
+        try:
+            await self.channel_layer.group_add(
+                self.user_group_name,
+                self.channel_name
+            )
+        except RedisError as error:
+            logger.warning(
+            "Unable to register user WebSocket group for user %s: %s",
+                self.user.id,
+            error,
+            )
+            await self.close(code=1013)
+            return
 
         # ---------------------------------------------------------
         # ACCEPT CONNECTION
@@ -364,10 +378,17 @@ class UserConsumer(AsyncWebsocketConsumer):
 
         if hasattr(self, "user_group_name"):
 
-            await self.channel_layer.group_discard(
-                self.user_group_name,
-                self.channel_name
-            )
+            try:
+                await self.channel_layer.group_discard(
+                    self.user_group_name,
+                    self.channel_name
+                )
+            except RedisError as error:
+                logger.warning(
+                    "Unable to remove user WebSocket group for user %s: %s",
+                    self.user.id,
+                    error,
+                )
 
     async def receive(self, text_data):
 

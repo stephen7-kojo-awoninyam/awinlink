@@ -3470,6 +3470,20 @@ async function rejectIncomingCall(
 ========================================================= */
 
 let awinlinkUserSocket = null;
+let awinlinkUserSocketReconnectTimer = null;
+let awinlinkUserSocketRetryDelay = 1000;
+
+
+function scheduleGlobalUserSocketReconnect() {
+    if (!currentUserId || awinlinkUserSocketReconnectTimer) return;
+
+    const delay = awinlinkUserSocketRetryDelay + Math.random() * 500;
+    awinlinkUserSocketRetryDelay = Math.min(awinlinkUserSocketRetryDelay * 2, 30000);
+    awinlinkUserSocketReconnectTimer = setTimeout(function () {
+        awinlinkUserSocketReconnectTimer = null;
+        connectGlobalUserSocket();
+    }, delay);
+}
 
 
 function connectGlobalUserSocket() {
@@ -3485,8 +3499,9 @@ function connectGlobalUserSocket() {
 
     if (
         awinlinkUserSocket &&
-        awinlinkUserSocket.readyState ===
-        WebSocket.OPEN
+        [WebSocket.CONNECTING, WebSocket.OPEN].includes(
+            awinlinkUserSocket.readyState
+        )
     ) {
 
         return;
@@ -3504,12 +3519,28 @@ function connectGlobalUserSocket() {
         `${protocol}://${window.location.host}/ws/user/`;
 
 
-    awinlinkUserSocket =
-        new WebSocket(socketUrl);
+    let socket;
+    try {
+        socket = new WebSocket(socketUrl);
+    } catch (error) {
+        console.warn("Unable to create Awinlink global WebSocket:", error);
+        scheduleGlobalUserSocketReconnect();
+        return;
+    }
+
+    awinlinkUserSocket = socket;
 
 
-    awinlinkUserSocket.onopen =
+    socket.onopen =
         function () {
+
+            if (awinlinkUserSocket !== socket) return;
+
+            awinlinkUserSocketRetryDelay = 1000;
+            if (awinlinkUserSocketReconnectTimer) {
+                clearTimeout(awinlinkUserSocketReconnectTimer);
+                awinlinkUserSocketReconnectTimer = null;
+            }
 
             console.log(
                 "Connected to Awinlink global user WebSocket."
@@ -3518,7 +3549,7 @@ function connectGlobalUserSocket() {
         };
 
 
-    awinlinkUserSocket.onmessage =
+    socket.onmessage =
         function (event) {
 
             try {
@@ -3568,26 +3599,30 @@ function connectGlobalUserSocket() {
         };
 
 
-    awinlinkUserSocket.onerror =
+    socket.onerror =
         function (error) {
 
-            console.error(
+            console.warn(
                 "Awinlink global WebSocket error:",
                 error
             );
 
+            socket.close();
+
         };
 
 
-    awinlinkUserSocket.onclose =
+    socket.onclose =
         function () {
 
             console.log(
                 "Awinlink global WebSocket disconnected."
             );
 
-            awinlinkUserSocket =
-                null;
+            if (awinlinkUserSocket === socket) {
+                awinlinkUserSocket = null;
+                scheduleGlobalUserSocketReconnect();
+            }
 
         };
 
