@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from .models import (
     Post,
     PostLike,
@@ -108,6 +109,7 @@ def like_post(request, post_id):
         user=request.user,
         post=post
     )
+    liked = True
 
     if created:
 
@@ -131,6 +133,17 @@ def like_post(request, post_id):
     else:
 
         like.delete()
+        liked = False
+
+    accept_header = request.headers.get("accept", "").lower()
+    is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+    if is_ajax or "application/json" in accept_header:
+        return JsonResponse({
+            "status": "success",
+            "liked": liked,
+            "count": post.likes.count(),
+        })
 
     return redirect("home_feed")
     
@@ -178,6 +191,32 @@ def add_comment(request, post_id):
                     post=post
 
                 )
+
+            accept_header = request.headers.get("accept", "").lower()
+            is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+            if is_ajax or "application/json" in accept_header:
+                return JsonResponse({
+                    "status": "success",
+                    "comment": {
+                        "user": comment.user.get_full_name() or comment.user.username,
+                        "text": comment.text,
+                        "created_at": comment.created_at.strftime("%b %d, %Y %H:%M"),
+                    },
+                    "count": post.comments.count(),
+                })
+
+            return redirect("home_feed")
+
+        accept_header = request.headers.get("accept", "").lower()
+        is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+        if is_ajax or "application/json" in accept_header:
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid comment.",
+                "errors": form.errors,
+            }, status=400)
 
     return redirect("home_feed")
 

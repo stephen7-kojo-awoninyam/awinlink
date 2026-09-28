@@ -7,7 +7,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 
 
-from .models import Event, EventRegistration, EventFeedback, EventCertificate, EventMedia
+from .models import Event, EventRegistration, EventFeedback, EventCertificate, EventMedia, EventLike, EventComment
 from .forms import EventForm, EventFeedbackForm, EventCertificateForm
 
 
@@ -20,6 +20,7 @@ from notifications.models import Notification
 from feed.models import Post
 
 from django.db.models import Avg, Count, Q
+from django.http import JsonResponse
 
 from django.utils import timezone
 
@@ -457,6 +458,52 @@ def event_detail(request, event_id):
     
     
     
+@login_required
+def like_event(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    like, created = EventLike.objects.get_or_create(user=request.user, event=event)
+    liked = True
+
+    if not created:
+        like.delete()
+        liked = False
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", "").lower():
+        return JsonResponse({
+            "status": "success",
+            "liked": liked,
+            "count": event.likes.count(),
+        })
+
+    return redirect("event_detail", event_id=event.id)
+
+
+@login_required
+def add_event_comment(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+
+    if request.method == "POST":
+        text = request.POST.get("text", "").strip()
+        if text:
+            comment = EventComment.objects.create(user=request.user, event=event, text=text)
+            if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", "").lower():
+                return JsonResponse({
+                    "status": "success",
+                    "comment": {
+                        "user": comment.user.get_full_name() or comment.user.username,
+                        "text": comment.text,
+                        "created_at": comment.created_at.strftime("%b %d, %Y %H:%M"),
+                    },
+                    "count": event.comments.count(),
+                })
+            return redirect("event_detail", event_id=event.id)
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", "").lower():
+        return JsonResponse({"status": "error", "message": "Empty comment."}, status=400)
+
+    return redirect("event_detail", event_id=event.id)
+
+
 @login_required
 def my_events(request):
 

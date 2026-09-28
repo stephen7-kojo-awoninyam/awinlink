@@ -87,7 +87,7 @@
                                     <br>
 
                                     👤 Hosted by:
-                                    {{ event.organizer.get_full_name }}
+                                    {{ event.organizer.name }}
 
                                 </p>
 
@@ -100,15 +100,56 @@
 
                                 {% endif %}
 
+                                <div class="d-flex gap-2 flex-wrap mt-3">
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm {% if event.id in liked_event_ids %}btn-primary{% else %}btn-outline-primary{% endif %} event-like-button"
+                                        data-post-id="{{ event.id }}"
+                                        data-url="{% url 'like_event' event.id %}"
+                                    >
+                                        <span class="event-like-label">
+                                            {% if event.id in liked_event_ids %}
+                                                ❤️ Liked
+                                            {% else %}
+                                                ❤️ Like
+                                            {% endif %}
+                                        </span>
+                                        <span class="event-like-count">{{ event.likes.count }}</span>
+                                    </button>
 
-                                <br>
+                                    <a
+                                        href="{% url 'event_detail' event.id %}"
+                                        class="btn btn-outline-primary btn-sm"
+                                    >
+                                        View Event
+                                    </a>
+                                </div>
 
-                                <a
-                                    href="{% url 'event_detail' event.id %}"
-                                    class="btn btn-outline-primary btn-sm mt-2"
-                                >
-                                    View Event
-                                </a>
+                                <div class="mt-3">
+                                    <h6 id="event-comment-count-{{ event.id }}">
+                                        💬 Comments ({{ event.comments.count }})
+                                    </h6>
+
+                                    <form method="POST" action="{% url 'add_event_comment' event.id %}" class="mb-3 event-comment-form" data-post-id="{{ event.id }}" data-url="{% url 'add_event_comment' event.id %}">
+                                        {% csrf_token %}
+                                        <div class="input-group">
+                                            <input type="text" name="text" class="form-control" placeholder="Write a comment..." required>
+                                            <button type="submit" class="btn btn-success">Comment</button>
+                                        </div>
+                                    </form>
+
+                                    <div id="event-comments-list-{{ event.id }}" class="event-comments-list">
+                                        {% for comment in event.comments.all %}
+                                            <div class="mb-2 p-2 border-bottom">
+                                                <strong>{{ comment.user.get_full_name|default:comment.user.username }}</strong>
+                                                <p class="mb-1">{{ comment.text }}</p>
+                                                <small class="text-muted">{{ comment.created_at|date:"M d, Y H:i" }}</small>
+                                            </div>
+                                        {% empty %}
+                                            <p class="text-muted no-event-comments-message">No comments yet.</p>
+                                        {% endfor %}
+                                    </div>
+                                </div>
 
                             </div>
 
@@ -377,14 +418,24 @@
 
                             <!-- LIKE -->
 
-                            <a
-                                href="{% url 'like_post' post.id %}"
-                                class="btn btn-outline-primary btn-sm"
+                            <button
+                                type="button"
+                                class="btn btn-sm {% if post.id in liked_post_ids %}btn-primary{% else %}btn-outline-primary{% endif %} like-button"
+                                data-post-id="{{ post.id }}"
+                                data-url="{% url 'like_post' post.id %}"
+                                data-liked="{% if post.id in liked_post_ids %}true{% else %}false{% endif %}"
                             >
 
-                                ❤️ Like {{ post.likes.count }}
+                                <span class="like-label">
+                                    {% if post.id in liked_post_ids %}
+                                        ❤️ Liked
+                                    {% else %}
+                                        ❤️ Like
+                                    {% endif %}
+                                </span>
+                                <span class="like-count">{{ post.likes.count }}</span>
 
-                            </a>
+                            </button>
 
 
                             <!-- SAVE -->
@@ -560,7 +611,7 @@
 
                                             <hr>
 
-                                            <h6>
+                                            <h6 id="comment-count-{{ post.id }}">
                                                 💬 Comments ({{ post.comments.count }})
                                             </h6>
 
@@ -569,7 +620,9 @@
                                             <form
                                                 method="POST"
                                                 action="{% url 'add_comment' post.id %}"
-                                                class="mb-3"
+                                                class="mb-3 comment-form"
+                                                data-post-id="{{ post.id }}"
+                                                data-url="{% url 'add_comment' post.id %}"
                                             >
 
                                                 {% csrf_token %}
@@ -598,69 +651,33 @@
 
                                             <!-- EXISTING COMMENTS -->
 
-                                            {% for comment in post.comments.all %}
+                                            <div id="comments-list-{{ post.id }}" class="comments-list">
+                                                {% for comment in post.comments.all %}
 
-                                            <div class="mb-2 p-2 border-bottom">
+                                                <div class="mb-2 p-2 border-bottom">
 
-                                                <strong>
-                                                    {{ comment.user.get_full_name|default:comment.user.username }}
-                                                </strong>
+                                                    <strong>
+                                                        {{ comment.user.get_full_name|default:comment.user.username }}
+                                                    </strong>
 
-                                                <p class="mb-1">
-                                                    {{ comment.text }}
+                                                    <p class="mb-1">
+                                                        {{ comment.text }}
+                                                    </p>
+
+                                                    <small class="text-muted">
+                                                        {{ comment.created_at|date:"M d, Y H:i" }}
+                                                    </small>
+
+                                                </div>
+
+                                                {% empty %}
+
+                                                <p class="text-muted no-comments-message">
+                                                    No comments yet.
                                                 </p>
 
-                                                <small class="text-muted">
-                                                    {{ comment.created_at|date:"M d, Y H:i" }}
-                                                </small>
-
+                                                {% endfor %}
                                             </div>
-
-                                            {% empty %}
-
-                                            <p class="text-muted">
-                                                No comments yet.
-                                            </p>
-
-                                            {% endfor %}
-
-                        {% for comment in post.comments.all %}
-
-                            <div class="mb-2">
-
-                                <strong>
-
-                                    {{ comment.user.get_full_name }}
-
-                                </strong>
-
-                                :
-
-                                {{ comment.text }}
-
-
-                                <br>
-
-
-                                <small class="text-muted">
-
-                                    {{ comment.created_at }}
-
-                                </small>
-
-                            </div>
-
-
-                        {% empty %}
-
-                            <p class="text-muted">
-
-                                No comments yet.
-
-                            </p>
-
-                        {% endfor %}
-
 
                     </div>
 
@@ -1072,13 +1089,54 @@
                                 {{ lesson.description|truncatewords:30 }}
                             </p>
 
+                            <div class="d-flex gap-2 flex-wrap mb-3">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm {% if lesson.id in liked_course_ids %}btn-primary{% else %}btn-outline-primary{% endif %} course-like-button"
+                                    data-post-id="{{ lesson.id }}"
+                                    data-url="{% url 'like_course' lesson.id %}"
+                                >
+                                    <span class="course-like-label">
+                                        {% if lesson.id in liked_course_ids %}
+                                            ❤️ Liked
+                                        {% else %}
+                                            ❤️ Like
+                                        {% endif %}
+                                    </span>
+                                    <span class="course-like-count">{{ lesson.likes.count }}</span>
+                                </button>
 
-                            <a
-                                href="{% url 'lesson_detail' lesson.id %}"
-                                class="btn btn-success btn-sm"
-                            >
-                                Start Learning
-                            </a>
+                                <a
+                                    href="{% url 'lesson_detail' lesson.id %}"
+                                    class="btn btn-success btn-sm"
+                                >
+                                    Start Learning
+                                </a>
+                            </div>
+
+                            <h6 id="course-comment-count-{{ lesson.id }}">
+                                💬 Comments ({{ lesson.comments.count }})
+                            </h6>
+
+                            <form method="POST" action="{% url 'add_course_comment' lesson.id %}" class="mb-3 course-comment-form" data-post-id="{{ lesson.id }}" data-url="{% url 'add_course_comment' lesson.id %}">
+                                {% csrf_token %}
+                                <div class="input-group">
+                                    <input type="text" name="text" class="form-control" placeholder="Write a comment..." required>
+                                    <button type="submit" class="btn btn-success">Comment</button>
+                                </div>
+                            </form>
+
+                            <div id="course-comments-list-{{ lesson.id }}" class="course-comments-list">
+                                {% for comment in lesson.comments.all %}
+                                    <div class="mb-2 p-2 border-bottom">
+                                        <strong>{{ comment.user.get_full_name|default:comment.user.username }}</strong>
+                                        <p class="mb-1">{{ comment.text }}</p>
+                                        <small class="text-muted">{{ comment.created_at|date:"M d, Y H:i" }}</small>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted no-course-comments-message">No comments yet.</p>
+                                {% endfor %}
+                            </div>
 
                         </div>
 
@@ -1242,7 +1300,7 @@
                                                     {% if talent.connection.sender_id == request.user.id %}
 
                                                         <a
-                                                            href="{% url 'cancel_connection_request' talent.connection.id %}"
+                                                            href="{% url 'connections:cancel_connection_request' talent.connection.id %}"
                                                             class="btn btn-sm btn-secondary"
                                                         >
                                                             Request Sent
@@ -1251,14 +1309,14 @@
                                                     {% else %}
 
                                                         <a
-                                                            href="{% url 'accept_connection_request' talent.connection.id %}"
+                                                            href="{% url 'connections:accept_connection_request' talent.connection.id %}"
                                                             class="btn btn-sm btn-success"
                                                         >
                                                             Accept
                                                         </a>
 
                                                         <a
-                                                            href="{% url 'reject_connection_request' talent.connection.id %}"
+                                                            href="{% url 'connections:reject_connection_request' talent.connection.id %}"
                                                             class="btn btn-sm btn-outline-danger"
                                                         >
                                                             Reject
@@ -1269,7 +1327,7 @@
                                                 {% elif talent.connection.status == "REJECTED" %}
 
                                                     <a
-                                                        href="{% url 'send_connection_request' talent.user.id %}"
+                                                        href="{% url 'connections:send_connection_request' talent.user.id %}"
                                                         class="btn btn-sm btn-outline-primary"
                                                     >
                                                         Connect
@@ -1280,7 +1338,7 @@
                                             {% else %}
 
                                                 <a
-                                                    href="{% url 'send_connection_request' talent.user.id %}"
+                                                    href="{% url 'connections:send_connection_request' talent.user.id %}"
                                                     class="btn btn-sm btn-outline-primary"
                                                 >
                                                     Connect
@@ -1371,5 +1429,135 @@
         </div>
 
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const getCookie = function (name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            };
+
+            const csrfToken = getCookie('csrftoken');
+
+            const bindLikeButtons = function (selector, labelClass, countClass) {
+                document.querySelectorAll(selector).forEach(function (button) {
+                    button.addEventListener('click', async function (event) {
+                        event.preventDefault();
+
+                        const url = this.dataset.url;
+                        const label = this.querySelector('.' + labelClass);
+                        const count = this.querySelector('.' + countClass);
+
+                        try {
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': csrfToken,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                },
+                                credentials: 'same-origin'
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok || data.status !== 'success') {
+                                throw new Error(data.message || 'Unable to update like.');
+                            }
+
+                            const liked = Boolean(data.liked);
+                            this.classList.toggle('btn-primary', liked);
+                            this.classList.toggle('btn-outline-primary', !liked);
+                            label.textContent = liked ? '❤️ Liked' : '❤️ Like';
+                            count.textContent = data.count;
+                        } catch (error) {
+                            console.error('Like action failed:', error);
+                            window.location.href = url;
+                        }
+                    });
+                });
+            };
+
+            const bindCommentForms = function (selector, listSelector, countSelector, emptyClass) {
+                document.querySelectorAll(selector).forEach(function (form) {
+                    form.addEventListener('submit', async function (event) {
+                        event.preventDefault();
+
+                        const input = this.querySelector('input[name="text"]');
+                        const value = input.value.trim();
+                        if (!value) {
+                            input.focus();
+                            return;
+                        }
+
+                        const postId = this.dataset.postId;
+                        const url = this.dataset.url;
+                        const list = document.getElementById(listSelector + postId);
+                        const count = document.getElementById(countSelector + postId);
+
+                        try {
+                            const formData = new FormData(this);
+                            const response = await fetch(url, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': csrfToken,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                },
+                                body: formData,
+                                credentials: 'same-origin'
+                            });
+
+                            const data = await response.json();
+                            if (!response.ok || data.status !== 'success') {
+                                throw new Error(data.message || 'Unable to comment.');
+                            }
+
+                            if (list) {
+                                const empty = list.querySelector('.' + emptyClass);
+                                if (empty) empty.remove();
+
+                                const item = document.createElement('div');
+                                item.className = 'mb-2 p-2 border-bottom';
+                                item.innerHTML = `
+                                    <strong>${data.comment.user}</strong>
+                                    <p class="mb-1">${data.comment.text}</p>
+                                    <small class="text-muted">${data.comment.created_at}</small>
+                                `;
+                                list.prepend(item);
+                            }
+
+                            if (count) {
+                                count.textContent = `💬 Comments (${data.count})`;
+                            }
+
+                            input.value = '';
+                        } catch (error) {
+                            console.error('Comment action failed:', error);
+                            window.location.href = url;
+                        }
+                    });
+                });
+            };
+
+            bindLikeButtons('.like-button', 'like-label', 'like-count');
+            bindLikeButtons('.event-like-button', 'event-like-label', 'event-like-count');
+            bindLikeButtons('.course-like-button', 'course-like-label', 'course-like-count');
+
+            bindCommentForms('.comment-form', 'comments-list-', 'comment-count-', 'no-comments-message');
+            bindCommentForms('.event-comment-form', 'event-comments-list-', 'event-comment-count-', 'no-event-comments-message');
+            bindCommentForms('.course-comment-form', 'course-comments-list-', 'course-comment-count-', 'no-course-comments-message');
+        });
+    </script>
 
     {% endblock %}

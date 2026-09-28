@@ -8,7 +8,7 @@ from connections.models import (
     Connection,
 )
 
-from feed.models import Post, SavedPost, SharedPost
+from feed.models import Post, PostLike, SavedPost, SharedPost
 from opportunities.models import Opportunity
 from recommendations.services import RecommendationEngine
 from talents.models import TalentProfile
@@ -347,7 +347,7 @@ def home_feed(request):
 
 
     # ==================================
-    # SAVED POSTS
+    # SAVED POSTS + LIKED POSTS
     # ==================================
 
     saved_post_ids = set(
@@ -361,6 +361,60 @@ def home_feed(request):
         ).values_list(
 
             "post_id",
+
+            flat=True
+
+        )
+
+    )
+
+    liked_post_ids = set(
+
+        PostLike.objects.filter(
+
+            user=request.user,
+
+            post__in=posts
+
+        ).values_list(
+
+            "post_id",
+
+            flat=True
+
+        )
+
+    )
+
+    liked_event_ids = set(
+
+        EventLike.objects.filter(
+
+            user=request.user,
+
+            event__in=events
+
+        ).values_list(
+
+            "event_id",
+
+            flat=True
+
+        )
+
+    )
+
+    liked_course_ids = set(
+
+        CourseLike.objects.filter(
+
+            user=request.user,
+
+            course__in=learning_content
+
+        ).values_list(
+
+            "course_id",
 
             flat=True
 
@@ -660,7 +714,11 @@ def home_feed(request):
 
         "saved_post_ids": saved_post_ids,
 
+        "liked_post_ids": liked_post_ids,
 
+        "liked_event_ids": liked_event_ids,
+
+        "liked_course_ids": liked_course_ids,
 
     }
 

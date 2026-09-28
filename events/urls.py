@@ -103,6 +103,18 @@ urlpatterns = [
     # ==========================================
 
     path(
+        "<int:event_id>/like/",
+        views.like_event,
+        name="like_event"
+    ),
+
+    path(
+        "<int:event_id>/comment/",
+        views.add_event_comment,
+        name="add_event_comment"
+    ),
+
+    path(
         "<int:event_id>/feedback/",
         views.give_feedback,
         name="give_feedback"

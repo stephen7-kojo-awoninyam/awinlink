@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Avg
+from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 import uuid
@@ -20,6 +21,8 @@ from .models import (
     Enrollment,
     LessonProgress,
     CourseReview,
+    CourseLike,
+    CourseComment,
     Quiz,
     Question,
     QuizAttempt,
@@ -129,6 +132,52 @@ def course_list(request):
 # =========================================================
 # COURSE DETAIL
 # =========================================================
+
+@login_required
+def like_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id, status="APPROVED")
+    like, created = CourseLike.objects.get_or_create(user=request.user, course=course)
+    liked = True
+
+    if not created:
+        like.delete()
+        liked = False
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", "").lower():
+        return JsonResponse({
+            "status": "success",
+            "liked": liked,
+            "count": course.likes.count(),
+        })
+
+    return redirect("course_detail", slug=course.slug)
+
+
+@login_required
+def add_course_comment(request, course_id):
+    course = get_object_or_404(Course, id=course_id, status="APPROVED")
+
+    if request.method == "POST":
+        text = request.POST.get("text", "").strip()
+        if text:
+            comment = CourseComment.objects.create(user=request.user, course=course, text=text)
+            if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", "").lower():
+                return JsonResponse({
+                    "status": "success",
+                    "comment": {
+                        "user": comment.user.get_full_name() or comment.user.username,
+                        "text": comment.text,
+                        "created_at": comment.created_at.strftime("%b %d, %Y %H:%M"),
+                    },
+                    "count": course.comments.count(),
+                })
+            return redirect("course_detail", slug=course.slug)
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", "").lower():
+        return JsonResponse({"status": "error", "message": "Empty comment."}, status=400)
+
+    return redirect("course_detail", slug=course.slug)
+
 
 @login_required
 def course_detail(request, slug):

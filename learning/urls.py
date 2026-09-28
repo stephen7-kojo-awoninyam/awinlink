@@ -152,6 +152,18 @@ urlpatterns = [
     # =====================================================
 
     path(
+        "course/<int:course_id>/like/",
+        views.like_course,
+        name="like_course"
+    ),
+
+    path(
+        "course/<int:course_id>/comment/",
+        views.add_course_comment,
+        name="add_course_comment"
+    ),
+
+    path(
         "course/<int:course_id>/review/",
         views.review_course,
         name="review_course"
