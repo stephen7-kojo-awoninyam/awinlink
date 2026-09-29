@@ -5,6 +5,24 @@ from . import views
 
 urlpatterns = [
 
+    path(
+        "read-all/",
+        views.mark_all_notifications_read,
+        name="mark_all_notifications_read"
+    ),
+
+    path(
+        "push/config/",
+        views.push_config,
+        name="push_config"
+    ),
+
+    path(
+        "push/subscriptions/",
+        views.manage_push_subscription,
+        name="manage_push_subscription"
+    ),
+
 
     path(
         "",

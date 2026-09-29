@@ -7,9 +7,25 @@
 <div class="container mt-5">
 
 
-<h2>
-Notifications 🔔
-</h2>
+<div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+    <h2>Notifications 🔔</h2>
+    <label class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" id="notificationSoundToggle">
+        <span class="form-check-label">Notification sound</span>
+    </label>
+</div>
+
+
+{% if unread_notifications %}
+
+<form method="post" action="{% url 'mark_all_notifications_read' %}" class="mb-3">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-primary btn-sm">
+        Mark all as read
+    </button>
+</form>
+
+{% endif %}
 
 
 <hr>
@@ -49,7 +65,7 @@ Notifications 🔔
 
     <br>
 
-    {% if notification.notification_type == "MESSAGE" %}
+    {% if notification.notification_type == "MESSAGE" or notification.notification_type == "INCOMING_CALL" or notification.notification_type == "MISSED_CALL" %}
 
         <a
             href="{% url 'notification_detail' notification.id %}"
@@ -60,12 +76,12 @@ Notifications 🔔
 
     {% elif not notification.is_read %}
 
-        <a
-            href="{% url 'mark_notification_read' notification.id %}"
-            class="btn btn-primary btn-sm mt-3"
-        >
-            Mark as read
-        </a>
+        <form method="post" action="{% url 'mark_notification_read' notification.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm mt-3">
+                Mark as read
+            </button>
+        </form>
 
     {% endif %}
 

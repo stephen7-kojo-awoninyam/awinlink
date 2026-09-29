@@ -84,7 +84,7 @@ INSTALLED_APPS = [
     "onboarding",
     "domains",
     "messaging",
-    "notifications",
+    "notifications.apps.NotificationsConfig",
     "organizations",
     "opportunities",
     "search",
@@ -265,6 +265,13 @@ STATICFILES_STORAGE = (
     "whitenoise.storage.CompressedManifestStaticFilesStorage"
 )
 
+WEB_PUSH_PUBLIC_KEY = os.environ.get("WEB_PUSH_PUBLIC_KEY", "").strip()
+WEB_PUSH_PRIVATE_KEY = os.environ.get("WEB_PUSH_PRIVATE_KEY", "").strip()
+WEB_PUSH_SUBJECT = os.environ.get(
+    "WEB_PUSH_SUBJECT",
+    "mailto:admin@awinlink.com",
+).strip()
+
 
 # =====================================================
 # MEDIA FILES
@@ -272,7 +279,7 @@ STATICFILES_STORAGE = (
 
 MEDIA_URL = "/media/"
 
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
 
 
 # =====================================================

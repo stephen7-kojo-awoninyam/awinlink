@@ -1,0 +1,18 @@
+{
+  "name": "Awinlink",
+  "short_name": "Awinlink",
+  "description": "Awinlink talent network",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0866ff",
+  "icons": [
+    {
+      "src": "/static/img/awinlink-app.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

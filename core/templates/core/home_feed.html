@@ -1242,16 +1242,23 @@
 
                                         <div class="d-flex align-items-center">
 
-                                            {% if talent.profile_photo %}
-
-                                                <img
-                                                    src="{{ talent.profile_photo.url }}"
-                                                    width="55"
-                                                    height="55"
-                                                    class="rounded-circle me-3"
-                                                >
-
-                                            {% endif %}
+                                            <span class="feed-profile-avatar me-3">
+                                                {% if talent.profile_photo %}
+                                                    <img
+                                                        src="{{ talent.profile_photo.url }}"
+                                                        alt="{{ talent.user.get_full_name|default:talent.user.username }}"
+                                                        loading="lazy"
+                                                    >
+                                                {% elif talent.user.profile_picture %}
+                                                    <img
+                                                        src="{{ talent.user.profile_picture.url }}"
+                                                        alt="{{ talent.user.get_full_name|default:talent.user.username }}"
+                                                        loading="lazy"
+                                                    >
+                                                {% else %}
+                                                    <i class="bi bi-person-fill" aria-hidden="true"></i>
+                                                {% endif %}
+                                            </span>
 
                                             <div>
 
@@ -1326,23 +1333,35 @@
 
                                                 {% elif talent.connection.status == "REJECTED" %}
 
-                                                    <a
-                                                        href="{% url 'connections:send_connection_request' talent.user.id %}"
-                                                        class="btn btn-sm btn-outline-primary"
+                                                    <form
+                                                        method="post"
+                                                        action="{% url 'connections:send_connection_request' talent.user.id %}"
+                                                        class="connection-request-form d-inline-block"
                                                     >
-                                                        Connect
-                                                    </a>
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                            <i class="bi bi-person-plus me-1" aria-hidden="true"></i>
+                                                            Connect
+                                                        </button>
+                                                        <span class="connection-action-feedback visually-hidden" aria-live="polite"></span>
+                                                    </form>
 
                                                 {% endif %}
 
                                             {% else %}
 
-                                                <a
-                                                    href="{% url 'connections:send_connection_request' talent.user.id %}"
-                                                    class="btn btn-sm btn-outline-primary"
+                                                <form
+                                                    method="post"
+                                                    action="{% url 'connections:send_connection_request' talent.user.id %}"
+                                                    class="connection-request-form d-inline-block"
                                                 >
-                                                    Connect
-                                                </a>
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-person-plus me-1" aria-hidden="true"></i>
+                                                        Connect
+                                                    </button>
+                                                    <span class="connection-action-feedback visually-hidden" aria-live="polite"></span>
+                                                </form>
 
                                             {% endif %}
 
@@ -1384,31 +1403,36 @@
 
                         {% for organization in recommended_organizations %}
 
-                            <div class="mb-3">
-
-                                <strong>
-                                    {{ organization.name }}
-                                </strong>
-
-
-                                <br>
-
-
-                                <small>
-                                    {{ organization.country }}
-                                </small>
-
-
-                                <br>
-
-
+                            <div class="feed-organization-suggestion mb-3">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="feed-profile-avatar me-3">
+                                        {% if organization.logo %}
+                                            <img
+                                                src="{{ organization.logo.url }}"
+                                                alt="{{ organization.name }}"
+                                                loading="lazy"
+                                            >
+                                        {% elif organization.user and organization.user.profile_picture %}
+                                            <img
+                                                src="{{ organization.user.profile_picture.url }}"
+                                                alt="{{ organization.name }}"
+                                                loading="lazy"
+                                            >
+                                        {% else %}
+                                            <i class="bi bi-building-fill" aria-hidden="true"></i>
+                                        {% endif %}
+                                    </span>
+                                    <div class="feed-profile-meta">
+                                        <strong>{{ organization.name }}</strong>
+                                        <small class="text-muted">{{ organization.country }}</small>
+                                    </div>
+                                </div>
                                 <a
                                     href="{% url 'organization_profile' organization.id %}"
-                                    class="btn btn-sm btn-outline-success mt-1"
+                                    class="btn btn-sm btn-outline-success"
                                 >
                                     View
                                 </a>
-
                             </div>
 
 
@@ -1488,6 +1512,60 @@
                 });
             };
 
+            const bindConnectionForms = function () {
+                document.querySelectorAll('.connection-request-form').forEach(function (form) {
+                    form.addEventListener('submit', async function (event) {
+                        event.preventDefault();
+
+                        const button = this.querySelector('button[type="submit"]');
+                        const feedback = this.querySelector('.connection-action-feedback');
+                        const originalText = button.textContent.trim();
+                        button.disabled = true;
+                        button.setAttribute('aria-busy', 'true');
+                        button.textContent = 'Sending...';
+
+                        try {
+                            const response = await fetch(this.action, {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': csrfToken,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                },
+                                body: new FormData(this),
+                                credentials: 'same-origin'
+                            });
+                            const data = await response.json();
+                            if (!response.ok) {
+                                throw new Error(data.detail || 'Unable to send connection request.');
+                            }
+
+                            const states = {
+                                request_sent: ['Request sent', 'btn btn-sm btn-secondary'],
+                                incoming_request: ['Request received', 'btn btn-sm btn-outline-primary'],
+                                connected: ['Connected', 'btn btn-sm btn-success']
+                            };
+                            const [label, className] = states[data.state] || states.request_sent;
+                            button.textContent = label;
+                            button.className = className;
+                            button.removeAttribute('aria-busy');
+                            if (feedback) {
+                                feedback.textContent = data.detail || label;
+                                feedback.classList.remove('visually-hidden');
+                            }
+                        } catch (error) {
+                            button.disabled = false;
+                            button.removeAttribute('aria-busy');
+                            button.textContent = originalText;
+                            if (feedback) {
+                                feedback.textContent = error.message;
+                                feedback.classList.remove('visually-hidden');
+                            }
+                        }
+                    });
+                });
+            };
+
             const bindCommentForms = function (selector, listSelector, countSelector, emptyClass) {
                 document.querySelectorAll(selector).forEach(function (form) {
                     form.addEventListener('submit', async function (event) {
@@ -1553,6 +1631,7 @@
             bindLikeButtons('.like-button', 'like-label', 'like-count');
             bindLikeButtons('.event-like-button', 'event-like-label', 'event-like-count');
             bindLikeButtons('.course-like-button', 'course-like-label', 'course-like-count');
+            bindConnectionForms();
 
             bindCommentForms('.comment-form', 'comments-list-', 'comment-count-', 'no-comments-message');
             bindCommentForms('.event-comment-form', 'event-comments-list-', 'event-comment-count-', 'no-event-comments-message');

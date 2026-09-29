@@ -3,6 +3,7 @@ from notifications.models import Notification
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from datetime import timedelta
+from django.db import transaction
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -30,11 +31,19 @@ from .serializers import (
 CALL_RING_TIMEOUT = timedelta(seconds=30)
 
 
+@transaction.atomic
 def expire_ringing_call(call):
     """
     Mark a ringing call as missed when nobody answers
     within the allowed ringing time.
     """
+
+    call = (
+        Call.objects
+        .select_for_update()
+        .select_related("initiated_by", "conversation")
+        .get(pk=call.pk)
+    )
 
     if call.status != "RINGING":
         return False
@@ -101,6 +110,19 @@ def expire_ringing_call(call):
 
     for participant in ringing_participants:
 
+        Notification.objects.filter(
+            user=participant.user,
+            conversation=call.conversation,
+            notification_type="INCOMING_CALL",
+            is_read=False,
+        ).update(is_read=True)
+
+        caller_name = (
+            call.initiated_by.get_full_name() or call.initiated_by.username
+            if call.initiated_by
+            else "another user"
+        )
+
         Notification.objects.create(
             user=participant.user,
             sender=call.initiated_by,
@@ -108,7 +130,7 @@ def expire_ringing_call(call):
             message=(
                 f"You missed a "
                 f"{call.call_type.lower()} call from "
-                f"{call.initiated_by.get_full_name() or call.initiated_by.username}."
+                f"{caller_name}."
             ),
             conversation=call.conversation,
         )
@@ -1338,6 +1360,18 @@ class RejectCallAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if request.data.get("timed_out") is True:
+            if call.status == "RINGING" and expire_ringing_call(call):
+                return Response(
+                    {"detail": "Call marked as missed.", "status": "MISSED"},
+                    status=status.HTTP_200_OK,
+                )
+
+            return Response(
+                {"detail": "This call has not timed out."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
         participant.status = "REJECTED"
         participant.left_at = timezone.now()
 
@@ -1478,6 +1512,23 @@ class EndCallAPIView(APIView):
                     "You are no longer active in this call."
                 },
                 status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if (
+            call.status == "RINGING"
+            and call.initiated_by_id == request.user.id
+            and request.data.get("end_for_everyone")
+            and expire_ringing_call(call)
+        ):
+            call = (
+                Call.objects
+                .select_related("conversation", "initiated_by")
+                .prefetch_related("participants__user")
+                .get(pk=call.pk)
+            )
+            return Response(
+                CallSerializer(call).data,
+                status=status.HTTP_200_OK,
             )
 
         now = timezone.now()

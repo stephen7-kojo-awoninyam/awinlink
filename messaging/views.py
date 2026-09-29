@@ -853,7 +853,7 @@ def start_conversation(request, user_id, opportunity_id=None):
         if not connected:
 
             return redirect(
-                "connections_list"
+                "connections:connections_list"
             )
 
 

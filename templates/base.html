@@ -16,6 +16,11 @@
 
 <title>{% block title %}Awinlink{% endblock %}</title>
 
+<link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+<meta name="theme-color" content="#0866ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Awinlink">
+
 
 <!-- =====================================================
      BOOTSTRAP
@@ -871,6 +876,29 @@
 
 <main class="awinlink-content">
 
+    <aside
+        class="notification-permission-prompt"
+        id="notificationPermissionPrompt"
+        aria-live="polite"
+        hidden
+    >
+        <span class="notification-prompt-icon" aria-hidden="true">
+            <i class="bi bi-bell-fill"></i>
+        </span>
+        <span class="notification-prompt-copy">
+            <strong id="notificationPromptTitle">Stay in the loop</strong>
+            <span id="notificationPromptMessage">Get message and call alerts, even when Awinlink is closed.</span>
+        </span>
+        <span class="notification-prompt-actions">
+            <button class="btn btn-awinlink btn-sm" type="button" id="enableNotificationsButton">
+                Enable alerts
+            </button>
+            <button class="notification-prompt-dismiss" type="button" id="dismissNotificationsButton" aria-label="Not now" title="Not now">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+        </span>
+    </aside>
+
 
     <!-- DJANGO MESSAGES -->
 
@@ -965,6 +993,10 @@
 
 <script
     src="{% static 'js/main.js' %}"
+></script>
+
+<script
+    src="{% static 'js/notifications.js' %}"
 ></script>
 
 

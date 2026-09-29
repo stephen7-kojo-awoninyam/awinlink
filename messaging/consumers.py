@@ -413,4 +413,12 @@ class UserConsumer(AsyncWebsocketConsumer):
                     "last_name": event["caller_last_name"],
                 },
             })
-        )         
+        )
+
+    async def notification_created(self, event):
+        await self.send(
+            text_data=json.dumps({
+                "type": "notification_created",
+                "notification": event["notification"],
+            })
+        )

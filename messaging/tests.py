@@ -27,6 +27,29 @@ class MessagingUrlNamesTest(SimpleTestCase):
         self.assertEqual(reverse("messaging:start_coach_conversation", args=[11]), "/messages/start-coach/11/")
 
 
+class StartConversationTests(TestCase):
+    def test_unconnected_user_is_redirected_to_connections_page(self):
+        user_model = get_user_model()
+        sender = user_model.objects.create_user(
+            username="profile_visitor",
+            password="TestPass123!",
+        )
+        talent_user = user_model.objects.create_user(
+            username="profile_talent",
+            password="TestPass123!",
+        )
+        self.client.force_login(sender)
+
+        response = self.client.get(
+            reverse("messaging:start_conversation", args=[talent_user.id])
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("connections:connections_list"),
+        )
+
+
 class SendMessageAjaxTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(

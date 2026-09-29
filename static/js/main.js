@@ -3145,7 +3145,7 @@ function showIncomingCall(call) {
                     secondsRemaining <= 0
                 ) {
 
-                    rejectIncomingCall(call.call_id);
+                    rejectIncomingCall(call.call_id, true);
 
                 }
 
@@ -3393,7 +3393,8 @@ async function answerIncomingCall(call) {
 ========================================================= */
 
 async function rejectIncomingCall(
-    callId
+    callId,
+    timedOut = false
 ) {
 
     const id =
@@ -3425,7 +3426,11 @@ async function rejectIncomingCall(
                     },
 
                     credentials:
-                        "same-origin"
+                        "same-origin",
+
+                    body: JSON.stringify({
+                        timed_out: timedOut,
+                    })
 
                 }
             );
@@ -3585,6 +3590,14 @@ function connectGlobalUserSocket() {
                         data
                     );
 
+                }
+
+                if (data.type === "notification_created") {
+                    window.dispatchEvent(
+                        new CustomEvent("awinlink:notification", {
+                            detail: data.notification,
+                        })
+                    );
                 }
 
             } catch (error) {

@@ -6,6 +6,8 @@ from django.shortcuts import (
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
 from notifications.models import Notification
 from organizations.models import Organization
@@ -162,6 +164,7 @@ def unfollow_organization(request, organization_id):
 # =========================================================
 
 @login_required
+@require_POST
 def send_connection_request(request, user_id):
 
     receiver = get_object_or_404(
@@ -173,13 +176,29 @@ def send_connection_request(request, user_id):
     # CANNOT CONNECT WITH YOURSELF
     # -----------------------------------------------------
 
-    if request.user == receiver:
+    is_ajax = (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "").lower()
+    )
 
-        return redirect(
-            request.META.get(
-                "HTTP_REFERER",
-                "/"
+    def respond(state, connection=None, status_code=200, detail=""):
+        if is_ajax:
+            return JsonResponse(
+                {
+                    "state": state,
+                    "connection_id": connection.id if connection else None,
+                    "detail": detail,
+                },
+                status=status_code,
             )
+
+        return redirect(request.META.get("HTTP_REFERER", "/"))
+
+    if request.user == receiver:
+        return respond(
+            "error",
+            status_code=400,
+            detail="You cannot connect with yourself.",
         )
 
     # -----------------------------------------------------
@@ -208,23 +227,11 @@ def send_connection_request(request, user_id):
 
         # Already connected
         if existing_connection.status == "ACCEPTED":
-
-            return redirect(
-                request.META.get(
-                    "HTTP_REFERER",
-                    "/"
-                )
-            )
+            return respond("connected", existing_connection)
 
         # Request already pending
         if existing_connection.status == "PENDING":
-
-            return redirect(
-                request.META.get(
-                    "HTTP_REFERER",
-                    "/"
-                )
-            )
+            return respond("request_sent", existing_connection)
 
         # -------------------------------------------------
         # PREVIOUS REQUEST WAS REJECTED
@@ -232,13 +239,8 @@ def send_connection_request(request, user_id):
 
         if existing_connection.status == "REJECTED":
 
-            existing_connection.delete()
-
-            Connection.objects.create(
-                sender=request.user,
-                receiver=receiver,
-                status="PENDING"
-            )
+            existing_connection.status = "PENDING"
+            existing_connection.save(update_fields=["status", "updated_at"])
 
             Notification.objects.create(
                 user=receiver,
@@ -250,12 +252,7 @@ def send_connection_request(request, user_id):
                 )
             )
 
-            return redirect(
-                request.META.get(
-                    "HTTP_REFERER",
-                    "/"
-                )
-            )
+            return respond("request_sent", existing_connection)
 
     # =====================================================
     # RECEIVER ALREADY SENT A REQUEST TO CURRENT USER
@@ -268,13 +265,7 @@ def send_connection_request(request, user_id):
         # -------------------------------------------------
 
         if reverse_connection.status == "ACCEPTED":
-
-            return redirect(
-                request.META.get(
-                    "HTTP_REFERER",
-                    "/"
-                )
-            )
+            return respond("connected", reverse_connection)
 
         # -------------------------------------------------
         # THEY ALREADY SENT A PENDING REQUEST
@@ -287,12 +278,7 @@ def send_connection_request(request, user_id):
             # The current user should accept or reject
             # the existing request.
 
-            return redirect(
-                request.META.get(
-                    "HTTP_REFERER",
-                    "/"
-                )
-            )
+            return respond("incoming_request", reverse_connection)
 
         # -------------------------------------------------
         # THEIR PREVIOUS REQUEST WAS REJECTED
@@ -306,7 +292,7 @@ def send_connection_request(request, user_id):
     # CREATE NEW CONNECTION
     # =====================================================
 
-    Connection.objects.create(
+    connection = Connection.objects.create(
         sender=request.user,
         receiver=receiver,
         status="PENDING"
@@ -326,12 +312,7 @@ def send_connection_request(request, user_id):
         )
     )
 
-    return redirect(
-        request.META.get(
-            "HTTP_REFERER",
-            "/"
-        )
-    )
+    return respond("request_sent", connection)
 
 
 # =========================================================
