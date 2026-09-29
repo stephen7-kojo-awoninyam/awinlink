@@ -117,6 +117,16 @@
                                 "
                             >
 
+                        {% elif talent.user.profile_picture %}
+
+                            <img
+                                src="{{ talent.user.profile_picture.url }}"
+                                class="card-img-top"
+                                alt="{{ talent.user.get_full_name|default:talent.user.username }}"
+                                style="height:220px;object-fit:cover;"
+                                loading="lazy"
+                            >
+
                         {% else %}
 
                             <div

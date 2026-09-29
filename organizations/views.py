@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
+from django.views.decorators.http import require_POST
 from events.models import Event
 
 from .models import (
@@ -465,7 +466,14 @@ def organization_profile(request, organization_id):
     )
 
 
-    followers = organization.followers.count()
+    followers = organization.organization_followers.count()
+    is_following = (
+        request.user.is_authenticated
+        and OrganizationFollow.objects.filter(
+            user=request.user,
+            organization=organization,
+        ).exists()
+    )
 
 
 
@@ -481,7 +489,8 @@ def organization_profile(request, organization_id):
 
             "opportunities":opportunities,
 
-            "followers":followers
+            "followers": followers,
+            "is_following": is_following,
 
         }
 
@@ -494,7 +503,9 @@ def organization_profile(request, organization_id):
 def organization_directory(request):
 
 
-    organizations = Organization.objects.all().select_related(
+    organizations = Organization.objects.filter(
+        status="ACTIVE"
+    ).select_related(
 
         "category",
 
@@ -1073,6 +1084,7 @@ def organization_list(request):
     
     
 @login_required
+@require_POST
 def follow_organization(request, organization_id):
 
 
@@ -1104,6 +1116,7 @@ def follow_organization(request, organization_id):
     
     
 @login_required
+@require_POST
 def unfollow_organization(request, organization_id):
 
 

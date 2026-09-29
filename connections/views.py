@@ -112,7 +112,7 @@ def follow_organization(request, organization_id):
     # Notify only for a new follow
     if created:
 
-        if organization.user != request.user:
+        if organization.user and organization.user != request.user:
 
             Notification.objects.create(
                 user=organization.user,

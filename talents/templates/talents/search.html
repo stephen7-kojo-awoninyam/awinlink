@@ -141,20 +141,15 @@ Search Talents
 
 
 <div class="text-center">
-
-
-{% if talent.profile_photo %}
-
-
-<img src="{{ talent.profile_photo.url }}"
-class="rounded-circle"
-width="120"
-height="120">
-
-
-{% endif %}
-
-
+    <span class="talent-finder-avatar">
+        {% if talent.profile_photo %}
+            <img src="{{ talent.profile_photo.url }}" alt="{{ talent.user.get_full_name|default:talent.user.username }}" loading="lazy">
+        {% elif talent.user.profile_picture %}
+            <img src="{{ talent.user.profile_picture.url }}" alt="{{ talent.user.get_full_name|default:talent.user.username }}" loading="lazy">
+        {% else %}
+            <i class="bi bi-person-fill" aria-hidden="true"></i>
+        {% endif %}
+    </span>
 </div>
 
 

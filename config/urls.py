@@ -64,7 +64,7 @@ urlpatterns = [
 
 urlpatterns += [
     re_path(
-        r"^media/(?P<path>talents/(?:profile|cover)/[^/]+)$",
+        r"^media/(?P<path>(?:talents/(?:profile|cover)|organizations/(?:logos|covers))/[^/]+)$",
         serve,
         {"document_root": settings.MEDIA_ROOT},
         name="public_talent_media",

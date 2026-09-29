@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Invite Talent | Awinlink{% endblock %}
+
+{% block content %}
+<main class="container py-4" style="max-width:760px;">
+    <a class="small text-decoration-none" href="{% url 'opportunity_recommendations' opportunity.id %}">
+        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
+        Back to recommendations
+    </a>
+
+    <section class="card border-0 shadow-sm mt-3">
+        <div class="card-body p-4">
+            <h1 class="h3 mb-1">Invite {{ talent.user.get_full_name|default:talent.user.username }}</h1>
+            <p class="text-muted mb-4">For {{ opportunity.title }}</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <label for="invitationMessage" class="form-label">Message</label>
+                <textarea
+                    id="invitationMessage"
+                    class="form-control mb-3"
+                    name="message"
+                    rows="5"
+                    maxlength="4000"
+                    placeholder="Share why you think this opportunity could be a good fit."
+                ></textarea>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-send me-1" aria-hidden="true"></i>
+                        Send invitation
+                    </button>
+                    <a class="btn btn-outline-secondary" href="{% url 'opportunity_recommendations' opportunity.id %}">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </section>
+</main>
+{% endblock %}

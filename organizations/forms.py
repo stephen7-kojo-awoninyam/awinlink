@@ -30,7 +30,7 @@ class OrganizationForm(forms.ModelForm):
 
             "organization_size",
 
-            "level",
+                "cover_photo",
 
             "website",
 
@@ -41,6 +41,8 @@ class OrganizationForm(forms.ModelForm):
             "description",
 
             "logo",
+
+            "cover_photo",
 
         ]
 
@@ -110,8 +112,8 @@ class OrganizationForm(forms.ModelForm):
                     "placeholder": "City"
 
                 }
-
             ),
+
 
 
 

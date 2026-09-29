@@ -47,13 +47,7 @@ height="250">
 {{ organization.name }}
 
 {% if organization.verified %}
-
-<span class="badge bg-success">
-
-✓ Verified
-
-</span>
-
+    <span class="badge bg-success">Verified</span>
 {% endif %}
 
 </h2>
@@ -63,30 +57,12 @@ height="250">
 <p>
 
 {{ organization.description }}
-
 </p>
-
 
 <p>
-
-Followers:
-
-{{ organization.organization_followers.count }}
-
+    <strong>Followers:</strong>
+    {{ organization.organization_followers.count }}
 </p>
-
-
-<a href="{% url 'follow_organization' organization.id %}"
-
-class="btn btn-primary">
-
-Follow
-
-</a>
-
-
-</div>
-
 </div>
 
 
@@ -122,145 +98,33 @@ height="150">
 <div class="col-md-9">
 
 
-
 <h2>
-
-
-{{ organization.name }}
-
-
-
-{% if organization.verified %}
-
-<span class="badge bg-success">
-
-✓ Verified
-
-</span>
-
-{% endif %}
-
-
-
-{% if organization.official %}
-
-<span class="badge bg-primary">
-
-Official
-
-</span>
-
-{% endif %}
-
-
-
+    {{ organization.name }}
+    {% if organization.verified %}
+        <span class="badge bg-success">✓ Verified</span>
+    {% endif %}
+    {% if organization.official %}
+        <span class="badge bg-primary">Official</span>
+    {% endif %}
 </h2>
 
-
-
-
-
+<p>{{ organization.description }}</p>
+<p><strong>Category:</strong> {{ organization.category }}</p>
+<p><strong>Domain:</strong> {{ organization.domain }}</p>
 <p>
-
-{{ organization.description }}
-
+    <strong>Location:</strong>
+    {{ organization.city }}{% if organization.city %}, {% endif %}{{ organization.country }}
 </p>
-
-
-
-
-
-<p>
-
-<strong>
-Category:
-</strong>
-
-{{ organization.category }}
-
-</p>
-
-
-
-
-
-<p>
-
-<strong>
-Domain:
-</strong>
-
-{{ organization.domain }}
-
-</p>
-
-
-
-
-
-<p>
-
-<strong>
-Location:
-</strong>
-
-{{ organization.city }},
-{{ organization.country }}
-
-</p>
-
-
-
-
-
-
 {% if organization.website %}
-
-
-<p>
-
-<strong>
-Website:
-</strong>
-
-
-<a href="{{ organization.website }}"
-target="_blank">
-
-{{ organization.website }}
-
-</a>
-
-
-</p>
-
-
+    <p>
+        <strong>Website:</strong>
+        <a href="{{ organization.website }}" target="_blank" rel="noopener noreferrer">{{ organization.website }}</a>
+    </p>
 {% endif %}
 
-
-
-
-
 </div>
 
-
 </div>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- ================================= -->
-<!-- ORGANIZATION DETAILS -->
-<!-- ================================= -->
-
 
 
 <div class="row mt-4">
@@ -269,108 +133,33 @@ target="_blank">
 
 
 
-<div class="col-md-4">
+<div class="col-md-9">
 
 
-<div class="card text-center p-3">
-
-
-<h5>
-
-Level
-
-</h5>
-
-
-<h4>
-
-{{ organization.level }}
-
-</h4>
-
-
-</div>
-
-
-</div>
-
-
-
-
-
-
-<div class="col-md-4">
-
-
-<div class="card text-center p-3">
+<h2>
 
 
 <h5>
-
-Founded
-
-</h5>
-
-
-<h4>
-
-{{ organization.founded_year }}
-
-</h4>
-
-
+<div class="row g-3 mt-4">
+    <div class="col-md-4">
+        <div class="card h-100 text-center p-3">
+            <h5>Level</h5>
+            <p class="h4 mb-0">{{ organization.get_level_display }}</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 text-center p-3">
+            <h5>Founded</h5>
+            <p class="h4 mb-0">{{ organization.founded_year|default:"—" }}</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 text-center p-3">
+            <h5>Organization Size</h5>
+            <p class="h4 mb-0">{{ organization.get_organization_size_display|default:"—" }}</p>
+        </div>
+    </div>
 </div>
-
-
-</div>
-
-
-
-
-
-
-<div class="col-md-4">
-
-
-<div class="card text-center p-3">
-
-
-<h5>
-
-Organization Size
-
-</h5>
-
-
-<h4>
-
-{{ organization.organization_size }}
-
-</h4>
-
-
-</div>
-
-
-</div>
-
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- ================================= -->
-<!-- SPORTS PROFILE -->
-<!-- ================================= -->
-
 
 
 {% if organization.sports_profile %}
@@ -721,35 +510,19 @@ Followers:
 </p>
 
 
-{% if user.talent_profile %}
-
-
-<a href="{% url 'follow_organization' organization.id %}"
-
-class="btn btn-success">
-
-Follow Organization
-
-</a>
-
-
-<a href="{% url 'unfollow_organization' organization.id %}"
-
-class="btn btn-danger">
-
-Unfollow
-
-</a>
-
-
+{% if user.is_authenticated %}
+    {% if is_following %}
+        <form method="post" action="{% url 'unfollow_organization' organization.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary">Following · Unfollow</button>
+        </form>
+    {% else %}
+        <form method="post" action="{% url 'follow_organization' organization.id %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">Follow Organization</button>
+        </form>
+    {% endif %}
 {% endif %}
-
-<a href="{% url 'follow_organization' organization.id %}"
-class="btn btn-success">
-
-Follow Organization
-
-</a>
 
 </div>
 
