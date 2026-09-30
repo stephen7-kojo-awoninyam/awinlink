@@ -100,10 +100,10 @@ INSTALLED_APPS = [
     "science_technology",
     "others",
     "art",
-
     # Third-party
     "rest_framework",
     "channels",
+    "cloudinary_storage",
 ]
 
 
@@ -273,13 +273,31 @@ WEB_PUSH_SUBJECT = os.environ.get(
 ).strip()
 
 
+
 # =====================================================
-# MEDIA FILES
+# MEDIA FILES / CLOUDINARY
 # =====================================================
 
 MEDIA_URL = "/media/"
 
 MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
+
+
+# Cloudinary credentials
+CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "")
+CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "")
+
+
+# Django 6 storage configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 
 # =====================================================
