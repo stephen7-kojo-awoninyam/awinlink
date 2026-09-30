@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
-
+from dotenv import load_dotenv
 import dj_database_url
 
 
@@ -21,7 +21,7 @@ import dj_database_url
 # =====================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR / ".env")
 
 # =====================================================
 # SECURITY / ENVIRONMENT
@@ -293,6 +293,15 @@ CLOUDINARY_STORAGE = {
     "API_KEY": CLOUDINARY_API_KEY,
     "API_SECRET": CLOUDINARY_API_SECRET,
 }
+
+import cloudinary
+
+cloudinary.config(
+    cloud_name=CLOUDINARY_CLOUD_NAME,
+    api_key=CLOUDINARY_API_KEY,
+    api_secret=CLOUDINARY_API_SECRET,
+    secure=True,
+)
 
 
 # Django 6 storage configuration
