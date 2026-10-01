@@ -229,6 +229,17 @@ class UserRegistrationForm(UserCreationForm):
         ),
     )
 
+    role = forms.ChoiceField(
+        required=True,
+        choices=User.ROLE_CHOICES,
+        label="Account type",
+        widget=forms.RadioSelect(
+            attrs={
+                "required": True,
+            }
+        ),
+    )
+
     country = forms.ChoiceField(
         required=True,
         choices=[("", "Select your country")] + COUNTRIES,
@@ -309,6 +320,23 @@ class UserRegistrationForm(UserCreationForm):
             "password1",
             "password2",
         )
+
+    # -----------------------------------------------------
+    # ROLE VALIDATION
+    # -----------------------------------------------------
+
+    def clean_role(self):
+        role = self.cleaned_data.get("role")
+
+        if not role:
+            raise ValidationError("Please select your account type.")
+
+        valid_roles = {choice[0] for choice in User.ROLE_CHOICES}
+
+        if role not in valid_roles:
+            raise ValidationError("Please select a valid account type.")
+
+        return role
 
     # -----------------------------------------------------
     # USERNAME VALIDATION

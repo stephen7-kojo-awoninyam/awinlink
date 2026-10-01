@@ -100,7 +100,8 @@ Create Account | Awinlink
                     type="radio"
                     name="role"
                     value="ATHLETE"
-                    {% if form.role.value == "ATHLETE" or not form.role.value %}
+                    required
+                    {% if form.role.value == "ATHLETE" %}
                         checked
                     {% endif %}
                 >
@@ -130,6 +131,7 @@ Create Account | Awinlink
                     type="radio"
                     name="role"
                     value="ORGANIZATION"
+                    required
                     {% if form.role.value == "ORGANIZATION" %}
                         checked
                     {% endif %}
@@ -160,6 +162,7 @@ Create Account | Awinlink
                     type="radio"
                     name="role"
                     value="SCOUT"
+                    required
                     {% if form.role.value == "SCOUT" %}
                         checked
                     {% endif %}
@@ -190,6 +193,7 @@ Create Account | Awinlink
                     type="radio"
                     name="role"
                     value="COACH"
+                    required
                     {% if form.role.value == "COACH" %}
                         checked
                     {% endif %}

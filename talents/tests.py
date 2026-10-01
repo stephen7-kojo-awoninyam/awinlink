@@ -11,6 +11,16 @@ from PIL import Image
 from .models import TalentProfile
 
 
+@override_settings(
+	STORAGES={
+		"default": {
+			"BACKEND": "django.core.files.storage.FileSystemStorage",
+		},
+		"staticfiles": {
+			"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+		},
+	}
+)
 class TalentDashboardTests(TestCase):
 	def setUp(self):
 		self.user = get_user_model().objects.create_user(
@@ -28,6 +38,55 @@ class TalentDashboardTests(TestCase):
 			city="Accra",
 		)
 		self.client.force_login(self.user)
+
+	def test_edit_profile_keeps_user_and_talent_country_in_sync(self):
+		response = self.client.post(
+			reverse("edit_profile"),
+			{
+				"talent_category": "SPORTS",
+				"talent_area": "Basketball",
+				"headline": "Point guard",
+				"biography": "Regional basketball player.",
+				"country": "Kenya",
+				"city": "Nairobi",
+				"experience_level": "BEGINNER",
+				"preferred_work_type": "REMOTE",
+			},
+		)
+
+		self.assertRedirects(
+			response,
+			reverse("talent_dashboard"),
+			fetch_redirect_response=False,
+		)
+		self.profile.refresh_from_db()
+		self.user.refresh_from_db()
+		self.assertEqual(self.profile.country, "Kenya")
+		self.assertEqual(self.user.country, "Kenya")
+
+	def test_edit_profile_prefills_country_from_registration(self):
+		self.profile.country = ""
+		self.profile.save(update_fields=["country"])
+		self.user.country = "GH"
+		self.user.save(update_fields=["country"])
+
+		response = self.client.get(reverse("edit_profile"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.context["form"]["country"].value(), "Ghana")
+
+	def test_dashboard_uses_username_when_full_name_is_empty(self):
+		user = get_user_model().objects.create_user(
+			username="nameless_talent",
+			password="TestPass123!",
+		)
+		TalentProfile.objects.create(user=user)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse("talent_dashboard"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "nameless_talent")
 
 	def test_dashboard_renders_saved_talent_information(self):
 		dashboard_entry = self.client.get(reverse("dashboard"))

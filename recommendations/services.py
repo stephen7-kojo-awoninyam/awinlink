@@ -1,5 +1,6 @@
 from talents.models import TalentProfile
 from talents.services import ProfileStrengthService
+from django.utils import timezone
 from analytics.models import RecommendationHistory
 from feed.models import Post
 from connections.models import (
@@ -41,6 +42,75 @@ class RecommendationEngine:
 
 
     @staticmethod
+    def _coerce_numeric_value(value, default=0):
+        """
+        Normalize varied score payloads into a float.
+
+        Some downstream services may return ints, strings, or
+        nested dictionaries. The recommendation engine should
+        gracefully handle all of them instead of crashing.
+        """
+        if value is None:
+            return float(default)
+
+        if isinstance(value, dict):
+            for key in ("score", "value", "strength", "percentage"):
+                if key in value:
+                    return RecommendationEngine._coerce_numeric_value(
+                        value[key],
+                        default,
+                    )
+            return float(default)
+
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return float(default)
+
+
+    @staticmethod
+    def _apply_contextual_relevance_boost(
+        score,
+        matched_domain_ids,
+        matched_skill_ids,
+        related_skill_strengths,
+        candidate,
+    ):
+        """
+        Reward multi-signal matches that are clearly relevant.
+
+        A single weak signal should not outrank a profile that
+        matches the user's domain and skills while also looking
+        like a credible option.
+        """
+        if not candidate:
+            return score
+
+        has_domain_match = bool(matched_domain_ids)
+        has_skill_match = bool(matched_skill_ids)
+        has_related_signal = bool(related_skill_strengths)
+
+        if has_domain_match and has_skill_match:
+            score += 5
+        elif has_domain_match and has_related_signal:
+            score += 3
+        elif has_skill_match and has_related_signal:
+            score += 3
+
+        if (has_domain_match or has_skill_match) and getattr(
+            candidate,
+            "verified",
+            False,
+        ):
+            score += 2
+
+        if candidate.is_role_model and (has_domain_match or has_skill_match):
+            score += 2
+
+        return score
+
+
+    @staticmethod
     def record_recommendation(
         organization,
         talent,
@@ -65,7 +135,18 @@ class RecommendationEngine:
     @staticmethod
     def get_candidates(opportunity):
 
-        talents = TalentProfile.objects.all()
+        talents = TalentProfile.objects.select_related(
+            "user"
+        ).prefetch_related(
+            "domains",
+            "skills",
+            "experiences",
+            "portfolio_items",
+            "achievements",
+            "event_certificates",
+        ).filter(
+            profile_visibility__in=("PUBLIC", "ORGANIZATIONS")
+        )
 
         # =================================
         # DOMAIN FILTER
@@ -76,37 +157,6 @@ class RecommendationEngine:
             talents = talents.filter(
                 domains=opportunity.domain
             )
-
-        # =================================
-        # LOCATION FILTER
-        # =================================
-        #
-        # Opportunity location may be:
-        #
-        # Accra, Ghana
-        #
-        # TalentProfile.country may be:
-        #
-        # Ghana
-        #
-        # Therefore we extract the country portion.
-        #
-
-        if opportunity.location:
-
-            location_parts = [
-                part.strip()
-                for part in opportunity.location.split(",")
-                if part.strip()
-            ]
-
-            if location_parts:
-
-                country = location_parts[-1]
-
-                talents = talents.filter(
-                    country__icontains=country
-                )
 
         # =================================
         # AVAILABILITY FILTER
@@ -156,37 +206,35 @@ class RecommendationEngine:
         # =================================
 
 
-        required_skills = opportunity.skills.all()
+        skill_weights = {
+            skill_id: 1
+            for skill_id in opportunity.skills.values_list(
+                "id",
+                flat=True,
+            )
+        }
 
+        for requirement in opportunity.requirements.all():
+            skill_weights[requirement.skill_id] = max(
+                requirement.importance,
+                skill_weights.get(requirement.skill_id, 1),
+            )
 
-        if required_skills.exists():
-
-
-            matched_skills = talent.skills.filter(
-
-                id__in=required_skills.values_list(
-
+        if skill_weights:
+            matched_skill_ids = set(
+                talent.skills.filter(
+                    id__in=skill_weights,
+                ).values_list(
                     "id",
-
-                    flat=True
-
+                    flat=True,
                 )
-
-            ).count()
-
-
-
-            skill_score = (
-
-                matched_skills /
-
-                required_skills.count()
-
-            ) * 30
-
-
-
-            score += skill_score
+            )
+            matched_weight = sum(
+                weight
+                for skill_id, weight in skill_weights.items()
+                if skill_id in matched_skill_ids
+            )
+            score += (matched_weight / sum(skill_weights.values())) * 30
 
 
 
@@ -200,13 +248,20 @@ class RecommendationEngine:
         experience_count = talent.experiences.count()
 
 
-        score += min(
+        score += min(experience_count * 1.2, 6)
 
-            experience_count * 2,
-
-            10
-
+        experience_levels = {
+            "BEGINNER": 0,
+            "INTERMEDIATE": 1,
+            "EXPERT": 2,
+        }
+        talent_level = experience_levels.get(talent.experience_level)
+        opportunity_level = experience_levels.get(
+            opportunity.experience_level
         )
+        if talent_level is not None and opportunity_level is not None:
+            level_distance = abs(talent_level - opportunity_level)
+            score += max(4 - level_distance * 2, 0)
 
 
 
@@ -293,6 +348,19 @@ class RecommendationEngine:
             certificate_count,
             2
         )
+
+        if talent.preferred_work_type == opportunity.work_type:
+            score += 3
+
+        if opportunity.location:
+            location_text = opportunity.location.strip().casefold()
+            city = (talent.city or "").strip().casefold()
+            country = (talent.country or "").strip().casefold()
+
+            if city and city in location_text:
+                score += 3
+            elif country and country in location_text:
+                score += 2
 
 
 
@@ -770,13 +838,12 @@ class RecommendationEngine:
         # PROFILE STRENGTH
         # ============================================
 
-        strength = ProfileStrengthService.calculate_strength(
-            talent
+        strength = RecommendationEngine._coerce_numeric_value(
+            ProfileStrengthService.calculate_strength(talent),
+            0,
         )
 
-        score += (
-            strength / 100
-        ) * 10
+        score += (strength / 100) * 10
 
         # ============================================
         # EXPERIENCE
@@ -800,7 +867,7 @@ class RecommendationEngine:
         # ============================================================
 
     @staticmethod
-    def score_talent_for_discovery(source_talent, candidate):
+    def _score_talent_for_discovery_legacy(source_talent, candidate):
         """
         Calculate how relevant another talent is for discovery.
 
@@ -848,6 +915,17 @@ class RecommendationEngine:
             )
         )
 
+        matched_domain_ids = (
+            source_domain_ids &
+            candidate_domain_ids
+        )
+
+        if matched_domain_ids:
+            score += min(
+                len(matched_domain_ids) * 12.5,
+                25,
+            )
+
         source_skill_ids = set(
             source_talent.skills.values_list(
                 "id",
@@ -862,33 +940,16 @@ class RecommendationEngine:
             )
         )
 
-        # --------------------------------------------------------
-        # SHARED DOMAINS
-        # --------------------------------------------------------
-
-        matched_domain_ids = (
-            source_domain_ids &
-            candidate_domain_ids
-        )
-
-        score += min(
-            len(matched_domain_ids) * 15,
-            30
-        )
-
-        # --------------------------------------------------------
-        # EXACT SKILLS
-        # --------------------------------------------------------
-
         matched_skill_ids = (
             source_skill_ids &
             candidate_skill_ids
         )
 
-        score += min(
-            len(matched_skill_ids) * 5,
-            25
-        )
+        if matched_skill_ids:
+            score += min(
+                len(matched_skill_ids) * 5,
+                25,
+            )
 
         # --------------------------------------------------------
         # RELATED SKILLS
@@ -903,32 +964,24 @@ class RecommendationEngine:
         # The relationship strength contributes to the score.
         #
 
-        related_skill_matches = (
-            RecommendationEngine
-            .get_related_skill_matches(
-                source_talent,
-                candidate
-            )
-        )
-
-        # Do not double-count exact skill matches.
         related_skill_matches = [
             match
-            for match in related_skill_matches
-            if match["related_skill"].id
-            not in matched_skill_ids
+            for match in RecommendationEngine.get_related_skill_matches(
+                source_talent,
+                candidate,
+            )
+            if match["related_skill"].id not in matched_skill_ids
         ]
 
         if related_skill_matches:
-
             related_score = sum(
-                match["strength"] * 5
+                max(0, min(1, match["strength"])) * 5
                 for match in related_skill_matches
             )
 
             score += min(
                 related_score,
-                15
+                15,
             )
 
         # --------------------------------------------------------
@@ -1171,40 +1224,62 @@ class RecommendationEngine:
         # RELATED SKILLS
         # --------------------------------------------------------
 
-        related_skill_names = set()
+        related_skill_matches = (
+            RecommendationEngine
+            .get_related_skill_matches(
+                source_talent,
+                candidate,
+            )
+        )
 
-        if source_talent.domains.exists():
+        related_skill_names = []
 
-            related_skill_names = (
+        if related_skill_matches:
+            related_skill_names = [
+                match["related_skill"].name
+                for match in related_skill_matches
+                if match["related_skill"].name
+                and match["related_skill"].id not in matched_skill_ids
+            ]
+
+        if related_skill_names:
+            reasons.append(
+                "Has skills related to your interests, "
+                + ", ".join(
+                    name for name in related_skill_names[:3]
+                )
+            )
+
+        if not related_skill_names and source_talent.domains.exists():
+            related_skill_names = list(
                 RecommendationEngine
                 .get_related_skills_for_domains(
                     source_talent.domains.all()
                 )
             )
 
-        related_skills = (
-            RecommendationEngine
-            .get_matching_skills(
-                candidate,
-                related_skill_names
-            )
-        )
-
-        related_skills = [
-            skill
-            for skill in related_skills
-            if skill.id not in matched_skill_ids
-        ]
-
-        if related_skills:
-
-            reasons.append(
-                "Has skills related to your interests, "
-                + ", ".join(
-                    skill.name
-                    for skill in related_skills[:3]
+            related_skills = (
+                RecommendationEngine
+                .get_matching_skills(
+                    candidate,
+                    related_skill_names,
                 )
             )
+
+            related_skills = [
+                skill
+                for skill in related_skills
+                if skill.id not in matched_skill_ids
+            ]
+
+            if related_skills:
+                reasons.append(
+                    "Has skills related to your interests, "
+                    + ", ".join(
+                        skill.name
+                        for skill in related_skills[:3]
+                    )
+                )
 
         # --------------------------------------------------------
         # CROSS-CATEGORY DISCOVERY
@@ -1229,7 +1304,7 @@ class RecommendationEngine:
             and (
                 matched_domain_ids
                 or matched_skill_ids
-                or related_skills
+                or bool(related_skill_matches)
             )
         ):
 
@@ -1321,6 +1396,7 @@ class RecommendationEngine:
         candidates = (
             TalentProfile.objects
             .select_related("user")
+            .filter(profile_visibility="PUBLIC")
             .prefetch_related(
                 "domains",
                 "skills",
@@ -1436,24 +1512,14 @@ class RecommendationEngine:
             )
 
             # Related skill match
-            related_skill_names = (
-                RecommendationEngine
-                .get_related_skills_for_domains(
-                    talent.domains.all()
-                )
-            )
-
-            related_skills = (
-                RecommendationEngine
-                .get_matching_skills(
+            related_skill_matches = (
+                RecommendationEngine.get_related_skill_matches(
+                    talent,
                     candidate,
-                    related_skill_names
                 )
             )
 
-            has_related_skill = bool(
-                related_skills
-            )
+            has_related_skill = bool(related_skill_matches)
 
             # --------------------------------------------------------
             # EXCLUDE WEAK DISCOVERY MATCHES
@@ -1525,24 +1591,14 @@ class RecommendationEngine:
             )
 
             # Related skill relationship
-            related_skill_names = (
-                RecommendationEngine
-                .get_related_skills_for_domains(
-                    talent.domains.all()
-                )
-            )
-
-            related_skills = (
-                RecommendationEngine
-                .get_matching_skills(
+            related_skill_matches = (
+                RecommendationEngine.get_related_skill_matches(
+                    talent,
                     candidate,
-                    related_skill_names
                 )
             )
 
-            has_related_skill = bool(
-                related_skills
-            )
+            has_related_skill = bool(related_skill_matches)
 
             # --------------------------------------------------------
             # CLASSIFY DISCOVERY
@@ -1581,8 +1637,12 @@ class RecommendationEngine:
         # --------------------------------------------------------
 
         recommendations.sort(
-            key=lambda item: item["score"],
-            reverse=True
+            key=lambda item: (
+                item["score"],
+                item["talent"].verified,
+                item["talent"].is_role_model,
+            ),
+            reverse=True,
         )
 
         return recommendations[:limit]
@@ -1649,15 +1709,17 @@ class RecommendationEngine:
 
         Scoring:
             Shared domains       = 25
-            Exact skills         = 25
+            Exact skills         = 20
             Related skills       = 15
-            Same talent category = 10
+            Same talent category = 7
             Experience           = 5
             Achievements         = 5
             Certifications       = 5
             Profile strength     = 5
-            Same country         = 3
-            Same city            = 2
+            Verified profile     = 5
+            Role Model           = 5
+            Same country         = 2
+            Same city            = 1
         """
 
         if not source_talent or not candidate:
@@ -1727,44 +1789,32 @@ class RecommendationEngine:
         if matched_skill_ids:
             score += min(
                 len(matched_skill_ids) * 5,
-                25
+                20
             )
 
         # --------------------------------------------------------
         # RELATED SKILLS — 15 POINTS
         # --------------------------------------------------------
 
-        related_skill_names = set()
+        related_skill_strengths = {}
+        for match in RecommendationEngine.get_related_skill_matches(
+            source_talent,
+            candidate,
+        ):
+            related_skill = match["related_skill"]
+            if related_skill.id in matched_skill_ids:
+                continue
 
-        if source_domain_ids:
-
-            related_skill_names = (
-                RecommendationEngine
-                .get_related_skills_for_domains(
-                    source_talent.domains.all()
-                )
+            strength = max(0, min(1, match["strength"]))
+            related_skill_strengths[related_skill.id] = max(
+                related_skill_strengths.get(related_skill.id, 0),
+                strength,
             )
 
-        related_skills = (
-            RecommendationEngine
-            .get_matching_skills(
-                candidate,
-                related_skill_names
-            )
+        score += min(
+            sum(sorted(related_skill_strengths.values(), reverse=True)[:3]) * 5,
+            15,
         )
-
-        # Remove exact matches so they are not counted twice.
-        related_skills = [
-            skill
-            for skill in related_skills
-            if skill.id not in matched_skill_ids
-        ]
-
-        if related_skills:
-            score += min(
-                len(related_skills) * 5,
-                15
-            )
 
         # --------------------------------------------------------
         # TALENT CATEGORY — 10 POINTS
@@ -1787,7 +1837,7 @@ class RecommendationEngine:
             and candidate_category
             and source_category == candidate_category
         ):
-            score += 10
+            score += 7
 
         # IMPORTANT:
         # Different categories are NOT penalized.
@@ -1831,17 +1881,24 @@ class RecommendationEngine:
 
         certificates_manager = getattr(
             candidate,
-            "certificates",
+            "event_certificates",
             None
         )
 
+        certificate_count = 0
         if certificates_manager:
             certificate_count = certificates_manager.count()
 
-            score += min(
-                certificate_count,
-                5
-            )
+        certifications_manager = getattr(
+            candidate,
+            "certifications",
+            None
+        )
+
+        if certifications_manager:
+            certificate_count += certifications_manager.count()
+
+        score += min(certificate_count, 5)
 
         # --------------------------------------------------------
         # PROFILE STRENGTH — 5 POINTS
@@ -1853,16 +1910,13 @@ class RecommendationEngine:
                 .calculate_strength(candidate)
             )
 
-            if isinstance(profile_strength, dict):
-                strength_value = profile_strength.get(
-                    "score",
-                    0
-                )
-            else:
-                strength_value = profile_strength
+            strength_value = RecommendationEngine._coerce_numeric_value(
+                profile_strength,
+                0,
+            )
 
             score += min(
-                float(strength_value) / 20,
+                strength_value / 20,
                 5
             )
 
@@ -1870,7 +1924,25 @@ class RecommendationEngine:
             pass
 
         # --------------------------------------------------------
-        # SAME COUNTRY — 3 POINTS
+        # PROFILE QUALITY — 10 POINTS
+        # --------------------------------------------------------
+
+        if candidate.verified:
+            score += 5
+
+        if candidate.is_role_model:
+            score += 5
+
+        score = RecommendationEngine._apply_contextual_relevance_boost(
+            score,
+            matched_domain_ids,
+            matched_skill_ids,
+            related_skill_strengths,
+            candidate,
+        )
+
+        # --------------------------------------------------------
+        # SAME COUNTRY — 2 POINTS
         # --------------------------------------------------------
 
         if (
@@ -1879,10 +1951,10 @@ class RecommendationEngine:
             and source_talent.country.strip().lower()
             == candidate.country.strip().lower()
         ):
-            score += 3
+            score += 2
 
         # --------------------------------------------------------
-        # SAME CITY — 2 POINTS
+        # SAME CITY — 1 POINT
         # --------------------------------------------------------
 
         if (
@@ -1891,7 +1963,7 @@ class RecommendationEngine:
             and source_talent.city.strip().lower()
             == candidate.city.strip().lower()
         ):
-            score += 2
+            score += 1
 
         # --------------------------------------------------------
         # FINAL SCORE
@@ -2086,13 +2158,12 @@ class RecommendationEngine:
         # PROFILE STRENGTH
         # ============================================
 
-        strength = ProfileStrengthService.calculate_strength(
-            role_model
+        strength = RecommendationEngine._coerce_numeric_value(
+            ProfileStrengthService.calculate_strength(role_model),
+            0,
         )
 
-        score += (
-            strength / 100
-        ) * 10
+        score += (strength / 100) * 10
 
         # ============================================
         # LOCATION RELEVANCE
@@ -2135,7 +2206,8 @@ class RecommendationEngine:
         # ============================================
 
         role_models = TalentProfile.objects.filter(
-            is_role_model=True
+            is_role_model=True,
+            profile_visibility="PUBLIC",
         ).exclude(
             user_id=talent.user_id
         )
@@ -2195,8 +2267,12 @@ class RecommendationEngine:
         # ============================================
 
         recommendations.sort(
-            key=lambda item: item["score"],
-            reverse=True
+            key=lambda item: (
+                item["score"],
+                item["role_model"].verified,
+                item["role_model"].is_role_model,
+            ),
+            reverse=True,
         )
 
         # ============================================
@@ -2689,6 +2765,9 @@ class RecommendationEngine:
         if course.status != "APPROVED":
             return 0
 
+        if course.enrollments.filter(user_id=user.id).exists():
+            return 0
+
         # Do not recommend the talent's own course
         if course.creator_id == user.id:
             return 0
@@ -3011,6 +3090,8 @@ class RecommendationEngine:
             status="APPROVED"
         ).exclude(
             creator_id=talent.user_id
+        ).exclude(
+            enrollments__user_id=talent.user_id
         )
 
         recommendations = []
@@ -3063,11 +3144,22 @@ class RecommendationEngine:
         if event.status != "PUBLISHED":
             return 0
 
+        now = timezone.now()
+        if event.registration_deadline <= now or event.end_date <= now:
+            return 0
+
         # Do not recommend events the talent
         # has already registered for.
         if event.registrations.filter(
             talent=talent
+        ).exclude(
+            status__in=("CANCELLED", "REJECTED")
         ).exists():
+            return 0
+
+        if event.capacity and event.registrations.filter(
+            status__in=("REGISTERED", "APPROVED", "ATTENDED")
+        ).count() >= event.capacity:
             return 0
 
         # ==========================================
@@ -3207,11 +3299,18 @@ class RecommendationEngine:
 
         from events.models import Event
 
+        now = timezone.now()
         events = Event.objects.filter(
-            status="PUBLISHED"
-        ).exclude(
-            registrations__talent=talent
-        ).distinct()
+            status="PUBLISHED",
+            registration_deadline__gt=now,
+            end_date__gt=now,
+        ).select_related(
+            "category",
+            "category__domain",
+        ).prefetch_related(
+            "registrations",
+            "feedback",
+        )
 
         recommendations = []
 
@@ -4569,11 +4668,18 @@ class RecommendationEngine:
         if not user:
             return []
 
+        from django.db.models import Q
+        from django.utils import timezone
+
         opportunities = Opportunity.objects.filter(
-            active=True
+            Q(deadline__isnull=True)
+            | Q(deadline__gte=timezone.localdate()),
+            active=True,
+        ).exclude(
+            applications__talent__user=user
         ).select_related(
             "organization"
-        )
+        ).distinct()
 
         recommendations = []
 

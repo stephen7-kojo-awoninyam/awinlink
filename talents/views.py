@@ -12,6 +12,7 @@ from notifications.models import Notification
 from .services import ProfileStrengthService
 from django.db.models import Q
 from organizations.models import Organization
+from accounts.forms import COUNTRIES
 from shortlists.models import Shortlist
 from analytics.models import RecommendationHistory
 from .models import Experience
@@ -584,7 +585,9 @@ def edit_profile(request):
 
         if form.is_valid():
 
-            form.save()
+            talent = form.save()
+            request.user.country = talent.country
+            request.user.save(update_fields=["country"])
 
 
             return redirect(
@@ -598,6 +601,13 @@ def edit_profile(request):
         form = TalentProfileForm(
             instance=talent
         )
+
+        if not talent.country and request.user.country:
+            country_names = dict(COUNTRIES)
+            form.initial["country"] = country_names.get(
+                request.user.country,
+                request.user.country,
+            )
 
 
     return render(

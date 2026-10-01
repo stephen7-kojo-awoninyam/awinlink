@@ -32,7 +32,6 @@ def recommendations(request, opportunity_id):
     organization = opportunity.organization
 
     results = RecommendationEngine.generate_for_organization(
-        organization,
         opportunity
     )
 
