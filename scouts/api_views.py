@@ -20,6 +20,7 @@ from .serializers import (
 )
 
 from talents.models import TalentProfile
+from api.serializers import TalentProfileSerializer
 
 
 # ============================================================
@@ -101,29 +102,24 @@ class ScoutTalentListAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
 
-    serializer_class = ScoutTalentViewSerializer
+    serializer_class = TalentProfileSerializer
 
     def get_queryset(self):
 
         if self.request.user.role != "SCOUT":
 
-            return ScoutTalentView.objects.none()
+            return TalentProfile.objects.none()
 
-        scout = getattr(
-            self.request.user,
-            "scout_profile",
-            None
-        )
-
-        if scout is None:
-
-            return ScoutTalentView.objects.none()
-
-        return ScoutTalentView.objects.filter(
-            scout=scout
+        return TalentProfile.objects.filter(
+            profile_visibility="PUBLIC",
         ).select_related(
-            "talent",
-            "talent__user"
+            "user",
+        ).prefetch_related(
+            "skills",
+            "domains",
+        ).order_by(
+            "-verified",
+            "user__username",
         )
 
 
@@ -153,7 +149,8 @@ class ScoutViewTalentAPIView(APIView):
 
         talent = get_object_or_404(
             TalentProfile,
-            id=talent_id
+            id=talent_id,
+            profile_visibility="PUBLIC",
         )
 
         talent_view = ScoutTalentView.objects.create(
@@ -196,7 +193,8 @@ class MyScoutTalentViewsAPIView(generics.ListAPIView):
             return ScoutTalentView.objects.none()
 
         return ScoutTalentView.objects.filter(
-            scout=scout
+            scout=scout,
+            talent__profile_visibility="PUBLIC",
         ).select_related(
             "talent",
             "talent__user"
@@ -229,7 +227,8 @@ class ScoutFollowTalentAPIView(APIView):
 
         talent = get_object_or_404(
             TalentProfile,
-            id=talent_id
+            id=talent_id,
+            profile_visibility="PUBLIC",
         )
 
         follow, created = ScoutTalentFollow.objects.get_or_create(
@@ -321,7 +320,8 @@ class MyFollowedTalentsAPIView(generics.ListAPIView):
             return ScoutTalentFollow.objects.none()
 
         return ScoutTalentFollow.objects.filter(
-            scout=scout
+            scout=scout,
+            talent__profile_visibility="PUBLIC",
         ).select_related(
             "talent",
             "talent__user"
@@ -354,7 +354,8 @@ class ScoutBookmarkTalentAPIView(APIView):
 
         talent = get_object_or_404(
             TalentProfile,
-            id=talent_id
+            id=talent_id,
+            profile_visibility="PUBLIC",
         )
 
         bookmark, created = ScoutTalentBookmark.objects.get_or_create(
@@ -412,7 +413,8 @@ class ScoutBookmarkUpdateAPIView(APIView):
         bookmark = get_object_or_404(
             ScoutTalentBookmark,
             id=bookmark_id,
-            scout=scout
+            scout=scout,
+            talent__profile_visibility="PUBLIC",
         )
 
         serializer = ScoutTalentBookmarkSerializer(
@@ -500,7 +502,8 @@ class MyScoutBookmarksAPIView(generics.ListAPIView):
             return ScoutTalentBookmark.objects.none()
 
         return ScoutTalentBookmark.objects.filter(
-            scout=scout
+            scout=scout,
+            talent__profile_visibility="PUBLIC",
         ).select_related(
             "talent",
             "talent__user"

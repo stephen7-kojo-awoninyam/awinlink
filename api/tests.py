@@ -6,6 +6,7 @@ from domains.models import TalentDomain
 from opportunities.models import Opportunity
 from organizations.models import Organization
 from talents.models import TalentProfile
+from others.models import OtherTalentProfile
 
 
 User = get_user_model()
@@ -124,3 +125,129 @@ class ApplicationDetailPermissionTests(APITestCase):
 		)
 
 		self.assertEqual(response.status_code, 201)
+
+
+class OtherTalentProfileApiTests(APITestCase):
+	def setUp(self):
+		self.owner = User.objects.create_user(
+			username="other_talent",
+			password="test-password",
+			role="ATHLETE",
+		)
+		self.talent = TalentProfile.objects.create(
+			user=self.owner,
+			talent_category="OTHERS",
+		)
+		self.url = "/api/talents/me/others/"
+
+	def test_owner_can_create_read_and_update_other_profile(self):
+		self.client.force_authenticate(user=self.owner)
+
+		create_response = self.client.post(
+			self.url,
+			{
+				"specialization": "Entrepreneur",
+				"years_of_experience": 4,
+			},
+			format="json",
+		)
+
+		self.assertEqual(create_response.status_code, 201)
+		self.assertEqual(
+			create_response.data["specialization"],
+			"Entrepreneur",
+		)
+		self.assertEqual(
+			OtherTalentProfile.objects.get(talent=self.talent).years_of_experience,
+			4,
+		)
+
+		read_response = self.client.get(self.url)
+		self.assertEqual(read_response.status_code, 200)
+
+		update_response = self.client.patch(
+			self.url,
+			{"description": "Builds community businesses."},
+			format="json",
+		)
+		self.assertEqual(update_response.status_code, 200)
+		self.assertEqual(
+			update_response.data["description"],
+			"Builds community businesses.",
+		)
+
+	def test_other_profile_is_included_in_visible_talent_detail(self):
+		OtherTalentProfile.objects.create(
+			talent=self.talent,
+			specialization="Consultant",
+		)
+		self.client.force_authenticate(user=self.owner)
+
+		response = self.client.get(f"/api/talents/{self.talent.id}/")
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(
+			response.data["other_profile"]["specialization"],
+			"Consultant",
+		)
+
+	def test_talent_without_other_profile_serializes_null(self):
+		self.client.force_authenticate(user=self.owner)
+
+		response = self.client.get(f"/api/talents/{self.talent.id}/")
+
+		self.assertEqual(response.status_code, 200)
+		self.assertIsNone(response.data["other_profile"])
+
+	def test_api_cannot_read_or_update_another_talents_profile(self):
+		OtherTalentProfile.objects.create(
+			talent=self.talent,
+			specialization="Private",
+		)
+		other_user = User.objects.create_user(
+			username="another_talent",
+			password="test-password",
+			role="ATHLETE",
+		)
+		TalentProfile.objects.create(
+			user=other_user,
+			talent_category="OTHERS",
+		)
+		self.client.force_authenticate(user=other_user)
+
+		read_response = self.client.get(self.url)
+		update_response = self.client.patch(
+			self.url,
+			{"specialization": "Unauthorized change"},
+			format="json",
+		)
+
+		self.assertEqual(read_response.status_code, 404)
+		self.assertEqual(update_response.status_code, 404)
+		self.assertEqual(
+			self.talent.other_profile.specialization,
+			"Private",
+		)
+
+	def test_endpoint_rejects_non_others_categories(self):
+		self.talent.talent_category = "SPORTS"
+		self.talent.save(update_fields=["talent_category"])
+		self.client.force_authenticate(user=self.owner)
+
+		response = self.client.get(self.url)
+
+		self.assertEqual(response.status_code, 400)
+
+	def test_create_rejects_invalid_urls(self):
+		self.client.force_authenticate(user=self.owner)
+
+		response = self.client.post(
+			self.url,
+			{"website": "not-a-url"},
+			format="json",
+		)
+
+		self.assertEqual(response.status_code, 400)
+		self.assertFalse(
+			OtherTalentProfile.objects.filter(talent=self.talent).exists()
+		)

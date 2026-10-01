@@ -70,11 +70,6 @@ urlpatterns = [
     ),
     
     path(
-        "talents/",
-        views.scout_talent_list,
-        name="scout_talent_list"
-    ),
-    path(
         "bookmarks/",
         views.scout_bookmarked_talents,
         name="scout_bookmarked_talents"

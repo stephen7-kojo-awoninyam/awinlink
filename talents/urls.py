@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from others.views import other_profile_setup as other_talent_profile_setup
 
 
 urlpatterns = [
@@ -175,7 +176,7 @@ path(
 
 path(
     "other-profile-setup/",
-    views.other_profile_setup,
+    other_talent_profile_setup,
     name="other_profile_setup"
 ),
 ]

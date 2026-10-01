@@ -68,18 +68,24 @@
                             <div class="d-flex gap-2 mt-3">
 
                                 <a
-                                    href="{% url 'talent_detail' bookmark.talent.id %}"
+                                    href="{% url 'scout_talent_detail' bookmark.talent.id %}"
                                     class="btn btn-primary btn-sm"
                                 >
                                     View Profile
                                 </a>
 
-                                <a
-                                    href="{% url 'remove_bookmark' bookmark.talent.id %}"
-                                    class="btn btn-outline-danger btn-sm"
+                                <form
+                                    method="POST"
+                                    action="{% url 'remove_bookmark' bookmark.talent.id %}"
                                 >
-                                    Remove
-                                </a>
+                                    {% csrf_token %}
+                                    <button
+                                        type="submit"
+                                        class="btn btn-outline-danger btn-sm"
+                                    >
+                                        Remove
+                                    </button>
+                                </form>
 
                             </div>
 

@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate
 from django.db import models
 from django.db.models import Q
 from talents.models import TalentProfile, RoleModelAssignment
+from others.models import OtherTalentProfile
 from talents.services import FollowerAnalyticsService
 from .serializers import EventRecommendationSerializer, RoleModelAssignmentSerializer
 from accounts.models import User
@@ -41,6 +42,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import (
     UserSerializer,
     TalentProfileSerializer,
+    OtherTalentProfileSerializer,
     OrganizationSerializer,
     OpportunitySerializer,
     OpportunityCreateSerializer,
@@ -161,6 +163,7 @@ class TalentListAPIView(APIView):
         talents = (
             visible_talent_profiles_for(request.user)
             .select_related("user")
+            .select_related("other_profile")
             .prefetch_related(
                 "domains",
                 "skills",
@@ -196,7 +199,8 @@ class TalentDetailAPIView(APIView):
             talent = (
                     visible_talent_profiles_for(request.user)
                 .select_related("user")
-                .prefetch_related(
+                    .select_related("other_profile")
+                    .prefetch_related(
                     "domains",
                     "skills",
                     "achievements",
@@ -240,6 +244,7 @@ class MyTalentProfileAPIView(APIView):
             talent = (
                 TalentProfile.objects
                 .select_related("user")
+                .select_related("other_profile")
                 .prefetch_related(
                     "domains",
                     "skills",
@@ -269,6 +274,125 @@ class MyTalentProfileAPIView(APIView):
         return Response(
             serializer.data,
             status=status.HTTP_200_OK
+        )
+
+
+# =====================================================
+# MY OTHER TALENT PROFILE API
+# =====================================================
+
+class MyOtherTalentProfileAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get_talent(self, request):
+        if request.user.role != "ATHLETE":
+            return None, Response(
+                {
+                    "detail": "Only talent accounts can manage this profile."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            talent = request.user.talent_profile
+        except TalentProfile.DoesNotExist:
+            return None, Response(
+                {
+                    "detail": "You do not have a talent profile."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if talent.talent_category != "OTHERS":
+            return None, Response(
+                {
+                    "detail": (
+                        "This endpoint is only available to talents "
+                        "in the Others category."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return talent, None
+
+    def get(self, request):
+        talent, error_response = self.get_talent(request)
+        if error_response:
+            return error_response
+
+        try:
+            profile = talent.other_profile
+        except OtherTalentProfile.DoesNotExist:
+            return Response(
+                {
+                    "detail": "The other-talent profile has not been created."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(
+            OtherTalentProfileSerializer(profile).data,
+            status=status.HTTP_200_OK,
+        )
+
+    def post(self, request):
+        talent, error_response = self.get_talent(request)
+        if error_response:
+            return error_response
+
+        if OtherTalentProfile.objects.filter(talent=talent).exists():
+            return Response(
+                {
+                    "detail": "The other-talent profile already exists."
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = OtherTalentProfileSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        profile = serializer.save(talent=talent)
+        return Response(
+            OtherTalentProfileSerializer(profile).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def patch(self, request):
+        talent, error_response = self.get_talent(request)
+        if error_response:
+            return error_response
+
+        try:
+            profile = talent.other_profile
+        except OtherTalentProfile.DoesNotExist:
+            return Response(
+                {
+                    "detail": "The other-talent profile has not been created."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = OtherTalentProfileSerializer(
+            profile,
+            data=request.data,
+            partial=True,
+        )
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        profile = serializer.save()
+        return Response(
+            OtherTalentProfileSerializer(profile).data,
+            status=status.HTTP_200_OK,
         )
 
 

@@ -13,6 +13,7 @@ from .views import (
     TalentListAPIView,
     TalentDetailAPIView,
     MyTalentProfileAPIView,
+    MyOtherTalentProfileAPIView,
     OrganizationListAPIView,
     OrganizationDetailAPIView,
     MyOrganizationAPIView,
@@ -139,6 +140,12 @@ urlpatterns = [
         "talents/me/",
         MyTalentProfileAPIView.as_view(),
         name="my_talent_profile"
+    ),
+
+    path(
+        "talents/me/others/",
+        MyOtherTalentProfileAPIView.as_view(),
+        name="my_other_talent_profile"
     ),
 
     path(

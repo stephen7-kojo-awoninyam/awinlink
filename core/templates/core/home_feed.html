@@ -271,7 +271,7 @@
                                             </h6>
 
                                             <small class="text-muted">
-                                                {{ post.author.get_role_display }}
+                                                {{ post.talent.get_talent_category_display|default:post.author.get_role_display }}
                                             </small>
 
                                         </div>

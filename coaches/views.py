@@ -292,7 +292,9 @@ def coach_talent_directory(request):
 
     talents = TalentProfile.objects.select_related(
         "user"
-    ).all().order_by(
+    ).filter(
+        profile_visibility="PUBLIC"
+    ).order_by(
         "-verified",
         "user__first_name",
         "user__last_name"
@@ -365,7 +367,8 @@ def coach_talent_directory(request):
 
     saved_talent_ids = set(
         CoachTalentBookmark.objects.filter(
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         ).values_list(
             "talent_id",
             flat=True
@@ -378,7 +381,8 @@ def coach_talent_directory(request):
 
     followed_talent_ids = set(
         CoachTalentFollow.objects.filter(
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         ).values_list(
             "talent_id",
             flat=True
@@ -443,7 +447,8 @@ def coach_view_talent(request, talent_id):
         TalentProfile.objects.select_related(
             "user"
         ),
-        id=talent_id
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     # -----------------------------------------------------
@@ -523,7 +528,8 @@ def saved_talents(request):
     saved_talents = (
         CoachTalentBookmark.objects
         .filter(
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         )
         .select_related(
             "talent",
@@ -547,7 +553,8 @@ def saved_talents(request):
     followed_talent_ids = set(
         CoachTalentFollow.objects
         .filter(
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         )
         .values_list(
             "talent_id",
@@ -691,7 +698,8 @@ def message_talent(request, talent_id):
 
     talent = get_object_or_404(
         TalentProfile,
-        id=talent_id
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     talent_user = talent.user
@@ -929,6 +937,9 @@ def coach_analytics(request):
 
     recent_views = (
         talent_views
+        .filter(
+            talent__profile_visibility="PUBLIC"
+        )
         .select_related(
             "talent",
             "talent__user"
@@ -944,6 +955,9 @@ def coach_analytics(request):
 
     recent_saved = (
         saved_talents
+        .filter(
+            talent__profile_visibility="PUBLIC"
+        )
         .select_related(
             "talent",
             "talent__user"
@@ -1006,7 +1020,8 @@ def save_talent(request, talent_id):
 
     talent = get_object_or_404(
         TalentProfile,
-        id=talent_id
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     # -----------------------------------------------------
@@ -1210,7 +1225,8 @@ def toggle_talent_follow(
 
     talent = get_object_or_404(
         TalentProfile,
-        id=talent_id
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     # -----------------------------------------------------
@@ -1298,7 +1314,8 @@ def follow_talent(request, talent_id):
 
     talent = get_object_or_404(
         TalentProfile,
-        id=talent_id
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     # -------------------------------------------------
@@ -1353,7 +1370,8 @@ def unfollow_talent(request, talent_id):
 
     talent = get_object_or_404(
         TalentProfile,
-        id=talent_id
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     # -------------------------------------------------
@@ -1486,7 +1504,9 @@ def coach_talent_directory(request):
             "skills",
             "domains"
         )
-        .all()
+        .filter(
+            profile_visibility="PUBLIC"
+        )
     )
 
 
@@ -1532,7 +1552,8 @@ def coach_talent_directory(request):
     saved_talent_ids = set(
 
         CoachTalentBookmark.objects.filter(
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         ).values_list(
             "talent_id",
             flat=True
@@ -1548,7 +1569,8 @@ def coach_talent_directory(request):
     followed_talent_ids = set(
 
         CoachTalentFollow.objects.filter(
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         ).values_list(
             "talent_id",
             flat=True
@@ -1688,7 +1710,4 @@ def create_coach_profile(request):
             "coach": coach,
         }
     )    
-
-
-
 

@@ -27,6 +27,7 @@ from talents.models import (
     Certification,
     Experience,
 )
+from others.models import OtherTalentProfile
 
 from organizations.models import (
     Organization,
@@ -146,6 +147,39 @@ class ExperienceSerializer(serializers.ModelSerializer):
 
 
 # =====================================================
+# OTHER TALENT PROFILE SERIALIZER
+# =====================================================
+
+class OtherTalentProfileSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = OtherTalentProfile
+
+        fields = [
+            "specialization",
+            "description",
+            "field",
+            "experience_description",
+            "years_of_experience",
+            "skills_description",
+            "projects_description",
+            "achievements_description",
+            "interests",
+            "website",
+            "linkedin",
+            "other_link",
+            "created_at",
+            "updated_at",
+        ]
+
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+        ]
+
+
+# =====================================================
 # TALENT PROFILE SERIALIZER
 # =====================================================
 
@@ -177,6 +211,10 @@ class TalentProfileSerializer(serializers.ModelSerializer):
 
     experiences = ExperienceSerializer(
         many=True,
+        read_only=True
+    )
+
+    other_profile = OtherTalentProfileSerializer(
         read_only=True
     )
 
@@ -230,6 +268,7 @@ class TalentProfileSerializer(serializers.ModelSerializer):
             "achievements",
             "certifications",
             "experiences",
+            "other_profile",
 
             # Metadata
             "created_at",

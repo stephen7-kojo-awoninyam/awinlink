@@ -30,6 +30,7 @@ class CoachProfileSerializer(serializers.ModelSerializer):
             "user",
             "username",
             "full_name",
+            "coach_category",
             "headline",
             "biography",
             "specialization",

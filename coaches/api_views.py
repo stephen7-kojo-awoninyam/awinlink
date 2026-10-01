@@ -118,6 +118,8 @@ class CoachTalentListAPIView(generics.ListAPIView):
         ).prefetch_related(
             "skills",
             "domains",
+        ).filter(
+            profile_visibility="PUBLIC"
         ).order_by(
             "-created_at"
         )
@@ -152,7 +154,8 @@ class CoachViewTalentAPIView(APIView):
 
         talent = get_object_or_404(
             TalentProfile,
-            id=talent_id
+            id=talent_id,
+            profile_visibility="PUBLIC",
         )
 
         talent_view = CoachTalentView.objects.create(
@@ -195,7 +198,8 @@ class MyCoachTalentViewsAPIView(generics.ListAPIView):
             return CoachTalentView.objects.none()
 
         return CoachTalentView.objects.filter(
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         ).select_related(
             "talent",
             "talent__user"
@@ -231,7 +235,8 @@ class CoachFollowTalentAPIView(APIView):
 
         talent = get_object_or_404(
             TalentProfile,
-            id=talent_id
+            id=talent_id,
+            profile_visibility="PUBLIC",
         )
 
         follow, created = CoachTalentFollow.objects.get_or_create(
@@ -329,7 +334,8 @@ class MyFollowedTalentsAPIView(generics.ListAPIView):
             return CoachTalentFollow.objects.none()
 
         return CoachTalentFollow.objects.filter(
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         ).select_related(
             "talent",
             "talent__user"
@@ -365,7 +371,8 @@ class CoachBookmarkTalentAPIView(APIView):
 
         talent = get_object_or_404(
             TalentProfile,
-            id=talent_id
+            id=talent_id,
+            profile_visibility="PUBLIC",
         )
 
         bookmark, created = CoachTalentBookmark.objects.get_or_create(
@@ -429,7 +436,8 @@ class CoachBookmarkUpdateAPIView(APIView):
         bookmark = get_object_or_404(
             CoachTalentBookmark,
             id=bookmark_id,
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         )
 
         serializer = CoachTalentBookmarkSerializer(
@@ -520,7 +528,8 @@ class MyCoachBookmarksAPIView(generics.ListAPIView):
             return CoachTalentBookmark.objects.none()
 
         return CoachTalentBookmark.objects.filter(
-            coach=coach
+            coach=coach,
+            talent__profile_visibility="PUBLIC",
         ).select_related(
             "talent",
             "talent__user"

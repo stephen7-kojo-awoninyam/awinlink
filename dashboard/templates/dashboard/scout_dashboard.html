@@ -114,7 +114,7 @@
     </div>
 
     <!-- =====================================================
-     MY TALENT PROFILE
+     MY SCOUT PROFILE
 ====================================================== -->
 
 <div class="card border-0 shadow-sm mb-5">
@@ -122,48 +122,23 @@
     <div class="card-body">
 
         <h5 class="fw-bold mb-3">
-            My Talent Profile
+            My Scout Profile
         </h5>
 
-        {% if profile %}
+        {% if scout.scout_category %}
 
             <p class="text-muted">
-                Manage your public talent identity, skills,
-                domains and professional information.
+                Manage your scout identity, specialization,
+                organization and professional information.
             </p>
 
             <div class="d-flex flex-wrap gap-2">
-
                 <a
-                    href="{% url 'talent_profile' profile.id %}"
+                    href="{% url 'create_scout_profile' %}"
                     class="btn btn-primary"
                 >
-                    <i class="bi bi-person me-2"></i>
-                    View Profile
-                </a>
-
-                <a
-                    href="{% url 'edit_profile' %}"
-                    class="btn btn-outline-primary"
-                >
                     <i class="bi bi-pencil me-2"></i>
-                    Edit Profile
-                </a>
-
-                <a
-                    href="{% url 'profile_strength' %}"
-                    class="btn btn-outline-secondary"
-                >
-                    <i class="bi bi-bar-chart me-2"></i>
-                    Profile Strength
-                </a>
-
-                <a
-                    href="{% url 'talent_settings' %}"
-                    class="btn btn-outline-secondary"
-                >
-                    <i class="bi bi-gear me-2"></i>
-                    Profile Settings
+                    Edit Scout Profile
                 </a>
 
             </div>
@@ -171,17 +146,16 @@
         {% else %}
 
             <p class="text-muted">
-                You haven't created your talent profile yet.
-                Create one to showcase your skills, domains,
-                experience and achievements.
+                Complete your scout profile to share your
+                specialization and professional information.
             </p>
 
             <a
-                href="{% url 'select_talent_category' %}"
+                href="{% url 'select_scout_category' %}"
                 class="btn btn-primary"
             >
                 <i class="bi bi-person-plus me-2"></i>
-                Create Talent Profile
+                Create Scout Profile
             </a>
 
         {% endif %}

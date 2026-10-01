@@ -1,13 +1,12 @@
-from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.db import models
+from django.views.decorators.http import require_POST
 from datetime import timedelta
 from django.utils import timezone
 from talents.models import TalentProfile
 from .forms import ScoutCategoryForm, ScoutProfileForm
-from .forms import ScoutCategoryForm
 from .models import (
     ScoutProfile,
     ScoutTalentView,
@@ -37,20 +36,26 @@ def scout_dashboard(request):
     )
 
     total_views = ScoutTalentView.objects.filter(
-        scout=scout
+        scout=scout,
+        talent__profile_visibility="PUBLIC",
     ).count()
 
     total_followed = ScoutTalentFollow.objects.filter(
-        scout=scout
+        scout=scout,
+        talent__profile_visibility="PUBLIC",
     ).count()
 
     total_bookmarks = ScoutTalentBookmark.objects.filter(
-        scout=scout
+        scout=scout,
+        talent__profile_visibility="PUBLIC",
     ).count()
 
     recent_views = (
         ScoutTalentView.objects
-        .filter(scout=scout)
+        .filter(
+            scout=scout,
+            talent__profile_visibility="PUBLIC",
+        )
         .select_related(
             "talent",
             "talent__user"
@@ -60,7 +65,10 @@ def scout_dashboard(request):
 
     recent_bookmarks = (
         ScoutTalentBookmark.objects
-        .filter(scout=scout)
+        .filter(
+            scout=scout,
+            talent__profile_visibility="PUBLIC",
+        )
         .select_related(
             "talent",
             "talent__user"
@@ -83,91 +91,8 @@ def scout_dashboard(request):
 
 
 # =========================================================
-# TALENT DISCOVERY
-# =========================================================
-
-@login_required
-def scout_talent_list(request):
-
-    if request.user.role != "SCOUT":
-        return render(
-            request,
-            "analytics/access_denied.html"
-        )
-
-    talents = (
-        TalentProfile.objects
-        .select_related("user")
-        .all()
-        .order_by("-verified", "user__username")
-    )
-
-    query = request.GET.get("q", "").strip()
-
-    if query:
-
-        talents = talents.filter(
-            user__username__icontains=query
-        ) | talents.filter(
-            user__first_name__icontains=query
-        ) | talents.filter(
-            user__last_name__icontains=query
-        ) | talents.filter(
-            headline__icontains=query
-        )
-
-        talents = talents.distinct()
-
-    return render(
-        request,
-        "scouts/talent_list.html",
-        {
-            "talents": talents,
-            "query": query,
-        }
-    )
-
-
-# =========================================================
 # TALENT DETAIL
 # =========================================================
-
-@login_required
-def scout_talent_detail(request, talent_id):
-
-    if request.user.role != "SCOUT":
-        return render(
-            request,
-            "analytics/access_denied.html"
-        )
-
-    scout, created = ScoutProfile.objects.get_or_create(
-        user=request.user
-    )
-
-    talent = get_object_or_404(
-        TalentProfile.objects.select_related("user"),
-        id=talent_id
-    )
-
-    # =====================================================
-    # RECORD PROFILE VIEW
-    # =====================================================
-
-    cooldown_time = timezone.now() - timedelta(minutes=30)
-
-    recent_view = ScoutTalentView.objects.filter(
-        scout=scout,
-        talent=talent,
-        viewed_at__gte=cooldown_time
-    ).exists()
-
-    if not recent_view:
-
-        ScoutTalentView.objects.create(
-            scout=scout,
-            talent=talent
-        )
 @login_required
 def scout_talent_detail(request, talent_id):
 
@@ -183,8 +108,12 @@ def scout_talent_detail(request, talent_id):
     )
 
     talent = get_object_or_404(
-        TalentProfile.objects.select_related("user"),
-        id=talent_id
+        TalentProfile.objects.select_related("user").prefetch_related(
+            "domains",
+            "skills",
+        ),
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     # =====================================================
@@ -240,6 +169,7 @@ def scout_talent_detail(request, talent_id):
 # =========================================================
 
 @login_required
+@require_POST
 def follow_talent(request, talent_id):
 
     if request.user.role != "SCOUT":
@@ -254,7 +184,8 @@ def follow_talent(request, talent_id):
 
     talent = get_object_or_404(
         TalentProfile,
-        id=talent_id
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     follow, created = ScoutTalentFollow.objects.get_or_create(
@@ -289,6 +220,7 @@ def follow_talent(request, talent_id):
 # =========================================================
 
 @login_required
+@require_POST
 def bookmark_talent(request, talent_id):
 
     if request.user.role != "SCOUT":
@@ -303,7 +235,8 @@ def bookmark_talent(request, talent_id):
 
     talent = get_object_or_404(
         TalentProfile,
-        id=talent_id
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     bookmark, created = ScoutTalentBookmark.objects.get_or_create(
@@ -339,12 +272,13 @@ def bookmark_talent(request, talent_id):
 # =========================================================
 
 @login_required
+@require_POST
 def remove_bookmark(request, talent_id):
 
     if request.user.role != "SCOUT":
         return render(
             request,
-            "scouts/access_denied.html"
+            "analytics/access_denied.html"
         )
 
     scout = get_object_or_404(
@@ -354,15 +288,11 @@ def remove_bookmark(request, talent_id):
 
     ScoutTalentBookmark.objects.filter(
         scout=scout,
-        talent_id=talent_id
+        talent_id=talent_id,
+        talent__profile_visibility="PUBLIC",
     ).delete()
 
-    return redirect(
-        request.META.get(
-            "HTTP_REFERER",
-            "scout_dashboard"
-        )
-    )
+    return redirect("scout_bookmarked_talents")
     
     
 # =========================================================
@@ -375,7 +305,7 @@ def saved_talents(request):
     if request.user.role != "SCOUT":
         return render(
             request,
-            "scouts/access_denied.html"
+            "analytics/access_denied.html"
         )
 
     scout = get_object_or_404(
@@ -385,7 +315,10 @@ def saved_talents(request):
 
     bookmarks = (
         ScoutTalentBookmark.objects
-        .filter(scout=scout)
+        .filter(
+            scout=scout,
+            talent__profile_visibility="PUBLIC",
+        )
         .select_related(
             "talent",
             "talent__user"
@@ -429,7 +362,12 @@ def scout_talent_list(request):
     ).prefetch_related(
         "domains",
         "skills"
-    ).all()
+    ).filter(
+        profile_visibility="PUBLIC"
+    ).order_by(
+        "-verified",
+        "user__username",
+    )
 
     # =====================================================
     # SEARCH
@@ -501,7 +439,10 @@ def scout_bookmarked_talents(request):
 
     bookmarks = (
         ScoutTalentBookmark.objects
-        .filter(scout=scout)
+        .filter(
+            scout=scout,
+            talent__profile_visibility="PUBLIC",
+        )
         .select_related(
             "talent",
             "talent__user"
@@ -542,7 +483,10 @@ def scout_followed_talents(request):
 
     followed_talents = (
         ScoutTalentFollow.objects
-        .filter(scout=scout)
+        .filter(
+            scout=scout,
+            talent__profile_visibility="PUBLIC",
+        )
         .select_related(
             "talent",
             "talent__user"
@@ -569,6 +513,7 @@ def scout_followed_talents(request):
 # =========================================================
 
 @login_required
+@require_POST
 def update_bookmark_notes(request, talent_id):
 
     if request.user.role != "SCOUT":
@@ -578,20 +523,14 @@ def update_bookmark_notes(request, talent_id):
             "analytics/access_denied.html"
         )
 
-    if request.method != "POST":
-
-        return redirect(
-            "scout_talent_detail",
-            talent_id=talent_id
-        )
-
     scout, created = ScoutProfile.objects.get_or_create(
         user=request.user
     )
 
     talent = get_object_or_404(
         TalentProfile,
-        id=talent_id
+        id=talent_id,
+        profile_visibility="PUBLIC",
     )
 
     bookmark = get_object_or_404(
@@ -632,7 +571,7 @@ def select_scout_category(request):
     )
 
     if scout.scout_category:
-        return redirect("scout_profile")
+        return redirect("scout_dashboard")
 
     if request.method == "POST":
 
@@ -695,7 +634,7 @@ def create_scout_profile(request):
                 "Scout profile created successfully."
             )
 
-            return redirect("scout_profile")
+            return redirect("scout_dashboard")
 
     else:
 

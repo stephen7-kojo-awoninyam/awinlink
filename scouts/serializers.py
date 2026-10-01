@@ -30,6 +30,7 @@ class ScoutProfileSerializer(serializers.ModelSerializer):
             "user",
             "username",
             "full_name",
+            "scout_category",
             "headline",
             "biography",
             "specialization",

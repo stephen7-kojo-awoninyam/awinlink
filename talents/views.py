@@ -19,11 +19,9 @@ from .models import Experience
 from .models import Certification,Achievement
 from .forms import AchievementForm,TalentCategoryForm,ExperienceForm,CertificationForm,TalentProfileForm,VerificationRequestForm
 from connections.models import Follow
-from others.models import OtherTalentProfile
 from science_technology.models import ScienceTechnologyTalentProfile
 from sports.models import SportsTalentProfile
 from art.models import ArtsTalentProfile
-from others.forms import OtherTalentProfileForm
 from science_technology.forms import ScienceTechnologyTalentProfileForm
 from art.forms import ArtsTalentProfileForm
 from sports.forms import SportsTalentProfileForm
@@ -37,7 +35,6 @@ from .forms import (
 SportsScoutProfileForm,
 ScienceTechnologyScoutProfileForm,
 ArtsScoutProfileForm,
-OtherScoutProfileForm,
 )
 # Create your views here.
 
@@ -1857,60 +1854,4 @@ def arts_profile_setup(request):
         }
     )
 
-# =====================================================
-# OTHER TALENT PROFILE SETUP
-# =====================================================
-
-
-@login_required
-def other_profile_setup(request):
-
-    talent = get_object_or_404(
-        TalentProfile,
-        user=request.user
-    )
-
-    if talent.talent_category != "OTHERS":
-        return redirect("select_talent_category")
-
-    profile, created = OtherTalentProfile.objects.get_or_create(
-        talent=talent
-    )
-
-    if request.user.role == "SCOUT":
-        FormClass = OtherScoutProfileForm
-    else:
-        FormClass = OtherTalentProfileForm
-
-    if request.method == "POST":
-
-        form = FormClass(
-            request.POST,
-            instance=profile
-        )
-
-        if form.is_valid():
-
-            form.save()
-
-            return redirect(
-                "talent_dashboard"
-            )
-
-    else:
-
-        form = FormClass(
-            instance=profile
-        )
-
-    return render(
-        request,
-        "talents/other_profile_setup.html",
-        {
-            "form": form,
-            "talent": talent,
-            "is_scout": request.user.role == "SCOUT",
-        }
-    )     
-    
     
