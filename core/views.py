@@ -1,6 +1,7 @@
 from django.db.models import Q
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
 
 from connections.models import (
     Follow,
@@ -27,7 +28,11 @@ from learning.models import Course as LearningContent, CourseLike
 def home(request):
 
     if request.user.is_authenticated:
-        return redirect("home_feed")
+        return render(
+            request,
+            "loading.html",
+            {"redirect_url": reverse("home_feed")},
+        )
 
     return render(
         request,
@@ -801,4 +806,3 @@ def explore(request):
         "core/explore.html",
         context
     )
-

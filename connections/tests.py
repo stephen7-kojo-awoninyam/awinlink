@@ -104,3 +104,56 @@ class SendConnectionRequestTests(TestCase):
 		response = self.client.get(self.url)
 
 		self.assertEqual(response.status_code, 405)
+
+	def test_accept_request_returns_json_without_redirecting(self):
+		connection = Connection.objects.create(
+			sender=self.receiver,
+			receiver=self.sender,
+			status="PENDING",
+		)
+
+		response = self.client.post(
+			reverse("connections:accept_connection_request", args=[connection.id]),
+			HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+			HTTP_ACCEPT="application/json",
+		)
+
+		connection.refresh_from_db()
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.json()["state"], "connected")
+		self.assertEqual(connection.status, "ACCEPTED")
+
+	def test_reject_request_returns_json_without_redirecting(self):
+		connection = Connection.objects.create(
+			sender=self.receiver,
+			receiver=self.sender,
+			status="PENDING",
+		)
+
+		response = self.client.post(
+			reverse("connections:reject_connection_request", args=[connection.id]),
+			HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+			HTTP_ACCEPT="application/json",
+		)
+
+		connection.refresh_from_db()
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.json()["state"], "rejected")
+		self.assertEqual(connection.status, "REJECTED")
+
+	def test_cancel_request_returns_json_without_redirecting(self):
+		connection = Connection.objects.create(
+			sender=self.sender,
+			receiver=self.receiver,
+			status="PENDING",
+		)
+
+		response = self.client.post(
+			reverse("connections:cancel_connection_request", args=[connection.id]),
+			HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+			HTTP_ACCEPT="application/json",
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.json()["state"], "cancelled")
+		self.assertFalse(Connection.objects.filter(id=connection.id).exists())

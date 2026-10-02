@@ -14,6 +14,9 @@ from .models import User
 # Create your views here.
 
 def loading_page(request):
+    if request.user.is_authenticated:
+        return redirect("home")
+
     return render(request, "loading.html")
 
 def register(request):

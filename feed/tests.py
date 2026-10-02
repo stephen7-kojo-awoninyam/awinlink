@@ -7,7 +7,7 @@ from django.utils import timezone
 from events.models import Event, EventCategory
 from learning.models import Course, LearningCategory
 from organizations.models import Organization
-from .models import Post
+from .models import Post, SavedPost, SharedPost
 
 
 User = get_user_model()
@@ -51,6 +51,43 @@ class FeedAjaxInteractionsTests(TestCase):
         self.assertEqual(data["status"], "success")
         self.assertEqual(data["comment"]["text"], "Nice one!")
         self.assertEqual(data["count"], 1)
+
+    def test_save_post_returns_json_and_toggles_state(self):
+        first_response = self.client.post(
+            f"/feed/save/{self.post.id}/",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+        second_response = self.client.post(
+            f"/feed/save/{self.post.id}/",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertTrue(first_response.json()["saved"])
+        self.assertEqual(second_response.status_code, 200)
+        self.assertFalse(second_response.json()["saved"])
+        self.assertFalse(SavedPost.objects.filter(user=self.user, post=self.post).exists())
+
+    def test_share_post_returns_json_without_redirect(self):
+        response = self.client.post(
+            f"/feed/share/{self.post.id}/",
+            {"caption": "Sharing this"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        self.assertEqual(response.json()["count"], 1)
+        self.assertTrue(
+            SharedPost.objects.filter(
+                user=self.user,
+                post=self.post,
+                caption="Sharing this",
+            ).exists()
+        )
 
     def test_like_and_comment_event_in_feed(self):
         organization = Organization.objects.create(

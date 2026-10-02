@@ -240,10 +240,20 @@ def save_post(request, post_id):
         post=post
     )
 
-    # If already saved, remove it
-    if not created:
+    is_ajax = (
+        request.headers.get("x-requested-with") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("accept", "").lower()
+    )
 
+    if not created:
         saved_post.delete()
+    is_saved = created
+
+    if is_ajax:
+        return JsonResponse({
+            "status": "success",
+            "saved": is_saved,
+        })
 
     return redirect("home_feed")
 
@@ -292,5 +302,15 @@ def share_post(request, post_id):
                 post=post
 
             )
+
+        is_ajax = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("accept", "").lower()
+        )
+        if is_ajax:
+            return JsonResponse({
+                "status": "success",
+                "count": post.shares.count(),
+            })
 
     return redirect("home_feed")

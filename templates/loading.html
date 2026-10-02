@@ -4,8 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if user.is_authenticated %}
+    <meta http-equiv="refresh" content="1;url={{ redirect_url }}">
+    {% endif %}
 
-    <title>Awinlink | Where Talent Meets Opportunities</title>
+    <title>{% if user.is_authenticated %}Loading | Awinlink{% else %}Awinlink | Where Talent Meets Opportunities{% endif %}</title>
 
     <style>
         * {
@@ -448,6 +451,27 @@
 
 <body>
 
+    {% if user.is_authenticated %}
+    <main class="landing-main" role="status" aria-live="polite">
+        <div class="loading-screen">
+            <div class="loading-logo">
+                <div class="logo-symbol" aria-hidden="true">A</div>
+                <div class="logo-name">awinlink</div>
+            </div>
+            <div class="loading-indicator">
+                <span>Loading your home feed</span>
+                <div class="dots" aria-hidden="true">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            </div>
+            <noscript>
+                <p><a href="{{ redirect_url }}">Continue to your home feed</a></p>
+            </noscript>
+        </div>
+    </main>
+    {% else %}
     <main class="landing-main">
 
         <!-- =========================
@@ -609,6 +633,7 @@
 
         });
     </script>
+    {% endif %}
 
 </body>
 </html>

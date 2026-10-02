@@ -347,12 +347,14 @@ def accept_connection_request(request, connection_id):
         )
     )
 
-    return redirect(
-        request.META.get(
-            "HTTP_REFERER",
-            "/"
-        )
-    )
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({
+            "status": "success",
+            "state": "connected",
+            "detail": "Connection accepted.",
+        })
+
+    return redirect(request.META.get("HTTP_REFERER", "/"))
 
 
 # =========================================================
@@ -373,12 +375,14 @@ def reject_connection_request(request, connection_id):
 
     connection.save()
 
-    return redirect(
-        request.META.get(
-            "HTTP_REFERER",
-            "/"
-        )
-    )
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({
+            "status": "success",
+            "state": "rejected",
+            "detail": "Request declined.",
+        })
+
+    return redirect(request.META.get("HTTP_REFERER", "/"))
 
 
 # =========================================================
@@ -397,12 +401,14 @@ def cancel_connection_request(request, connection_id):
 
     connection.delete()
 
-    return redirect(
-        request.META.get(
-            "HTTP_REFERER",
-            "/"
-        )
-    )
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({
+            "status": "success",
+            "state": "cancelled",
+            "detail": "Request cancelled.",
+        })
+
+    return redirect(request.META.get("HTTP_REFERER", "/"))
 
 
 # =========================================================

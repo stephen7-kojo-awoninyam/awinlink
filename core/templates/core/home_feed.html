@@ -440,9 +440,12 @@
 
                             <!-- SAVE -->
 
-                            <a
-                                href="{% url 'save_post' post.id %}"
-                                class="btn btn-outline-warning btn-sm"
+                            <button
+                                type="button"
+                                data-post-id="{{ post.id }}"
+                                data-url="{% url 'save_post' post.id %}"
+                                data-saved="{% if post.id in saved_post_ids %}true{% else %}false{% endif %}"
+                                class="btn btn-outline-warning btn-sm save-button"
                             >
 
                                 {% if post.id in saved_post_ids %}
@@ -455,19 +458,20 @@
 
                                 {% endif %}
 
-                            </a>
+                            </button>
 
 
                             <!-- SHARE -->
 
                             <button
                                 type="button"
-                                class="btn btn-outline-success btn-sm"
+                                class="btn btn-outline-success btn-sm share-count-button"
+                                data-post-id="{{ post.id }}"
                                 data-bs-toggle="modal"
                                 data-bs-target="#shareModal{{ post.id }}"
                             >
 
-                                🔗 Share {{ post.shares.count }}
+                                🔗 Share <span class="share-count">{{ post.shares.count }}</span>
 
                             </button>
 
@@ -514,6 +518,8 @@
                                     <form
                                         method="POST"
                                         action="{% url 'share_post' post.id %}"
+                                        class="share-form"
+                                        data-post-id="{{ post.id }}"
                                     >
 
                                         {% csrf_token %}
@@ -887,19 +893,26 @@
                                 <div class="d-flex gap-2 flex-wrap">
 
 
-                                    <a
-                                        href="{% url 'like_post' post.id %}"
-                                        class="btn btn-outline-primary btn-sm"
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm {% if post.id in liked_post_ids %}btn-primary{% else %}btn-outline-primary{% endif %} like-button"
+                                        data-post-id="{{ post.id }}"
+                                        data-url="{% url 'like_post' post.id %}"
+                                        data-liked="{% if post.id in liked_post_ids %}true{% else %}false{% endif %}"
                                     >
+                                        <span class="like-label">
+                                            {% if post.id in liked_post_ids %}❤️ Liked{% else %}❤️ Like{% endif %}
+                                        </span>
+                                        <span class="like-count">{{ post.likes.count }}</span>
+                                    </button>
 
-                                        ❤️ Like {{ post.likes.count }}
 
-                                    </a>
-
-
-                                    <a
-                                        href="{% url 'save_post' post.id %}"
-                                        class="btn btn-outline-warning btn-sm"
+                                    <button
+                                        type="button"
+                                        data-post-id="{{ post.id }}"
+                                        data-url="{% url 'save_post' post.id %}"
+                                        data-saved="{% if post.id in saved_post_ids %}true{% else %}false{% endif %}"
+                                        class="btn btn-outline-warning btn-sm save-button"
                                     >
 
                                         {% if post.id in saved_post_ids %}
@@ -912,17 +925,18 @@
 
                                         {% endif %}
 
-                                    </a>
+                                    </button>
 
 
                                     <button
                                         type="button"
-                                        class="btn btn-outline-success btn-sm"
+                                        class="btn btn-outline-success btn-sm share-count-button"
+                                        data-post-id="{{ post.id }}"
                                         data-bs-toggle="modal"
                                         data-bs-target="#shareModal{{ post.id }}"
                                     >
 
-                                        🔗 Share {{ post.shares.count }}
+                                        🔗 Share <span class="share-count">{{ post.shares.count }}</span>
 
                                     </button>
 
@@ -968,6 +982,8 @@
                                             <form
                                                 method="POST"
                                                 action="{% url 'share_post' post.id %}"
+                                                class="share-form"
+                                                data-post-id="{{ post.id }}"
                                             >
 
                                                 {% csrf_token %}
@@ -1306,28 +1322,36 @@
 
                                                     {% if talent.connection.sender_id == request.user.id %}
 
-                                                        <a
-                                                            href="{% url 'connections:cancel_connection_request' talent.connection.id %}"
-                                                            class="btn btn-sm btn-secondary"
+                                                        <form
+                                                            method="post"
+                                                            action="{% url 'connections:cancel_connection_request' talent.connection.id %}"
+                                                            class="connection-state-form d-inline-block"
                                                         >
-                                                            Request Sent
-                                                        </a>
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-sm btn-secondary">
+                                                                Request Sent
+                                                            </button>
+                                                        </form>
 
                                                     {% else %}
 
-                                                        <a
-                                                            href="{% url 'connections:accept_connection_request' talent.connection.id %}"
-                                                            class="btn btn-sm btn-success"
+                                                        <form
+                                                            method="post"
+                                                            action="{% url 'connections:accept_connection_request' talent.connection.id %}"
+                                                            class="connection-state-form d-inline-block"
                                                         >
-                                                            Accept
-                                                        </a>
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-sm btn-success">Accept</button>
+                                                        </form>
 
-                                                        <a
-                                                            href="{% url 'connections:reject_connection_request' talent.connection.id %}"
-                                                            class="btn btn-sm btn-outline-danger"
+                                                        <form
+                                                            method="post"
+                                                            action="{% url 'connections:reject_connection_request' talent.connection.id %}"
+                                                            class="connection-state-form d-inline-block"
                                                         >
-                                                            Reject
-                                                        </a>
+                                                            {% csrf_token %}
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                                                        </form>
 
                                                     {% endif %}
 
@@ -1457,66 +1481,148 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const getCookie = function (name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
-                    }
-                }
-                return cookieValue;
+                const prefix = name + '=';
+                const cookie = document.cookie.split(';').map(function (value) {
+                    return value.trim();
+                }).find(function (value) {
+                    return value.startsWith(prefix);
+                });
+                return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
             };
 
             const csrfToken = getCookie('csrftoken');
+            const headers = {
+                'X-CSRFToken': csrfToken || '',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            };
+
+            const requestJSON = async function (url, options) {
+                const response = await fetch(url, Object.assign({
+                    headers: headers,
+                    credentials: 'same-origin'
+                }, options));
+                const data = await response.json();
+                if (!response.ok || data.status === 'error') {
+                    throw new Error(data.message || data.detail || 'The action could not be completed.');
+                }
+                return data;
+            };
+
+            const showError = function (element, error) {
+                let feedback = element.closest('.card-body, .modal-body');
+                if (!feedback) feedback = element.parentElement;
+                let message = feedback.querySelector('.feed-action-error');
+                if (!message) {
+                    message = document.createElement('p');
+                    message.className = 'feed-action-error text-danger small mt-2';
+                    message.setAttribute('role', 'alert');
+                    feedback.appendChild(message);
+                }
+                message.textContent = error.message;
+            };
+
+            const clearError = function (element) {
+                const feedback = element.closest('.card-body, .modal-body');
+                const message = feedback && feedback.querySelector('.feed-action-error');
+                if (message) message.remove();
+            };
+
+            const matchingButtons = function (selector, postId) {
+                return Array.from(document.querySelectorAll(selector)).filter(function (button) {
+                    return button.dataset.postId === String(postId);
+                });
+            };
 
             const bindLikeButtons = function (selector, labelClass, countClass) {
                 document.querySelectorAll(selector).forEach(function (button) {
-                    button.addEventListener('click', async function (event) {
-                        event.preventDefault();
-
-                        const url = this.dataset.url;
-                        const label = this.querySelector('.' + labelClass);
-                        const count = this.querySelector('.' + countClass);
+                    button.addEventListener('click', async function () {
+                        if (this.disabled) return;
+                        this.disabled = true;
+                        clearError(this);
 
                         try {
-                            const response = await fetch(url, {
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRFToken': csrfToken,
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                    'Accept': 'application/json'
-                                },
-                                credentials: 'same-origin'
+                            const data = await requestJSON(this.dataset.url, { method: 'POST' });
+                            matchingButtons(selector, this.dataset.postId).forEach(function (item) {
+                                const liked = Boolean(data.liked);
+                                item.dataset.liked = String(liked);
+                                item.classList.toggle('btn-primary', liked);
+                                item.classList.toggle('btn-outline-primary', !liked);
+                                const label = item.querySelector('.like-label');
+                                const count = item.querySelector('.like-count');
+                                if (label) label.textContent = liked ? '❤️ Liked' : '❤️ Like';
+                                if (count) count.textContent = data.count;
                             });
 
-                            const data = await response.json();
-
-                            if (!response.ok || data.status !== 'success') {
-                                throw new Error(data.message || 'Unable to update like.');
-                            }
-
-                            const liked = Boolean(data.liked);
-                            this.classList.toggle('btn-primary', liked);
-                            this.classList.toggle('btn-outline-primary', !liked);
-                            label.textContent = liked ? '❤️ Liked' : '❤️ Like';
-                            count.textContent = data.count;
+                            const currentLabel = this.querySelector('.' + labelClass);
+                            const currentCount = this.querySelector('.' + countClass);
+                            if (currentLabel) currentLabel.textContent = data.liked ? '❤️ Liked' : '❤️ Like';
+                            if (currentCount) currentCount.textContent = data.count;
+                            clearError(this);
                         } catch (error) {
-                            console.error('Like action failed:', error);
-                            window.location.href = url;
+                            showError(this, error);
+                        } finally {
+                            this.disabled = false;
                         }
                     });
                 });
             };
 
+            document.querySelectorAll('.save-button').forEach(function (button) {
+                button.addEventListener('click', async function () {
+                    if (this.disabled) return;
+                    this.disabled = true;
+                    clearError(this);
+                    try {
+                        const data = await requestJSON(this.dataset.url, { method: 'POST' });
+                        matchingButtons('.save-button', this.dataset.postId).forEach(function (item) {
+                            item.dataset.saved = String(data.saved);
+                            item.textContent = data.saved ? '🔖 Saved' : '🔖 Save';
+                            item.classList.toggle('btn-warning', data.saved);
+                            item.classList.toggle('btn-outline-warning', !data.saved);
+                        });
+                        clearError(this);
+                    } catch (error) {
+                        showError(this, error);
+                    } finally {
+                        this.disabled = false;
+                    }
+                });
+            });
+
+            document.querySelectorAll('.share-form').forEach(function (form) {
+                form.addEventListener('submit', async function (event) {
+                    event.preventDefault();
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    if (submitButton) submitButton.disabled = true;
+                    clearError(this);
+                    try {
+                        const data = await requestJSON(this.action, {
+                            method: 'POST',
+                            body: new FormData(this)
+                        });
+                        matchingButtons('.share-count-button', this.dataset.postId).forEach(function (button) {
+                            const count = button.querySelector('.share-count');
+                            if (count) count.textContent = data.count;
+                        });
+                        this.reset();
+                        const modal = this.closest('.modal');
+                        if (modal && window.bootstrap && window.bootstrap.Modal) {
+                            window.bootstrap.Modal.getOrCreateInstance(modal).hide();
+                        }
+                        clearError(this);
+                    } catch (error) {
+                        showError(this, error);
+                    } finally {
+                        if (submitButton) submitButton.disabled = false;
+                    }
+                });
+            });
+
             const bindConnectionForms = function () {
                 document.querySelectorAll('.connection-request-form').forEach(function (form) {
                     form.addEventListener('submit', async function (event) {
                         event.preventDefault();
-
                         const button = this.querySelector('button[type="submit"]');
                         const feedback = this.querySelector('.connection-action-feedback');
                         const originalText = button.textContent.trim();
@@ -1525,32 +1631,21 @@
                         button.textContent = 'Sending...';
 
                         try {
-                            const response = await fetch(this.action, {
+                            const data = await requestJSON(this.action, {
                                 method: 'POST',
-                                headers: {
-                                    'X-CSRFToken': csrfToken,
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                    'Accept': 'application/json'
-                                },
-                                body: new FormData(this),
-                                credentials: 'same-origin'
+                                body: new FormData(this)
                             });
-                            const data = await response.json();
-                            if (!response.ok) {
-                                throw new Error(data.detail || 'Unable to send connection request.');
-                            }
-
                             const states = {
                                 request_sent: ['Request sent', 'btn btn-sm btn-secondary'],
                                 incoming_request: ['Request received', 'btn btn-sm btn-outline-primary'],
                                 connected: ['Connected', 'btn btn-sm btn-success']
                             };
-                            const [label, className] = states[data.state] || states.request_sent;
-                            button.textContent = label;
-                            button.className = className;
+                            const state = states[data.state] || states.request_sent;
+                            button.textContent = state[0];
+                            button.className = state[1];
                             button.removeAttribute('aria-busy');
                             if (feedback) {
-                                feedback.textContent = data.detail || label;
+                                feedback.textContent = data.detail || state[0];
                                 feedback.classList.remove('visually-hidden');
                             }
                         } catch (error) {
@@ -1566,63 +1661,76 @@
                 });
             };
 
+            document.querySelectorAll('.connection-state-form').forEach(function (form) {
+                form.addEventListener('submit', async function (event) {
+                    event.preventDefault();
+                    const button = this.querySelector('button');
+                    button.disabled = true;
+                    try {
+                        const data = await requestJSON(this.action, {
+                            method: 'POST',
+                            body: new FormData(this)
+                        });
+                        const actions = this.closest('.card-body');
+                        actions.querySelectorAll('.connection-state-form, .connection-request-form').forEach(function (item) {
+                            item.remove();
+                        });
+                        const state = document.createElement('span');
+                        state.className = data.state === 'connected' ? 'btn btn-sm btn-success disabled' : 'text-muted small';
+                        state.textContent = data.state === 'connected' ? '✓ Connected' : data.detail;
+                        actions.appendChild(state);
+                    } catch (error) {
+                        button.disabled = false;
+                        showError(this, error);
+                    }
+                });
+            });
+
             const bindCommentForms = function (selector, listSelector, countSelector, emptyClass) {
                 document.querySelectorAll(selector).forEach(function (form) {
                     form.addEventListener('submit', async function (event) {
                         event.preventDefault();
-
                         const input = this.querySelector('input[name="text"]');
-                        const value = input.value.trim();
-                        if (!value) {
+                        if (!input.value.trim()) {
                             input.focus();
                             return;
                         }
 
+                        const submitButton = this.querySelector('button[type="submit"]');
+                        if (submitButton) submitButton.disabled = true;
                         const postId = this.dataset.postId;
-                        const url = this.dataset.url;
                         const list = document.getElementById(listSelector + postId);
                         const count = document.getElementById(countSelector + postId);
+                        clearError(this);
 
                         try {
-                            const formData = new FormData(this);
-                            const response = await fetch(url, {
+                            const data = await requestJSON(this.dataset.url, {
                                 method: 'POST',
-                                headers: {
-                                    'X-CSRFToken': csrfToken,
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                    'Accept': 'application/json'
-                                },
-                                body: formData,
-                                credentials: 'same-origin'
+                                body: new FormData(this)
                             });
-
-                            const data = await response.json();
-                            if (!response.ok || data.status !== 'success') {
-                                throw new Error(data.message || 'Unable to comment.');
-                            }
-
                             if (list) {
                                 const empty = list.querySelector('.' + emptyClass);
                                 if (empty) empty.remove();
-
                                 const item = document.createElement('div');
                                 item.className = 'mb-2 p-2 border-bottom';
-                                item.innerHTML = `
-                                    <strong>${data.comment.user}</strong>
-                                    <p class="mb-1">${data.comment.text}</p>
-                                    <small class="text-muted">${data.comment.created_at}</small>
-                                `;
+                                const author = document.createElement('strong');
+                                author.textContent = data.comment.user;
+                                const text = document.createElement('p');
+                                text.className = 'mb-1';
+                                text.textContent = data.comment.text;
+                                const createdAt = document.createElement('small');
+                                createdAt.className = 'text-muted';
+                                createdAt.textContent = data.comment.created_at;
+                                item.append(author, text, createdAt);
                                 list.prepend(item);
                             }
-
-                            if (count) {
-                                count.textContent = `💬 Comments (${data.count})`;
-                            }
-
+                            if (count) count.textContent = `💬 Comments (${data.count})`;
                             input.value = '';
+                            clearError(this);
                         } catch (error) {
-                            console.error('Comment action failed:', error);
-                            window.location.href = url;
+                            showError(this, error);
+                        } finally {
+                            if (submitButton) submitButton.disabled = false;
                         }
                     });
                 });
@@ -1632,7 +1740,6 @@
             bindLikeButtons('.event-like-button', 'event-like-label', 'event-like-count');
             bindLikeButtons('.course-like-button', 'course-like-label', 'course-like-count');
             bindConnectionForms();
-
             bindCommentForms('.comment-form', 'comments-list-', 'comment-count-', 'no-comments-message');
             bindCommentForms('.event-comment-form', 'event-comments-list-', 'event-comment-count-', 'no-event-comments-message');
             bindCommentForms('.course-comment-form', 'course-comments-list-', 'course-comment-count-', 'no-course-comments-message');
