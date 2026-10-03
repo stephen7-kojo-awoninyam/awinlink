@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ competition.title }} | Awinlink{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+        <div>
+            <h1 class="h2">Edit competition</h1>
+            <p class="text-muted mb-0">{{ competition.title }} · {{ competition.get_status_display }}</p>
+        </div>
+        <a class="btn btn-outline-secondary align-self-start" href="{% url 'competition_dashboard' %}">Back to management</a>
+    </div>
+    {% if competition.review_note %}<div class="alert alert-warning"><strong>Review note:</strong> {{ competition.review_note|linebreaksbr }}</div>{% endif %}
+    <form method="post" class="card card-body shadow-sm">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+        {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {% if field.field.widget.input_type == "checkbox" %}
+                    <div class="form-check">{{ field }} <span class="form-check-label">Online competition</span></div>
+                {% else %}
+                    {{ field }}
+                {% endif %}
+                {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+        {% endfor %}
+        <button class="btn btn-primary align-self-start" type="submit">Save changes</button>
+    </form>
+</div>
+{% endblock %}

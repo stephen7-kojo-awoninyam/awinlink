@@ -61,6 +61,16 @@ class MessageSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    reply_to_id = serializers.PrimaryKeyRelatedField(
+        source="reply_to",
+        queryset=Message.objects.all(),
+        required=False,
+        allow_null=True,
+        write_only=True,
+    )
+
+    reply_to = serializers.SerializerMethodField()
+
     class Meta:
         model = Message
 
@@ -70,6 +80,8 @@ class MessageSerializer(serializers.ModelSerializer):
             "sender",
             "message_type",
             "content",
+            "reply_to_id",
+            "reply_to",
             "image",
             "video",
             "file",
@@ -85,6 +97,29 @@ class MessageSerializer(serializers.ModelSerializer):
             "created_at",
             "is_read",
         ]
+
+    def get_reply_to(self, obj):
+        if not obj.reply_to_id:
+            return None
+
+        replied_message = obj.reply_to
+        content = replied_message.content.strip()
+        if not content:
+            content = {
+                "IMAGE": "Photo",
+                "VIDEO": "Video",
+                "FILE": "File",
+                "AUDIO": "Voice message",
+            }.get(replied_message.message_type, "Message")
+
+        return {
+            "id": replied_message.pk,
+            "sender_name": (
+                replied_message.sender.get_full_name()
+                or replied_message.sender.username
+            ),
+            "content": content[:200],
+        }
 
 
 # ============================================================

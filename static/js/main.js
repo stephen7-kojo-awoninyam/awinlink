@@ -159,18 +159,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                     if (query.length > 0) {
+                        const searchUrl =
+                            searchInput.dataset.searchUrl;
 
-                        console.log(
-                            "Awinlink search:",
-                            query
-                        );
-
-                        /*
-                         * We will connect this
-                         * to the real Awinlink
-                         * search system later.
-                         */
-
+                        window.location.href =
+                            `${searchUrl}?search=${encodeURIComponent(query)}`;
                     }
 
                 }

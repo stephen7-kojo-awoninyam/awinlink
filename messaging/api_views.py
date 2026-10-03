@@ -610,7 +610,9 @@ class ConversationMessagesAPIView(APIView):
                 conversation=conversation
             )
             .select_related(
-                "sender"
+                "sender",
+                "reply_to",
+                "reply_to__sender",
             )
             .order_by(
                 "created_at"
@@ -716,6 +718,18 @@ class SendMessageAPIView(APIView):
         audio = serializer.validated_data.get(
             "audio"
         )
+        reply_to = serializer.validated_data.get("reply_to")
+
+        if reply_to and reply_to.conversation_id != conversation.pk:
+            return Response(
+                {
+                    "reply_to_id": (
+                        "The message you are replying to must belong "
+                        "to this conversation."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # ----------------------------------------------------
         # VALIDATE MESSAGE CONTENT

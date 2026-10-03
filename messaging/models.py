@@ -170,6 +170,14 @@ class Message(models.Model):
         related_name="sent_messages"
     )
 
+    reply_to = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="replies",
+    )
+
     content = models.TextField(
         blank=True
     )

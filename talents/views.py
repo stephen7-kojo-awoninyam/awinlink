@@ -19,6 +19,7 @@ from .models import Experience
 from .models import Certification,Achievement
 from .forms import AchievementForm,TalentCategoryForm,ExperienceForm,CertificationForm,TalentProfileForm,VerificationRequestForm
 from connections.models import Follow
+from competitions.models import CompetitionResult
 from science_technology.models import ScienceTechnologyTalentProfile
 from sports.models import SportsTalentProfile
 from art.models import ArtsTalentProfile
@@ -353,6 +354,16 @@ def talent_profile(request, talent_id):
         following=talent.user
     ).exists()
 
+    competition_results = (
+        CompetitionResult.objects.filter(
+            participant__talent=talent,
+            published_at__isnull=False,
+            participant__competition__status__in=("RESULTS", "COMPLETED"),
+        )
+        .select_related("participant__competition")
+        .order_by("position", "-published_at")
+    )
+
     # =====================================================
     # CATEGORY-SPECIFIC PROFILE
     # =====================================================
@@ -429,6 +440,8 @@ def talent_profile(request, talent_id):
             "followers_count": followers_count,
 
             "following": following,
+
+            "competition_results": competition_results,
 
             "science_technology_profile":
                 science_technology_profile,

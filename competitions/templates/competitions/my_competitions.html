@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}My competitions | Awinlink{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="h2">My competitions</h1>
+    <div class="list-group mt-3">
+        {% for participant in participants %}
+            <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2" href="{% url 'competition_detail' participant.competition.id %}">
+                <span><strong>{{ participant.competition.title }}</strong><span class="d-block small text-muted">{{ participant.competition.organization.name }}</span></span>
+                <span class="text-end"><span class="badge text-bg-light">{{ participant.get_status_display }}</span>{% if participant.result.published_at %}<span class="d-block small">{{ participant.result.award|default:participant.result.position }}</span>{% endif %}</span>
+            </a>
+        {% empty %}
+            <p class="text-muted">You have not registered for any competitions yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

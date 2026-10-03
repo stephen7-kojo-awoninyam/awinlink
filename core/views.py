@@ -12,6 +12,10 @@ from connections.models import (
 from feed.models import Post, PostLike, SavedPost, SharedPost
 from opportunities.models import Opportunity
 from recommendations.services import RecommendationEngine
+from recommendations.ecosystems import (
+    get_ecosystem_details,
+    get_ecosystem_user_ids,
+)
 from talents.models import TalentProfile
 from organizations.models import Organization
 from domains.models import TalentDomain
@@ -19,6 +23,7 @@ from skills.models import Skill
 
 from events.models import Event, EventLike
 from learning.models import Course as LearningContent, CourseLike
+from advertising.services import get_ads_for_user, insert_ads_into_feed
 
 
 
@@ -45,6 +50,8 @@ def home(request):
 
 @login_required
 def home_feed(request):
+    _, ecosystem_details = get_ecosystem_details(request.user)
+    ecosystem_user_ids = get_ecosystem_user_ids(request.user)
 
     # ==================================
     # USERS I FOLLOW
@@ -132,7 +139,7 @@ def home_feed(request):
     recommended_feed_user_ids = {
         item["user"].id
         for item in feed_user_recommendations
-    }
+    } & ecosystem_user_ids
 
 
     # ==================================
@@ -164,6 +171,13 @@ def home_feed(request):
         Q(
             author_id__in=following_organizations,
             visibility="ORGANIZATIONS"
+        )
+
+        |
+
+        Q(
+            author_id__in=ecosystem_user_ids,
+            visibility="PUBLIC"
         )
 
         |
@@ -350,28 +364,59 @@ def home_feed(request):
         reverse=True
     )
 
+    feed_items = insert_ads_into_feed(
+        feed_items,
+        get_ads_for_user(
+            request.user,
+            limit=min(3, max(1, len(feed_items) // 5)),
+        ),
+        request.user,
+    )
 
     # ==================================
     # SAVED POSTS + LIKED POSTS
     # ==================================
 
-    events = Event.objects.filter(
-        status="PUBLISHED"
-    ).select_related(
-        "organizer",
-        "category",
-    ).order_by(
-        "-created_at"
-    )[:5]
+    event_relevance = Q(
+        organizer__user_id__in=ecosystem_user_ids
+    )
+    course_relevance = Q(pk__in=[])
+    for detail in ecosystem_details:
+        event_relevance |= (
+            Q(category__domain__name__icontains=detail)
+            | Q(title__icontains=detail)
+            | Q(description__icontains=detail)
+        )
+        course_relevance |= (
+            Q(category__name__icontains=detail)
+            | Q(title__icontains=detail)
+            | Q(description__icontains=detail)
+        )
 
-    learning_content = LearningContent.objects.filter(
-        status="APPROVED"
-    ).select_related(
-        "category",
-        "creator",
-    ).order_by(
-        "-created_at"
-    )[:5]
+    events = list(
+        Event.objects.filter(
+            status="PUBLISHED",
+        ).filter(
+            event_relevance,
+        ).select_related(
+            "organizer",
+            "category",
+        ).order_by(
+            "-created_at"
+        )[:5]
+    )
+    learning_content = list(
+        LearningContent.objects.filter(
+            status="APPROVED",
+        ).filter(
+            course_relevance,
+        ).select_related(
+            "category",
+            "creator",
+        ).order_by(
+            "-created_at"
+        )[:5]
+    )
 
     saved_post_ids = set(
 
@@ -476,9 +521,8 @@ def home_feed(request):
 
         opportunity.recommendation_score = score
 
-        opportunity_scores.append(
-            opportunity
-        )
+        if score > 10:
+            opportunity_scores.append(opportunity)
 
 
     # ==================================
@@ -556,6 +600,8 @@ def home_feed(request):
         user_id__in=followed_talent_ids
     ).exclude(
         user_id__in=connected_user_ids
+    ).filter(
+        user_id__in=ecosystem_user_ids
     ).select_related(
         "user"
     )
@@ -641,6 +687,8 @@ def home_feed(request):
         user=request.user
     ).exclude(
         id__in=followed_organization_ids
+    ).filter(
+        user_id__in=ecosystem_user_ids
     ).select_related(
         "category",
         "domain"

@@ -2361,6 +2361,7 @@
     </div>
 
 {% endif %}
+
 ```
 
 </div>
@@ -2458,6 +2459,27 @@
 
     </div>
 
+{% endif %}
+{% if competition_results %}
+    <h3 class="h5 mt-4">Competition results</h3>
+    <div class="timeline">
+        {% for result in competition_results %}
+            <div class="timeline-item">
+                <span class="timeline-dot"></span>
+                <div class="timeline-card">
+                    <h4>
+                        <a href="{% url 'competition_detail' result.participant.competition.id %}">
+                            {{ result.award|default:result.participant.competition.title }}
+                        </a>
+                    </h4>
+                    <p class="mb-1">{{ result.participant.competition.title }}</p>
+                    {% if result.position %}
+                        <span class="timeline-date">Position: {{ result.position }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
 {% endif %}
 ```
 

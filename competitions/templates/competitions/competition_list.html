@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Competitions | Awinlink{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h2 mb-1">Competitions</h1>
+            <p class="text-muted mb-0">Discover challenges and showcase your talent.</p>
+        </div>
+        {% if request.user.role == "ORGANIZATION" %}
+            <a class="btn btn-primary" href="{% url 'competition_create' %}">Create competition</a>
+        {% endif %}
+    </div>
+
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-md-7">
+            <input class="form-control" type="search" name="q" value="{{ query }}" placeholder="Search competitions">
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="category">
+                <option value="">All categories</option>
+                {% for value, label in categories %}
+                    <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-primary w-100" type="submit">Search</button>
+        </div>
+    </form>
+
+    {% if competition_recommendations %}
+        <section class="mb-4" aria-labelledby="recommended-competitions-heading">
+            <div class="d-flex justify-content-between align-items-end mb-3">
+                <div>
+                    <h2 class="h4 mb-1" id="recommended-competitions-heading">Recommended for your talent</h2>
+                    <p class="text-muted small mb-0">Ranked using your category, specialty, skills and competition history.</p>
+                </div>
+                <span class="badge text-bg-success">Personalized</span>
+            </div>
+            <div class="row g-3">
+                {% for recommendation in competition_recommendations %}
+                    {% with competition=recommendation.competition %}
+                        <div class="col-md-6 col-xl-4">
+                            <article class="card h-100 border-success-subtle shadow-sm">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between gap-2 mb-2">
+                                        <span class="badge text-bg-light">{{ competition.get_category_display }}{% if competition.discipline %} · {{ competition.discipline }}{% endif %}</span>
+                                        <span class="badge text-bg-success">{{ recommendation.score }}/100 match score</span>
+                                    </div>
+                                    <h3 class="h5">{{ competition.title }}</h3>
+                                    <p class="text-muted small">{{ competition.organization.name }}</p>
+                                    <ul class="small ps-3">
+                                        {% for reason in recommendation.reasons %}
+                                            <li>{{ reason }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    <p class="small text-muted mt-auto">Registration closes {{ competition.registration_end|date:"M j, Y" }}</p>
+                                    <a class="btn btn-outline-success" href="{% url 'competition_detail' competition.id %}">View recommendation</a>
+                                </div>
+                            </article>
+                        </div>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    <div class="row g-3">
+        {% for competition in competitions %}
+            <div class="col-md-6 col-xl-4">
+                <article class="card h-100 shadow-sm">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between gap-2 mb-2">
+                            <span class="badge text-bg-light">{{ competition.get_category_display }}</span>
+                            <span class="badge text-bg-primary">{{ competition.get_status_display }}</span>
+                        </div>
+                        <h2 class="h5">{{ competition.title }}</h2>
+                        <p class="text-muted small mb-2">{{ competition.organization.name }}{% if competition.discipline %} · {{ competition.discipline }}{% endif %}</p>
+                        <p class="flex-grow-1">{{ competition.description|truncatewords:28 }}</p>
+                        <p class="small text-muted">
+                            {{ competition.competition_start }} – {{ competition.competition_end }}
+                        </p>
+                        <a class="btn btn-outline-primary mt-auto" href="{% url 'competition_detail' competition.id %}">View competition</a>
+                    </div>
+                </article>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-light border">No published competitions match your search.</div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

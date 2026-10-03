@@ -696,6 +696,12 @@
         <!-- SHARED / REPOSTED POST -->
         <!-- ================================================= -->
 
+        {% elif item.type == "ADVERTISEMENT" %}
+
+            {% with advertisement=item.object tracking_token=item.tracking_token %}
+                {% include "advertising/ad_card.html" %}
+            {% endwith %}
+
         {% elif item.type == "SHARE" %}
 
             {% with shared=item.object %}

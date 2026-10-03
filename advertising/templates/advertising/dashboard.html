@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Advertising dashboard | Awinlink{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1">Advertising dashboard</h1>
+            <p class="text-muted mb-0">Campaigns for {{ organization.name }}</p>
+        </div>
+        <a href="{% url 'advertising_campaign_create' %}" class="btn btn-primary">
+            Create campaign
+        </a>
+    </div>
+
+    {% for campaign in campaigns %}
+        <section class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <div>
+                        <h2 class="h5 mb-1">{{ campaign.name }}</h2>
+                        <span class="badge text-bg-secondary">{{ campaign.get_status_display }}</span>
+                        <span class="badge text-bg-light">{{ campaign.get_billing_model_display }}</span>
+                        <p class="text-muted mt-2 mb-0">
+                            {{ campaign.start_date|date:"M j, Y" }} – {{ campaign.end_date|date:"M j, Y" }}
+                        </p>
+                    </div>
+                    <div class="text-md-end">
+                        <div>Budget: <strong>{{ campaign.currency }} {{ campaign.total_budget|floatformat:2 }}</strong></div>
+                        <div>Funded: {{ campaign.currency }} {{ campaign.funded_amount|floatformat:2 }}</div>
+                        <div>Spent: {{ campaign.currency }} {{ campaign.dashboard_metrics.spent|floatformat:2 }}</div>
+                        <div>Available: {{ campaign.currency }} {{ campaign.dashboard_metrics.remaining|floatformat:2 }}</div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-2 text-center">
+                    <div class="col"><div class="border rounded p-2"><strong>{{ campaign.dashboard_metrics.impressions }}</strong><br><small>Impressions</small></div></div>
+                    <div class="col"><div class="border rounded p-2"><strong>{{ campaign.dashboard_metrics.clicks }}</strong><br><small>Clicks</small></div></div>
+                    <div class="col"><div class="border rounded p-2"><strong>{{ campaign.dashboard_metrics.video_views }}</strong><br><small>Video views</small></div></div>
+                </div>
+
+                {% if campaign.payments.all %}
+                    <details class="mt-3">
+                        <summary>Funding activity</summary>
+                        <ul class="small mt-2 mb-0">
+                            {% for payment in campaign.payments.all %}
+                                <li>
+                                    {{ payment.created_at|date:"M j, Y H:i" }} —
+                                    {{ payment.currency }} {{ payment.amount|floatformat:2 }}
+                                    ({{ payment.get_status_display }})
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                {% endif %}
+
+                {% if campaign.review_note %}
+                    <div class="alert alert-warning mt-3 mb-0">{{ campaign.review_note }}</div>
+                {% endif %}
+
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    {% if campaign.status == "DRAFT" or campaign.status == "REJECTED" %}
+                        <a
+                            class="btn btn-outline-secondary btn-sm"
+                            href="{% url 'advertising_campaign_edit' campaign.pk %}"
+                        >
+                            Edit draft
+                        </a>
+                        <form method="post" action="{% url 'advertising_campaign_action' campaign.pk 'submit' %}">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-primary btn-sm" type="submit">Submit for review</button>
+                        </form>
+                    {% endif %}
+                    {% if campaign.status == "APPROVED" %}
+                        <form method="post" action="{% url 'advertising_campaign_action' campaign.pk 'activate' %}">
+                            {% csrf_token %}
+                            <button class="btn btn-success btn-sm" type="submit">Activate campaign</button>
+                        </form>
+                    {% endif %}
+                    {% if campaign.status == "ACTIVE" %}
+                        <form method="post" action="{% url 'advertising_campaign_action' campaign.pk 'pause' %}">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-warning btn-sm" type="submit">Pause campaign</button>
+                        </form>
+                    {% endif %}
+                    {% if campaign.status != "COMPLETED" and campaign.status != "CANCELLED" %}
+                        <form method="post" action="{% url 'advertising_campaign_action' campaign.pk 'cancel' %}">
+                            {% csrf_token %}
+                            <button class="btn btn-outline-danger btn-sm" type="submit">Cancel campaign</button>
+                        </form>
+                    {% endif %}
+                    {% if campaign.status == "APPROVED" or campaign.status == "ACTIVE" or campaign.status == "PAUSED" %}
+                        {% if campaign.remaining_to_fund > 0 %}
+                            <form method="post" action="{% url 'advertising_fund_campaign' campaign.pk %}" class="d-flex gap-2">
+                                {% csrf_token %}
+                                <label class="visually-hidden" for="fund-{{ campaign.pk }}">Funding amount</label>
+                                <input
+                                    id="fund-{{ campaign.pk }}"
+                                    class="form-control form-control-sm"
+                                    type="number"
+                                    name="amount"
+                                    min="0.01"
+                                    max="{{ campaign.remaining_to_fund|floatformat:2 }}"
+                                    step="0.01"
+                                    placeholder="Amount ({{ campaign.currency }})"
+                                    required
+                                >
+                                <button class="btn btn-primary btn-sm text-nowrap" type="submit">Fund with Paystack</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    {% empty %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <h2 class="h5">No campaigns yet</h2>
+                <p class="text-muted">Create a campaign to reach relevant Awinlink talents.</p>
+                <a href="{% url 'advertising_campaign_create' %}" class="btn btn-primary">Create your first campaign</a>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

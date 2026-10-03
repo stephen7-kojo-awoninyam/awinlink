@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Competition judging | Awinlink{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    {% if is_organizer %}
+        <h1 class="h2">Assign coaches</h1>
+        <p class="text-muted">{{ competition.title }} · Only coach accounts can be assigned.</p>
+        <form method="post" class="card card-body mb-4">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+            {% endfor %}
+            <button class="btn btn-primary align-self-start">Assign coach</button>
+        </form>
+        <h2 class="h5">Current assignments</h2>
+        <ul class="list-group">
+            {% for assignment in assignments %}
+                <li class="list-group-item">{{ assignment.coach.get_full_name|default:assignment.coach.username }} · {{ assignment.get_role_display }}</li>
+            {% empty %}
+                <li class="list-group-item text-muted">No coaches assigned.</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <h1 class="h2">My judging assignments</h1>
+        <div class="list-group mt-3">
+            {% for assignment in assignments %}
+                <div class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    <div><strong>{{ assignment.competition.title }}</strong><div class="small text-muted">{{ assignment.competition.get_status_display }} · {{ assignment.get_role_display }}</div></div>
+                    {% if assignment.competition.status == "JUDGING" or assignment.role == "MENTOR" and assignment.competition.status == "ONGOING" %}<a class="btn btn-sm btn-primary" href="{% url 'competition_participants' assignment.competition.id %}">{% if assignment.role == "MENTOR" %}Mentor participants{% else %}Review participants{% endif %}</a>{% endif %}
+                </div>
+            {% empty %}
+                <p class="text-muted">You have no competition assignments.</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

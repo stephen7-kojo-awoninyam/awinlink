@@ -47,7 +47,7 @@
                             type="text"
                             name="search"
                             class="form-control"
-                            placeholder="Search by name, username, talent area, headline, or location..."
+                            placeholder="Search by name, talent area, headline, or location; use @username to find any account..."
                             value="{{ request.GET.search }}"
                         >
 
@@ -343,7 +343,7 @@
                     </button>
 
                     <a
-                        href="{% url 'talent_search' %}"
+                        href="{% url 'user_search' %}"
                         class="btn btn-outline-secondary"
                     >
 
@@ -367,12 +367,16 @@
     <div class="d-flex justify-content-between mb-3">
 
         <h4>
-            Talent Results
+            {% if username_search %}Account Results{% else %}Talent Results{% endif %}
         </h4>
 
         <span class="badge bg-primary align-self-center">
 
-            {{ talents|length }} Talents
+            {% if username_search %}
+                {{ user_results|length }} Accounts
+            {% else %}
+                {{ talents|length }} Talents
+            {% endif %}
 
         </span>
 
@@ -380,6 +384,62 @@
 
 
     <div class="row">
+
+        {% if username_search %}
+
+            {% for result in user_results %}
+
+                <div class="col-md-4 mb-4">
+
+                    <div class="card h-100 shadow-sm">
+
+                        <div class="text-center pt-4">
+                            <span class="talent-finder-avatar">
+                                {% if result.photo %}
+                                    <img src="{{ result.photo.url }}" alt="{{ result.display_name }}" loading="lazy">
+                                {% else %}
+                                    <i class="bi bi-person-fill" aria-hidden="true"></i>
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="card-body text-center">
+                            <h5>{{ result.display_name }}</h5>
+                            <p class="text-muted mb-1">@{{ result.user.username }}</p>
+                            <p class="text-primary">{{ result.role_label }}</p>
+
+                            {% if result.detail %}
+                                <p>{{ result.detail }}</p>
+                            {% endif %}
+
+                            {% if result.location %}
+                                <p class="text-muted">📍 {{ result.location }}</p>
+                            {% endif %}
+                        </div>
+
+                        {% if result.profile_url %}
+                            <div class="card-footer bg-white">
+                                <a href="{{ result.profile_url }}" class="btn btn-primary btn-sm w-100">
+                                    View Profile
+                                </a>
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            {% empty %}
+
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No visible account found for @{{ username_query }}.
+                    </div>
+                </div>
+
+            {% endfor %}
+
+        {% else %}
 
         {% for talent in talents %}
 
@@ -476,7 +536,6 @@
                                 </span>
 
                             {% endfor %}
-
                         </div>
 
 
@@ -534,6 +593,8 @@
             </div>
 
         {% endfor %}
+
+        {% endif %}
 
     </div>
 

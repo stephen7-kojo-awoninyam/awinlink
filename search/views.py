@@ -1,5 +1,7 @@
 from django.shortcuts import render
 from twisted import python
+from django.contrib.auth import get_user_model
+from django.urls import reverse
 from talents.models import TalentProfile
 from skills.models import Skill
 from domains.models import TalentDomain
@@ -16,6 +18,7 @@ from django.db.models import Q
 
 
 def talent_search(request):
+    user_model = get_user_model()
 
     talents = TalentProfile.objects.select_related(
         "user"
@@ -30,7 +33,7 @@ def talent_search(request):
     # GET FILTERS
     # ==========================================
 
-    search = request.GET.get("search")
+    search = request.GET.get("search", "").strip()
     role = request.GET.get("role")
     skill = request.GET.get("skill")
     domain = request.GET.get("domain")
@@ -44,7 +47,125 @@ def talent_search(request):
     # GENERAL SEARCH
     # ==========================================
 
-    if search:
+    username_search = search.startswith("@")
+    username_query = search[1:].strip() if username_search else ""
+    user_results = []
+
+    if username_search:
+        users = user_model.objects.filter(
+            username__iexact=username_query,
+            is_active=True,
+        ).exclude(
+            Q(role="ADMIN") | Q(is_superuser=True)
+        ).select_related(
+            "talent_profile",
+            "coach_profile",
+            "scout_profile",
+            "organization_profile__category",
+            "organization_profile__domain",
+        )
+
+        for user in users:
+            profile = None
+            profile_url = ""
+            display_name = user.get_full_name() or user.username
+            detail = ""
+            location = ""
+            photo = user.profile_picture
+
+            if user.role == "ATHLETE":
+                profile = getattr(user, "talent_profile", None)
+                if profile is None:
+                    continue
+
+                is_owner = (
+                    request.user.is_authenticated
+                    and request.user.pk == user.pk
+                )
+                can_view_organization_profile = (
+                    request.user.is_authenticated
+                    and request.user.role == "ORGANIZATION"
+                    and profile.profile_visibility == "ORGANIZATIONS"
+                )
+                if not is_owner and not can_view_organization_profile:
+                    if profile.profile_visibility != "PUBLIC":
+                        continue
+
+                detail = profile.headline or profile.talent_area or ""
+                location = ", ".join(
+                    value for value in (profile.city, profile.country) if value
+                )
+                photo = profile.profile_photo or photo
+                profile_url = reverse("talent_profile", args=[profile.pk])
+
+            elif user.role == "COACH":
+                profile = getattr(user, "coach_profile", None)
+                if profile:
+                    detail = (
+                        profile.headline
+                        or profile.specialization
+                        or (
+                            f"{profile.get_coach_category_display()} Coach"
+                            if profile.coach_category
+                            else ""
+                        )
+                    )
+                    location = ", ".join(
+                        value for value in (profile.city, profile.country) if value
+                    )
+                    photo = profile.profile_photo or photo
+                if request.user.is_authenticated and request.user.pk == user.pk:
+                    profile_url = reverse("coach_profile")
+
+            elif user.role == "SCOUT":
+                profile = getattr(user, "scout_profile", None)
+                if profile:
+                    detail = (
+                        profile.headline
+                        or profile.specialization
+                        or (
+                            f"{profile.get_scout_category_display()} Scout"
+                            if profile.scout_category
+                            else ""
+                        )
+                    )
+                    location = ", ".join(
+                        value for value in (profile.city, profile.country) if value
+                    )
+                if request.user.is_authenticated and request.user.pk == user.pk:
+                    profile_url = reverse("scout_dashboard")
+
+            elif user.role == "ORGANIZATION":
+                profile = getattr(user, "organization_profile", None)
+                if profile:
+                    display_name = profile.name
+                    detail = (
+                        profile.category.name
+                        if profile.category
+                        else ""
+                    )
+                    location = ", ".join(
+                        value for value in (profile.city, profile.country) if value
+                    )
+                    photo = profile.logo or photo
+                    profile_url = reverse(
+                        "organization_profile",
+                        args=[profile.pk],
+                    )
+
+            user_results.append(
+                {
+                    "user": user,
+                    "display_name": display_name,
+                    "role_label": user.get_role_display(),
+                    "detail": detail,
+                    "location": location,
+                    "photo": photo,
+                    "profile_url": profile_url,
+                }
+            )
+
+    elif search:
         talents = talents.filter(
             Q(user__first_name__icontains=search)
             | Q(user__last_name__icontains=search)
@@ -147,16 +268,15 @@ def talent_search(request):
     )
 
     # Get roles directly from User model
-    User = TalentProfile._meta.get_field(
-        "user"
-    ).remote_field.model
-
-    role_choices = User._meta.get_field(
+    role_choices = user_model._meta.get_field(
         "role"
     ).choices
 
     context = {
         "talents": talents,
+        "user_results": user_results,
+        "username_search": username_search,
+        "username_query": username_query,
         "skills": skills,
         "domains": domains,
         "role_choices": role_choices,
@@ -173,7 +293,7 @@ def talent_search(request):
 
     return render(
         request,
-        "search/talent_search.html",
+        "search/search.html",
         context
     )
 

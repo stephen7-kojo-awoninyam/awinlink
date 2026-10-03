@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Manage competitions | Awinlink{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <div><h1 class="h2 mb-1">Manage competitions</h1><p class="text-muted mb-0">Draft, submit, publish and manage your competitions.</p></div>
+        {% if request.user.role == "ORGANIZATION" %}<a class="btn btn-primary" href="{% url 'competition_create' %}">Create competition</a>{% endif %}
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead><tr><th>Competition</th><th>Status</th><th>Dates</th><th>Participants</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for competition in competitions %}
+                    <tr>
+                        <td><a href="{% url 'competition_detail' competition.id %}">{{ competition.title }}</a><div class="small text-muted">{{ competition.organization.name }}</div></td>
+                        <td>{{ competition.get_status_display }}</td>
+                        <td>{{ competition.competition_start }} – {{ competition.competition_end }}</td>
+                        <td>{{ competition.participant_count }}</td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% if competition.status == "DRAFT" or competition.status == "REJECTED" %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'competition_edit' competition.id %}">Edit</a>
+                                    <form method="post" action="{% url 'competition_action' competition.id %}">{% csrf_token %}<input type="hidden" name="action" value="submit"><button class="btn btn-sm btn-primary">Submit</button></form>
+                                {% endif %}
+                                {% if competition.status == "APPROVED" %}
+                                    <form method="post" action="{% url 'competition_action' competition.id %}">{% csrf_token %}<input type="hidden" name="action" value="publish"><button class="btn btn-sm btn-primary">Publish</button></form>
+                                {% endif %}
+                                {% if competition.status == "PUBLISHED" %}
+                                    <form method="post" action="{% url 'competition_action' competition.id %}">{% csrf_token %}<input type="hidden" name="action" value="close_registration"><button class="btn btn-sm btn-outline-primary">Close registration</button></form>
+                                    <form method="post" action="{% url 'competition_action' competition.id %}">{% csrf_token %}<input type="hidden" name="action" value="start"><button class="btn btn-sm btn-outline-primary">Start</button></form>
+                                {% endif %}
+                                {% if competition.status == "REGISTRATION_CLOSED" %}
+                                    <form method="post" action="{% url 'competition_action' competition.id %}">{% csrf_token %}<input type="hidden" name="action" value="start"><button class="btn btn-sm btn-outline-primary">Start</button></form>
+                                {% endif %}
+                                {% if competition.status == "ONGOING" %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'competition_participants' competition.id %}">Participants</a>
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'competition_assign_judge' competition.id %}">Assign coaches</a>
+                                    <form method="post" action="{% url 'competition_action' competition.id %}">{% csrf_token %}<input type="hidden" name="action" value="start_judging"><button class="btn btn-sm btn-outline-primary">Start judging</button></form>
+                                {% endif %}
+                                {% if competition.status == "JUDGING" %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'competition_participants' competition.id %}">Participants</a>
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'competition_assign_judge' competition.id %}">Assign coaches</a>
+                                    <a class="btn btn-sm btn-outline-primary" href="{% url 'competition_results' competition.id %}">Enter results</a>
+                                    <form method="post" action="{% url 'competition_action' competition.id %}">{% csrf_token %}<input type="hidden" name="action" value="publish_results"><button class="btn btn-sm btn-primary">Publish results</button></form>
+                                {% endif %}
+                                {% if competition.status == "RESULTS" %}
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'competition_results' competition.id %}">Results</a>
+                                    <form method="post" action="{% url 'competition_action' competition.id %}">{% csrf_token %}<input type="hidden" name="action" value="complete"><button class="btn btn-sm btn-outline-primary">Complete</button></form>
+                                {% endif %}
+                                {% if competition.status != "COMPLETED" and competition.status != "CANCELLED" %}
+                                    <form method="post" action="{% url 'competition_action' competition.id %}" onsubmit="return confirm('Cancel this competition?');">{% csrf_token %}<input type="hidden" name="action" value="cancel"><button class="btn btn-sm btn-outline-danger">Cancel</button></form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">No competitions yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -192,35 +192,27 @@ class PostSerializer(serializers.ModelSerializer):
 
         return obj.shares.count()
 
-# --------------------------------------------------------
-# CURRENT USER STATE
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # CURRENT USER STATE
+    # --------------------------------------------------------
 
-def get_is_liked(self, obj):
+    def get_is_liked(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return PostLike.objects.filter(
+            post=obj,
+            user=request.user
+        ).exists()
 
-    request = self.context.get("request")
-
-    if not request or not request.user.is_authenticated:
-
-        return False
-
-    return PostLike.objects.filter(
-        post=obj,
-        user=request.user
-    ).exists()
-
-def get_is_saved(self, obj):
-
-    request = self.context.get("request")
-
-    if not request or not request.user.is_authenticated:
-
-        return False
-
-    return SavedPost.objects.filter(
-        post=obj,
-        user=request.user
-    ).exists()
+    def get_is_saved(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return SavedPost.objects.filter(
+            post=obj,
+            user=request.user
+        ).exists()
 
 
 # ============================================================
@@ -372,4 +364,3 @@ class SharedPostSerializer(serializers.ModelSerializer):
             obj.post,
             context=self.context
         ).data
-

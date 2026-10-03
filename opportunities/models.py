@@ -12,7 +12,6 @@ class Opportunity(models.Model):
         ("TRIAL", "Sports Trial"),
         ("SCHOLARSHIP", "Scholarship"),
         ("AUDITION", "Audition"),
-        ("COMPETITION", "Competition"),
 
     )
 

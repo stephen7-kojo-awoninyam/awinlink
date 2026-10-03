@@ -45,7 +45,6 @@ class Event(models.Model):
 
     EVENT_TYPES = (
 
-        ("COMPETITION", "Competition"),
         ("WORKSHOP", "Workshop"),
         ("BOOTCAMP", "Bootcamp"),
         ("AUDITION", "Audition"),

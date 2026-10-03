@@ -1,3 +1,5 @@
+import re
+
 from talents.models import TalentProfile
 from talents.services import ProfileStrengthService
 from django.utils import timezone
@@ -4706,4 +4708,282 @@ class RecommendationEngine:
             reverse=True
         )
 
+        return recommendations[:limit]
+
+    @staticmethod
+    def _text_contains_term(text, term):
+        normalized_text = RecommendationEngine.normalize_text(text)
+        normalized_term = RecommendationEngine.normalize_text(term)
+        if not normalized_text or not normalized_term:
+            return False
+        return re.search(
+            rf"(?<!\w){re.escape(normalized_term)}(?!\w)",
+            normalized_text,
+        ) is not None
+
+    def _score_competition_and_reasons(self, talent, competition):
+        if not talent or not competition:
+            return 0, []
+
+        from competitions.models import CompetitionParticipant
+
+        today = timezone.localdate()
+        if (
+            competition.status != "PUBLISHED"
+            or competition.registration_start > today
+            or competition.registration_end < today
+            or competition.competition_end < today
+        ):
+            return 0, []
+
+        if CompetitionParticipant.objects.filter(
+            competition=competition,
+            talent=talent,
+        ).exists():
+            return 0, []
+
+        if (
+            competition.max_participants is not None
+            and competition.participants.filter(status="REGISTERED").count()
+            >= competition.max_participants
+        ):
+            return 0, []
+
+        score = 0
+        reasons = []
+        competition_text = self.normalize_text(
+            " ".join(
+                (
+                    competition.title,
+                    competition.discipline,
+                    competition.description,
+                    competition.requirements,
+                    competition.rules,
+                    competition.prizes,
+                )
+            )
+        )
+
+        if talent.talent_category == competition.category:
+            score += 35
+            reasons.append(
+                f"Matches your {competition.get_category_display()} talent category."
+            )
+
+        domain_matches = [
+            domain
+            for domain in talent.domains.all()
+            if self._text_contains_term(competition_text, domain.name)
+        ]
+        if domain_matches:
+            score += min(12 * len(domain_matches), 24)
+            reasons.append(
+                "Relevant to your "
+                + ", ".join(domain.name for domain in domain_matches[:3])
+                + " domain"
+                + ("s." if len(domain_matches) > 1 else ".")
+            )
+
+        profile_areas = [talent.talent_area]
+        if competition.category == "SPORTS":
+            from sports.models import SportsTalentProfile
+
+            sports_profile = (
+                SportsTalentProfile.objects.filter(talent=talent)
+                .select_related("sport", "sport_category")
+                .first()
+            )
+            if sports_profile:
+                profile_areas.extend(
+                    (
+                        sports_profile.sport.name if sports_profile.sport else "",
+                        (
+                            sports_profile.sport_category.name
+                            if sports_profile.sport_category
+                            else ""
+                        ),
+                        sports_profile.position,
+                    )
+                )
+
+        matching_areas = []
+        for area in dict.fromkeys(profile_areas):
+            if area and self._text_contains_term(competition_text, area):
+                matching_areas.append(area.strip())
+        if matching_areas:
+            score += min(24 + (len(matching_areas) - 1) * 6, 30)
+            reasons.append(
+                "Matches your " + ", ".join(matching_areas[:3]) + " specialization."
+            )
+
+        exact_skills = [
+            skill.name
+            for skill in talent.skills.all()
+            if self._text_contains_term(competition_text, skill.name)
+        ]
+        if exact_skills:
+            score += min(len(exact_skills) * 8, 24)
+            reasons.append(
+                "Uses your "
+                + ", ".join(exact_skills[:3])
+                + (" skills." if len(exact_skills) > 1 else " skill.")
+            )
+
+        if talent.skills.exists():
+            from skills.models import SkillRelationship
+
+            source_skill_ids = talent.skills.values_list("pk", flat=True)
+            relationships = SkillRelationship.objects.filter(
+                skill_id__in=source_skill_ids
+            ).select_related("related_skill")
+            related_skills = {
+                relationship.related_skill.name
+                for relationship in relationships
+                if self._text_contains_term(
+                    competition_text,
+                    relationship.related_skill.name,
+                )
+            }
+            if related_skills:
+                score += min(len(related_skills) * 5, 15)
+                reasons.append(
+                    "Connects to related skills: "
+                    + ", ".join(sorted(related_skills)[:3])
+                    + "."
+                )
+
+        profile_history = " ".join(
+            [
+                f"{role} {description}"
+                for role, description in talent.experiences.order_by(
+                    "-created_at"
+                ).values_list("role", "description")[:5]
+            ]
+            + list(talent.achievements.values_list("title", flat=True)[:5])
+            + list(talent.certifications.values_list("name", flat=True)[:5])
+        )
+        if profile_history and any(
+            self._text_contains_term(competition_text, term)
+            for term in re.findall(r"[\w-]{4,}", profile_history)
+        ):
+            score += 5
+            reasons.append("Aligns with your experience or achievements.")
+
+        from competitions.models import CompetitionResult
+
+        previous_results = CompetitionResult.objects.filter(
+            participant__talent=talent,
+            published_at__isnull=False,
+        ).select_related(
+            "participant__competition"
+        ).order_by(
+            "-published_at"
+        )[:50]
+        related_result = next(
+            (
+                result
+                for result in previous_results
+                if result.participant.competition.category == competition.category
+                and (
+                    not competition.discipline
+                    or not result.participant.competition.discipline
+                    or self.normalize_text(
+                        competition.discipline
+                    )
+                    == self.normalize_text(
+                        result.participant.competition.discipline
+                    )
+                )
+            ),
+            None,
+        )
+        if related_result:
+            score += 8
+            reasons.append("Builds on your history in similar competitions.")
+
+        if OrganizationFollow.objects.filter(
+            user=talent.user,
+            organization=competition.organization,
+        ).exists():
+            score += 8
+            reasons.append("Hosted by an organization you follow.")
+
+        if talent.country and competition.location and self._text_contains_term(
+            competition.location,
+            talent.country,
+        ):
+            score += 4
+            reasons.append("Takes place in your country.")
+        elif competition.online:
+            score += 3
+            reasons.append("Available online.")
+
+        if competition.registration_end >= today and (
+            competition.registration_end - today
+        ).days <= 3:
+            score += 2
+            reasons.append("Registration closes soon.")
+
+        return min(score, 100), reasons
+
+    def score_competition_for_talent(self, talent, competition):
+        """Score an open competition against a talent's profile and history."""
+        score, _reasons = self._score_competition_and_reasons(
+            talent,
+            competition,
+        )
+        return score
+
+    def get_competition_recommendation_reason(self, talent, competition):
+        """Return concise, profile-specific explanations for a recommendation."""
+        _score, reasons = self._score_competition_and_reasons(
+            talent,
+            competition,
+        )
+        return reasons
+
+    def recommend_competitions_for_talent(self, talent, limit=10):
+        """Rank open competitions by specific profile and competition-history fit."""
+        if not talent or limit <= 0:
+            return []
+
+        from competitions.models import Competition
+
+        today = timezone.localdate()
+        competitions = (
+            Competition.objects.filter(
+                status="PUBLISHED",
+                registration_start__lte=today,
+                registration_end__gte=today,
+                competition_end__gte=today,
+            )
+            .exclude(participants__talent=talent)
+            .select_related("organization")
+            .prefetch_related(
+                "participants",
+            )
+            .distinct()
+        )
+        recommendations = []
+        for competition in competitions:
+            score, reasons = self._score_competition_and_reasons(
+                talent,
+                competition,
+            )
+            if score <= 0:
+                continue
+            recommendations.append(
+                {
+                    "competition": competition,
+                    "score": score,
+                    "reasons": reasons,
+                }
+            )
+        recommendations.sort(
+            key=lambda item: (
+                -item["score"],
+                item["competition"].registration_end,
+                -item["competition"].created_at.timestamp(),
+            )
+        )
         return recommendations[:limit]

@@ -488,6 +488,15 @@
 
 </div>
 
+<a
+    href="{% url 'logout' %}"
+    class="sidebar-link"
+    title="Log out"
+>
+    <i class="bi bi-box-arrow-right"></i>
+    <span>Log out</span>
+</a>
+
 
 <!-- =====================================================
      MAIN NAVIGATION
@@ -641,6 +650,14 @@
 
 </a>
 
+    <a
+        href="{% url 'competition_list' %}"
+        class="sidebar-link"
+        title="Competitions"
+    >
+        <i class="bi bi-trophy"></i>
+        <span>Competitions</span>
+    </a>
 
  <a href="{% url 'courses' %}"
    class="sidebar-link"
@@ -736,6 +753,13 @@
 
     </a>
 
+    <a
+        href="{% url 'my_judging' %}"
+        class="sidebar-link"
+    >
+        <i class="bi bi-clipboard2-check"></i>
+        <span>Competition judging</span>
+    </a>
 
     <!-- Saved Talents -->
 
@@ -769,7 +793,33 @@
     </a>
 
 </div>
-
+</div>
+{% endif %}
+{% if request.user.role == "ORGANIZATION" %}
+<div class="sidebar-section">
+    <span class="sidebar-label">ORGANIZATION</span>
+    <a href="{% url 'competition_dashboard' %}" class="sidebar-link">
+        <i class="bi bi-trophy"></i>
+        <span>Manage Competitions</span>
+    </a>
+    <a href="{% url 'advertising_dashboard' %}" class="sidebar-link">
+        <i class="bi bi-megaphone"></i>
+        <span>Advertising</span>
+    </a>
+</div>
+{% elif request.user.role == "ATHLETE" %}
+<a href="{% url 'my_competitions' %}" class="sidebar-link">
+    <i class="bi bi-trophy"></i>
+    <span>My Competitions</span>
+</a>
+{% elif request.user.role == "ADMIN" or request.user.is_superuser %}
+<div class="sidebar-section">
+    <span class="sidebar-label">MODERATION</span>
+    <a href="{% url 'competition_moderation' %}" class="sidebar-link">
+        <i class="bi bi-shield-check"></i>
+        <span>Competition Review</span>
+    </a>
+</div>
 {% endif %}
 
 
@@ -849,8 +899,11 @@
 
         <input
             type="text"
-            placeholder="Search talents, organizations, opportunities..."
+            placeholder="Search talents, organizations, opportunities, or @username..."
             id="globalSearch"
+            name="search"
+            data-search-url="{% url 'user_search' %}"
+            aria-label="Search Awinlink"
         >
 
     </div>

@@ -6,6 +6,11 @@ from django.test import TestCase
 from django.utils import timezone
 
 from applications.models import Application
+from competitions.models import (
+	Competition,
+	CompetitionParticipant,
+	CompetitionResult,
+)
 from domains.models import TalentDomain
 from events.models import Event, EventCertificate
 from learning.models import Course, Enrollment, LearningCategory
@@ -13,6 +18,7 @@ from opportunities.models import Opportunity, OpportunityRequirement
 from organizations.models import Organization
 from recommendations.services import RecommendationEngine
 from skills.models import Skill, SkillCategory, SkillRelationship
+from sports.models import Sport, SportsTalentProfile
 from talents.models import TalentProfile
 
 
@@ -400,5 +406,176 @@ class CourseAndEventRecommendationTests(TestCase):
 
 		self.assertEqual(
 			self.engine.recommend_events_for_talent(self.talent),
+			[],
+		)
+
+
+class CompetitionRecommendationTests(TestCase):
+	def setUp(self):
+		self.user = get_user_model().objects.create_user(
+			username="competition_talent",
+			role="ATHLETE",
+		)
+		self.talent = TalentProfile.objects.create(
+			user=self.user,
+			talent_category="SPORTS",
+			talent_area="Goalkeeper",
+			country="Ghana",
+		)
+		self.engine = RecommendationEngine()
+		self.organization = Organization.objects.create(
+			name="Competition Organizer",
+			country="Ghana",
+		)
+		self.today = timezone.localdate()
+
+	def create_competition(self, title, **overrides):
+		values = {
+			"organization": self.organization,
+			"title": title,
+			"description": "Open challenge for emerging athletes.",
+			"category": "SPORTS",
+			"discipline": "Football",
+			"status": "PUBLISHED",
+			"registration_start": self.today - timedelta(days=1),
+			"registration_end": self.today + timedelta(days=10),
+			"competition_start": self.today + timedelta(days=11),
+			"competition_end": self.today + timedelta(days=12),
+		}
+		values.update(overrides)
+		return Competition.objects.create(**values)
+
+	def test_recommendations_rank_category_specialty_and_skills(self):
+		sport = Sport.objects.create(name="Football")
+		SportsTalentProfile.objects.create(
+			talent=self.talent,
+			sport=sport,
+			position="Goalkeeper",
+		)
+		category = SkillCategory.objects.create(name="Football")
+		skill = Skill.objects.create(category=category, name="Shot stopping")
+		self.talent.skills.add(skill)
+
+		high_fit = self.create_competition(
+			"Goalkeeper Skills Challenge",
+			requirements="Football goalkeeper and shot stopping trials.",
+			location="Accra, Ghana",
+		)
+		category_only = self.create_competition(
+			"General Athlete Showcase",
+			discipline="",
+			requirements="A general challenge for all athletes.",
+			location="Online",
+			online=True,
+		)
+
+		recommendations = self.engine.recommend_competitions_for_talent(
+			self.talent
+		)
+
+		self.assertEqual(recommendations[0]["competition"].pk, high_fit.pk)
+		self.assertGreater(
+			recommendations[0]["score"],
+			self.engine.score_competition_for_talent(
+				self.talent,
+				category_only,
+			),
+		)
+		self.assertTrue(
+			any("Goalkeeper" in reason for reason in recommendations[0]["reasons"])
+		)
+		self.assertTrue(
+			any("Shot stopping" in reason for reason in recommendations[0]["reasons"])
+		)
+
+	def test_recommendations_exclude_registered_full_and_closed_competitions(self):
+		registered = self.create_competition("Registered competition")
+		CompetitionParticipant.objects.create(
+			competition=registered,
+			talent=self.talent,
+		)
+		full = self.create_competition(
+			"Full competition",
+			max_participants=1,
+		)
+		other_user = get_user_model().objects.create_user(
+			username="another_talent",
+			role="ATHLETE",
+		)
+		other_talent = TalentProfile.objects.create(user=other_user)
+		CompetitionParticipant.objects.create(
+			competition=full,
+			talent=other_talent,
+		)
+		self.create_competition(
+			"Closed registration",
+			registration_end=self.today - timedelta(days=1),
+		)
+		self.create_competition(
+			"Not yet open",
+			registration_start=self.today + timedelta(days=1),
+		)
+		available = self.create_competition("Available competition")
+
+		recommendations = self.engine.recommend_competitions_for_talent(
+			self.talent
+		)
+		recommended_ids = {
+			item["competition"].pk
+			for item in recommendations
+		}
+
+		self.assertEqual(recommended_ids, {available.pk})
+
+	def test_similar_published_competition_result_improves_relevance(self):
+		past_competition = self.create_competition(
+			"Past Football Challenge",
+			status="COMPLETED",
+			registration_end=self.today - timedelta(days=20),
+			competition_start=self.today - timedelta(days=19),
+			competition_end=self.today - timedelta(days=18),
+		)
+		past_participant = CompetitionParticipant.objects.create(
+			competition=past_competition,
+			talent=self.talent,
+		)
+		CompetitionResult.objects.create(
+			participant=past_participant,
+			position=1,
+			award="Winner",
+			published_at=timezone.now(),
+		)
+		recommended = self.create_competition("New Football Challenge")
+		unrelated = self.create_competition(
+			"General Arts Exhibition",
+			category="ARTS",
+			discipline="Painting",
+			requirements="A showcase for new painters.",
+		)
+
+		self.assertGreater(
+			self.engine.score_competition_for_talent(
+				self.talent,
+				recommended,
+			),
+			self.engine.score_competition_for_talent(
+				self.talent,
+				unrelated,
+			),
+		)
+
+	def test_unmatched_talent_is_not_shown_generic_recommendations(self):
+		self.talent.talent_category = None
+		self.talent.talent_area = ""
+		self.talent.save(update_fields=("talent_category", "talent_area"))
+		self.create_competition(
+			"Painting showcase",
+			category="ARTS",
+			discipline="Painting",
+			description="A general showcase.",
+		)
+
+		self.assertEqual(
+			self.engine.recommend_competitions_for_talent(self.talent),
 			[],
 		)

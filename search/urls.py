@@ -7,6 +7,12 @@ urlpatterns = [
     path(
         "",
         views.talent_search,
+        name="user_search"
+    ),
+
+    path(
+        "",
+        views.talent_search,
         name="talent_search"
     ),
     

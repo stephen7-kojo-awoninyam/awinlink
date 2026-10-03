@@ -1,7 +1,7 @@
 from django.test import SimpleTestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from rest_framework.test import APIClient
@@ -76,6 +76,119 @@ class SendMessageAjaxTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["message"]["content"], "A message to myself")
         self.assertEqual(Message.objects.filter(conversation=self.conversation).count(), 1)
+
+    def test_sending_reply_links_message_and_returns_quoted_message_preview(self):
+        recipient = get_user_model().objects.create_user(
+            username="reply_recipient",
+        )
+        ConversationParticipant.objects.create(
+            conversation=self.conversation,
+            user=recipient,
+        )
+        original = Message.objects.create(
+            conversation=self.conversation,
+            sender=recipient,
+            content="The original message",
+        )
+
+        response = self.client.post(
+            reverse("messaging:send_message", args=[self.conversation.id]),
+            {
+                "content": "My reply",
+                "message_type": "TEXT",
+                "reply_to_id": original.pk,
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        reply = Message.objects.get(content="My reply")
+        self.assertEqual(reply.reply_to, original)
+        self.assertEqual(
+            response.json()["message"]["reply_to"],
+            {
+                "id": original.pk,
+                "sender_name": recipient.username,
+                "content": "The original message",
+            },
+        )
+
+    def test_reply_cannot_reference_a_message_from_another_conversation(self):
+        other_conversation = Conversation.objects.create(
+            created_by=self.user,
+        )
+        ConversationParticipant.objects.create(
+            conversation=other_conversation,
+            user=self.user,
+        )
+        original = Message.objects.create(
+            conversation=other_conversation,
+            sender=self.user,
+            content="Not part of this chat",
+        )
+
+        response = self.client.post(
+            reverse("messaging:send_message", args=[self.conversation.id]),
+            {
+                "content": "Invalid reply",
+                "reply_to_id": original.pk,
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Message.objects.filter(content="Invalid reply").count(), 0)
+
+
+@override_settings(
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+)
+class ConversationReplyTemplateTests(TestCase):
+    def test_conversation_shows_reply_action_and_quoted_parent(self):
+        user_model = get_user_model()
+        sender = user_model.objects.create_user(username="quote_sender")
+        recipient = user_model.objects.create_user(username="quote_recipient")
+        conversation = Conversation.objects.create(created_by=sender)
+        ConversationParticipant.objects.create(
+            conversation=conversation,
+            user=sender,
+        )
+        ConversationParticipant.objects.create(
+            conversation=conversation,
+            user=recipient,
+        )
+        original = Message.objects.create(
+            conversation=conversation,
+            sender=sender,
+            content="Original specific message",
+        )
+        Message.objects.create(
+            conversation=conversation,
+            sender=recipient,
+            content="Reply in the conversation",
+            reply_to=original,
+        )
+        self.client.force_login(recipient)
+
+        response = self.client.get(
+            reverse("messaging:conversation", args=[conversation.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Original specific message")
+        self.assertContains(response, "Reply in the conversation")
+        self.assertContains(response, 'class="reply-message-button"')
+        self.assertContains(response, 'name="reply_to_id"')
+        self.assertContains(response, "Replying to")
 
 
 class MessageReadReceiptTests(TestCase):
@@ -176,6 +289,62 @@ class SendMessageAPINotificationTests(TestCase):
                 notification_type="MESSAGE",
                 conversation=self.conversation,
             ).exists()
+        )
+
+    def test_api_message_reply_returns_quoted_message(self):
+        original = Message.objects.create(
+            conversation=self.conversation,
+            sender=self.recipient,
+            content="API original",
+        )
+
+        response = self.client.post(
+            f"/api/messaging/conversations/{self.conversation.id}/messages/create/",
+            {
+                "message_type": "TEXT",
+                "content": "API reply",
+                "reply_to_id": original.pk,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.data["reply_to"],
+            {
+                "id": original.pk,
+                "sender_name": self.recipient.username,
+                "content": "API original",
+            },
+        )
+
+    def test_api_message_reply_cannot_reference_other_conversation(self):
+        other_conversation = Conversation.objects.create(
+            created_by=self.sender,
+        )
+        ConversationParticipant.objects.create(
+            conversation=other_conversation,
+            user=self.sender,
+        )
+        original = Message.objects.create(
+            conversation=other_conversation,
+            sender=self.sender,
+            content="Outside message",
+        )
+
+        response = self.client.post(
+            f"/api/messaging/conversations/{self.conversation.id}/messages/create/",
+            {
+                "message_type": "TEXT",
+                "content": "Invalid API reply",
+                "reply_to_id": original.pk,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(
+            Message.objects.filter(content="Invalid API reply").exists()
         )
 
 

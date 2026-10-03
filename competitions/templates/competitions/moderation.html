@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Competition review | Awinlink{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="h2">Competition moderation</h1>
+    <p class="text-muted">Review competitions submitted by organizations.</p>
+    <div class="row g-3 mt-1">
+        {% for competition in competitions %}
+            <div class="col-12">
+                <article class="card"><div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between gap-3">
+                        <div>
+                            <h2 class="h5"><a href="{% url 'competition_detail' competition.id %}">{{ competition.title }}</a></h2>
+                            <p class="small text-muted">{{ competition.organization.name }} · {{ competition.get_category_display }} · {{ competition.competition_start }} – {{ competition.competition_end }}</p>
+                            <p>{{ competition.description|truncatewords:60 }}</p>
+                        </div>
+                        <form method="post" action="{% url 'competition_action' competition.id %}" class="d-flex flex-column gap-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="moderation">
+                            <textarea class="form-control" name="review_note" rows="2" placeholder="Review note (required when rejecting)"></textarea>
+                            <button class="btn btn-success" name="action" value="approve">Approve</button>
+                            <button class="btn btn-outline-danger" name="action" value="reject">Request changes</button>
+                        </form>
+                    </div>
+                </div></article>
+            </div>
+        {% empty %}
+            <div class="col-12"><div class="alert alert-light border">No competitions are awaiting review.</div></div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

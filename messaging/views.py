@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
@@ -35,6 +35,28 @@ from .models import (
 )
 
 
+def _message_reply_preview(message):
+    if not message:
+        return None
+
+    content = message.content.strip()
+    if not content:
+        content = {
+            "IMAGE": "Photo",
+            "VIDEO": "Video",
+            "FILE": "File",
+            "AUDIO": "Voice message",
+        }.get(message.message_type, "Message")
+
+    return {
+        "id": message.pk,
+        "sender_name": (
+            message.sender.get_full_name()
+            or message.sender.username
+        ),
+        "content": content[:200],
+    }
+
 
 # =====================================================
 # CONVERSATION DETAIL
@@ -68,7 +90,9 @@ def conversation(request, conversation_id):
 
     messages = conversation.messages.select_related(
 
-        "sender"
+        "sender",
+        "reply_to",
+        "reply_to__sender",
 
     ).order_by(
 
@@ -138,6 +162,18 @@ def conversation(request, conversation_id):
 
         )
 
+        reply_to_id = request.POST.get("reply_to_id", "").strip()
+        reply_to = None
+        if reply_to_id:
+            reply_to = Message.objects.filter(
+                pk=reply_to_id,
+                conversation=conversation,
+            ).select_related("sender").first()
+            if not reply_to:
+                return HttpResponseBadRequest(
+                    "The message you are replying to is not in this conversation."
+                )
+
 
         # ======================================
         # CHECK MESSAGE CONTENT
@@ -190,7 +226,8 @@ def conversation(request, conversation_id):
 
                 file=file,
 
-                audio=audio
+                audio=audio,
+                reply_to=reply_to
 
             )
 
@@ -357,6 +394,29 @@ def send_message(request, conversation_id):
             "audio"
         )
 
+        reply_to_id = request.POST.get("reply_to_id", "").strip()
+        reply_to = None
+        if reply_to_id:
+            reply_to = Message.objects.filter(
+                pk=reply_to_id,
+                conversation=conversation,
+            ).select_related("sender").first()
+            if not reply_to:
+                if is_ajax:
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "message": (
+                                "The message you are replying to is not "
+                                "in this conversation."
+                            ),
+                        },
+                        status=400,
+                    )
+                return HttpResponseBadRequest(
+                    "The message you are replying to is not in this conversation."
+                )
+
         # ======================================
         # DETERMINE MESSAGE TYPE
         # ======================================
@@ -470,7 +530,8 @@ def send_message(request, conversation_id):
 
             file=file,
 
-            audio=audio
+            audio=audio,
+            reply_to=reply_to
 
         )
 
@@ -523,7 +584,10 @@ def send_message(request, conversation_id):
                 {
                     "status": "success",
                     "message": {
+                        "id": message.pk,
                         "content": message.content,
+                        "message_type": message.message_type,
+                        "reply_to": _message_reply_preview(message.reply_to),
                         "created_at": timezone.localtime(
                             message.created_at
                         ).strftime("%b %d, %Y %I:%M %p"),

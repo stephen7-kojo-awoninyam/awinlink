@@ -8,7 +8,8 @@ from rest_framework import status
 from .models import Post
 from .serializers import PostSerializer,PostLike,PostLikeSerializer,Comment,CommentSerializer,SavedPost,SavedPostSerializer
 
-from connections.models import Follow, OrganizationFollow
+from connections.models import Connection, Follow, OrganizationFollow
+from recommendations.ecosystems import get_ecosystem_user_ids
 
 # ============================================================
 
@@ -64,6 +65,7 @@ class PostListAPIView(APIView):
     def get(self, request):
 
         user = request.user
+        ecosystem_user_ids = get_ecosystem_user_ids(user)
 
         # ----------------------------------------------------
         # POSTS THE USER CAN SEE
@@ -71,7 +73,10 @@ class PostListAPIView(APIView):
 
         posts = Post.objects.filter(
 
-            Q(visibility="PUBLIC")
+            Q(
+                visibility="PUBLIC",
+                author_id__in=ecosystem_user_ids | {user.pk},
+            )
 
             |
 
@@ -100,9 +105,31 @@ class PostListAPIView(APIView):
             flat=True
         )
 
+        connected_users = Connection.objects.filter(
+            Q(sender=user, status="ACCEPTED")
+            | Q(receiver=user, status="ACCEPTED")
+        ).values_list(
+            "sender_id",
+            "receiver_id",
+        )
+        connected_user_ids = set()
+        for sender_id, receiver_id in connected_users:
+            connected_user_ids.update((sender_id, receiver_id))
+        connected_user_ids.discard(user.pk)
+
+        public_network_author_ids = (
+            set(followed_users)
+            | connected_user_ids
+            | ecosystem_user_ids
+        )
+        posts = posts | Post.objects.filter(
+            visibility="PUBLIC",
+            author_id__in=public_network_author_ids,
+        )
+
         posts = posts | Post.objects.filter(
             visibility="FOLLOWERS",
-            author_id__in=followed_users
+            author_id__in=followed_users,
         )
 
         # ----------------------------------------------------
@@ -862,6 +889,4 @@ class MySavedPostsAPIView(APIView):
             serializer.data,
             status=status.HTTP_200_OK
         )
-
-
 

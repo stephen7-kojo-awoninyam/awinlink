@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Participants | {{ competition.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="h2">{{ competition.title }} participants</h1>
+    {% if is_scout %}<p class="text-muted">Only participants with public talent profiles are shown.</p>{% endif %}
+    <div class="row g-3 mt-1">
+        {% for participant in participants %}
+            <div class="col-md-6 col-xl-4">
+                <div class="card h-100"><div class="card-body">
+                    <h2 class="h5">
+                        <a class="text-decoration-none" href="{% url 'talent_profile' participant.talent.id %}">
+                            {{ participant.talent.user.get_full_name|default:participant.talent.user.username }}
+                        </a>
+                    </h2>
+                    <p class="text-muted small">{{ participant.talent.get_talent_category_display }}{% if participant.talent.talent_area %} · {{ participant.talent.talent_area }}{% endif %}</p>
+                    {% if not is_scout %}
+                        {% if participant.submitted_at %}<span class="badge text-bg-success">Submission received</span>{% endif %}
+                        {% if participant.submission %}<p class="mt-3">{{ participant.submission|truncatewords:30 }}</p>{% endif %}
+                        {% if participant.submission_url %}<a href="{{ participant.submission_url }}" target="_blank" rel="noopener noreferrer">View work</a>{% endif %}
+                    {% endif %}
+                    {% if can_evaluate and competition.status == "JUDGING" or can_mentor and competition.status == "ONGOING" %}
+                        <a class="btn btn-sm btn-outline-primary mt-3" href="{% url 'competition_evaluate' competition.id participant.id %}">{% if can_mentor and competition.status == "ONGOING" %}Add mentoring feedback{% else %}Evaluate{% endif %}</a>
+                    {% endif %}
+                </div></div>
+            </div>
+        {% empty %}
+            <div class="col-12"><p class="text-muted">No registered participants yet.</p></div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

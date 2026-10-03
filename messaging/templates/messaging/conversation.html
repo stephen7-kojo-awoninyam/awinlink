@@ -98,6 +98,70 @@
         margin-top: 7px;
     }
 
+    .reply-preview {
+        border-left: 3px solid #6c757d;
+        border-radius: 4px;
+        background: rgba(108, 117, 125, 0.12);
+        color: inherit;
+        margin: 6px 0 9px;
+        padding: 6px 9px;
+        font-size: 13px;
+    }
+
+    .mine .reply-preview {
+        border-left-color: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .reply-preview strong,
+    .reply-preview span {
+        display: block;
+    }
+
+    .reply-preview span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .reply-message-button {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        font-size: 12px;
+        margin-top: 5px;
+        opacity: 0.8;
+        padding: 2px 0;
+    }
+
+    .reply-composer-preview {
+        align-items: center;
+        background: #f1f3f5;
+        border-left: 3px solid #0d6efd;
+        border-radius: 6px;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding: 8px 10px;
+    }
+
+    .reply-composer-preview[hidden] {
+        display: none;
+    }
+
+    .reply-composer-preview div {
+        min-width: 0;
+    }
+
+    .reply-composer-preview span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     /* =========================
        MEDIA
        ========================= */
@@ -463,6 +527,17 @@
                                 You
                             </div>
 
+                            {% if message.reply_to %}
+                                <div class="reply-preview">
+                                    <strong>
+                                        {{ message.reply_to.sender.get_full_name|default:message.reply_to.sender.username }}
+                                    </strong>
+                                    <span>
+                                        {{ message.reply_to.content|default:"Attachment message"|truncatechars:180 }}
+                                    </span>
+                                </div>
+                            {% endif %}
+
 
                             <!-- TEXT -->
 
@@ -567,6 +642,17 @@
 
                             </span>
 
+                            <button
+                                type="button"
+                                class="reply-message-button"
+                                data-reply-id="{{ message.id }}"
+                                data-reply-author="You"
+                                data-reply-content="{{ message.content|default:''|truncatechars:180 }}"
+                                data-reply-type="{{ message.message_type }}"
+                            >
+                                Reply
+                            </button>
+
                         </div>
 
                     </div>
@@ -588,6 +674,17 @@
                                 {{ message.sender.get_full_name|default:message.sender.username }}
 
                             </div>
+
+                            {% if message.reply_to %}
+                                <div class="reply-preview">
+                                    <strong>
+                                        {{ message.reply_to.sender.get_full_name|default:message.reply_to.sender.username }}
+                                    </strong>
+                                    <span>
+                                        {{ message.reply_to.content|default:"Attachment message"|truncatechars:180 }}
+                                    </span>
+                                </div>
+                            {% endif %}
 
 
                             <!-- TEXT -->
@@ -693,6 +790,17 @@
 
                             </span>
 
+                            <button
+                                type="button"
+                                class="reply-message-button"
+                                data-reply-id="{{ message.id }}"
+                                data-reply-author="{{ message.sender.get_full_name|default:message.sender.username }}"
+                                data-reply-content="{{ message.content|default:''|truncatechars:180 }}"
+                                data-reply-type="{{ message.message_type }}"
+                            >
+                                Reply
+                            </button>
+
                         </div>
 
                     </div>
@@ -742,6 +850,29 @@
 
                 {% csrf_token %}
 
+                <input
+                    type="hidden"
+                    name="reply_to_id"
+                    id="replyToId"
+                    value=""
+                >
+
+                <div
+                    class="reply-composer-preview"
+                    id="replyComposerPreview"
+                    hidden
+                >
+                    <div>
+                        <strong id="replyComposerAuthor"></strong>
+                        <span id="replyComposerContent"></span>
+                    </div>
+                    <button
+                        type="button"
+                        class="btn-close"
+                        id="cancelReplyButton"
+                        aria-label="Cancel reply"
+                    ></button>
+                </div>
 
                 <!-- MESSAGE TYPE -->
 
@@ -943,6 +1074,21 @@ document.addEventListener("DOMContentLoaded", function () {
     const messageForm =
         document.getElementById("messageForm");
 
+    const replyToId =
+        document.getElementById("replyToId");
+
+    const replyComposerPreview =
+        document.getElementById("replyComposerPreview");
+
+    const replyComposerAuthor =
+        document.getElementById("replyComposerAuthor");
+
+    const replyComposerContent =
+        document.getElementById("replyComposerContent");
+
+    const cancelReplyButton =
+        document.getElementById("cancelReplyButton");
+
     const sendButton =
         document.getElementById("sendButton");
 
@@ -1057,6 +1203,46 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     scrollToBottom();
+
+    function attachmentReplyLabel(messageType) {
+        return {
+            IMAGE: "Photo",
+            VIDEO: "Video",
+            FILE: "File",
+            AUDIO: "Voice message"
+        }[messageType] || "Message";
+    }
+
+    function setReplyTarget(message) {
+        replyToId.value = message.id;
+        replyComposerAuthor.textContent =
+            `Replying to ${message.author}`;
+        replyComposerContent.textContent =
+            message.content || attachmentReplyLabel(message.messageType);
+        replyComposerPreview.hidden = false;
+        messageInput.focus();
+    }
+
+    function clearReplyTarget() {
+        replyToId.value = "";
+        replyComposerPreview.hidden = true;
+        replyComposerAuthor.textContent = "";
+        replyComposerContent.textContent = "";
+    }
+
+    chatBody.addEventListener("click", function (event) {
+        const button = event.target.closest(".reply-message-button");
+        if (!button) return;
+
+        setReplyTarget({
+            id: button.dataset.replyId,
+            author: button.dataset.replyAuthor,
+            content: button.dataset.replyContent,
+            messageType: button.dataset.replyType
+        });
+    });
+
+    cancelReplyButton.addEventListener("click", clearReplyTarget);
 
 
     /* =========================================================
@@ -2070,6 +2256,17 @@ document.addEventListener("DOMContentLoaded", function () {
         sender.textContent = "You";
         bubble.appendChild(sender);
 
+        if (message.reply_to) {
+            const preview = document.createElement("div");
+            preview.className = "reply-preview";
+            const author = document.createElement("strong");
+            author.textContent = message.reply_to.sender_name;
+            const content = document.createElement("span");
+            content.textContent = message.reply_to.content;
+            preview.append(author, content);
+            bubble.appendChild(preview);
+        }
+
         if (message.content) {
             const text = document.createElement("div");
             text.className = "mb-1";
@@ -2131,6 +2328,17 @@ document.addEventListener("DOMContentLoaded", function () {
         time.className = "message-time";
         time.textContent = message.created_at;
         bubble.appendChild(time);
+
+        const replyButton = document.createElement("button");
+        replyButton.type = "button";
+        replyButton.className = "reply-message-button";
+        replyButton.dataset.replyId = message.id;
+        replyButton.dataset.replyAuthor = "You";
+        replyButton.dataset.replyContent = message.content || "";
+        replyButton.dataset.replyType = message.message_type || "TEXT";
+        replyButton.textContent = "Reply";
+        bubble.appendChild(replyButton);
+
         row.appendChild(bubble);
         chatBody.appendChild(row);
         scrollToBottom();
@@ -2191,6 +2399,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             appendSentMessage(data.message);
             messageForm.reset();
+            clearReplyTarget();
             audioBlob = null;
             audioChunks = [];
             messageType.value = "TEXT";
