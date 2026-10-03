@@ -56,9 +56,10 @@ def register(request):
 
                 )
 
-            TalentProfile.objects.create(
-                user=user
-            )
+            if user.role == "ATHLETE":
+                TalentProfile.objects.create(
+                    user=user
+                )
 
             
             login(request, user)

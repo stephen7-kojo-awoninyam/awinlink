@@ -71,11 +71,17 @@
 
                             </h2>
 
-                            <p class="text-muted mb-0">
-
-                                {{ profile.headline|default:"Coach" }}
-
+                            <p class="text-primary fw-semibold mb-1">
+                                Coach{% if profile.coach_category %} - {{ profile.get_coach_category_display }}{% endif %}
                             </p>
+
+                            {% if profile.headline %}
+
+                            <p class="text-muted mb-0">
+                                {{ profile.headline }}
+                            </p>
+
+                            {% endif %}
 
                         </div>
 

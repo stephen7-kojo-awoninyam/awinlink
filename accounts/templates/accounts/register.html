@@ -381,6 +381,32 @@ Create Account | Awinlink
         </div>
 
 
+        <!-- COUNTRY -->
+        <div class="col-md-6">
+
+            <label
+                for="{{ form.country.id_for_label }}"
+                class="form-label"
+            >
+                Country
+            </label>
+
+            {{ form.country }}
+
+            <div
+                id="country-feedback"
+                class="small mt-1"
+            ></div>
+
+            {% for error in form.country.errors %}
+                <div class="text-danger small mt-1">
+                    {{ error }}
+                </div>
+            {% endfor %}
+
+        </div>
+
+
         <!-- PHONE -->
         <div class="col-md-6">
 
@@ -410,32 +436,6 @@ Create Account | Awinlink
             ></div>
 
             {% for error in form.phone_number.errors %}
-                <div class="text-danger small mt-1">
-                    {{ error }}
-                </div>
-            {% endfor %}
-
-        </div>
-
-
-        <!-- COUNTRY -->
-        <div class="col-md-6">
-
-            <label
-                for="{{ form.country.id_for_label }}"
-                class="form-label"
-            >
-                Country
-            </label>
-
-            {{ form.country }}
-
-            <div
-                id="country-feedback"
-                class="small mt-1"
-            ></div>
-
-            {% for error in form.country.errors %}
                 <div class="text-danger small mt-1">
                     {{ error }}
                 </div>

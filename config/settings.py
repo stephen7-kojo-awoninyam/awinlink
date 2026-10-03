@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     "science_technology",
     "others",
     "art",
+    "advertising",
     # Third-party
     "rest_framework",
     "channels",

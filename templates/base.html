@@ -276,7 +276,123 @@
 
 <div class="sidebar-user">
 
-    {% if user.talent_profile %}
+    {% if user.role == "COACH" %}
+
+        <a
+            href="{% url 'coach_profile' %}"
+            class="d-flex align-items-center text-decoration-none text-dark"
+        >
+
+            <div class="user-avatar">
+
+                {% if user.profile_picture %}
+
+                    <img
+                        src="{{ user.profile_picture.url }}"
+                        alt="Profile"
+                    >
+
+                {% else %}
+
+                    <i class="bi bi-person-badge"></i>
+
+                {% endif %}
+
+            </div>
+
+
+            <div class="user-info">
+
+                <strong>
+                    {{ user.get_full_name|default:user.username }}
+                </strong>
+
+                <small>
+                    {% if user.coach_profile.coach_category %}
+                        {{ user.coach_profile.get_coach_category_display }} Coach
+                    {% else %}
+                        Coach
+                    {% endif %}
+                </small>
+
+            </div>
+
+        </a>
+
+    {% elif user.role == "SCOUT" %}
+
+        <a
+            href="{% url 'scout_dashboard' %}"
+            class="d-flex align-items-center text-decoration-none text-dark"
+        >
+
+            <div class="user-avatar">
+
+                {% if user.profile_picture %}
+                    <img src="{{ user.profile_picture.url }}" alt="Profile">
+                {% else %}
+                    <i class="bi bi-binoculars"></i>
+                {% endif %}
+
+            </div>
+
+            <div class="user-info">
+                <strong>{{ user.get_full_name|default:user.username }}</strong>
+                <small>
+                    {% if user.scout_profile.scout_category %}
+                        {{ user.scout_profile.get_scout_category_display }} Scout
+                    {% else %}
+                        Scout
+                    {% endif %}
+                </small>
+            </div>
+
+        </a>
+
+    {% elif user.role == "ORGANIZATION" %}
+
+        {% if user.organization_profile %}
+            <a
+                href="{% url 'organization_profile' user.organization_profile.id %}"
+                class="d-flex align-items-center text-decoration-none text-dark"
+            >
+
+                <div class="user-avatar">
+                    {% if user.organization_profile.logo %}
+                        <img
+                            src="{{ user.organization_profile.logo.url }}"
+                            alt="{{ user.organization_profile.name }} logo"
+                        >
+                    {% else %}
+                        <i class="bi bi-building"></i>
+                    {% endif %}
+                </div>
+
+                <div class="user-info">
+                    <strong>{{ user.organization_profile.name }}</strong>
+                    <small>
+                        {% if user.organization_profile.category %}
+                            {{ user.organization_profile.category.name }}
+                        {% else %}
+                            Organization
+                        {% endif %}
+                    </small>
+                </div>
+
+            </a>
+        {% else %}
+            <div class="d-flex align-items-center">
+                <div class="user-avatar">
+                    <i class="bi bi-building"></i>
+                </div>
+                <div class="user-info">
+                    <strong>{{ user.get_full_name|default:user.username }}</strong>
+                    <small>Organization</small>
+                </div>
+            </div>
+        {% endif %}
+
+    {% elif user.talent_profile %}
 
         <a
             href="{% url 'talent_profile' user.talent_profile.id %}"
@@ -327,45 +443,6 @@
                     </small>
 
                 {% endif %}
-
-            </div>
-
-        </a>
-
-    {% elif user.role == "ORGANIZATION" and user.organization_profile %}
-
-        <a
-            href="{% url 'organization_profile' user.organization_profile.id %}"
-            class="d-flex align-items-center text-decoration-none text-dark"
-        >
-
-            <div class="user-avatar">
-
-                {% if user.profile_picture %}
-
-                    <img
-                        src="{{ user.profile_picture.url }}"
-                        alt="Profile"
-                    >
-
-                {% else %}
-
-                    <i class="bi bi-building"></i>
-
-                {% endif %}
-
-            </div>
-
-
-            <div class="user-info">
-
-                <strong>
-                    {{ user.get_full_name|default:user.username }}
-                </strong>
-
-                <small>
-                    {{ user.get_role_display }}
-                </small>
 
             </div>
 
@@ -856,6 +933,18 @@
 
                 {% if user.role == "ATHLETE" and user.talent_profile %}
                     <small>{{ user.talent_profile.display_identity }}</small>
+                {% elif user.role == "COACH" and user.coach_profile.coach_category %}
+                    <small>{{ user.coach_profile.get_coach_category_display }} Coach</small>
+                {% elif user.role == "SCOUT" and user.scout_profile.scout_category %}
+                    <small>{{ user.scout_profile.get_scout_category_display }} Scout</small>
+                {% elif user.role == "ORGANIZATION" and user.organization_profile %}
+                    <small>
+                        {% if user.organization_profile.category %}
+                            {{ user.organization_profile.category.name }}
+                        {% else %}
+                            Organization
+                        {% endif %}
+                    </small>
                 {% else %}
                     <small>{{ user.role|title }}</small>
                 {% endif %}
