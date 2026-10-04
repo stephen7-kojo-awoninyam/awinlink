@@ -144,6 +144,29 @@ def user_logout(request):
 
 
 @require_GET
+def check_username(request):
+    username = request.GET.get("username", "").strip().removeprefix("@")
+
+    if not username:
+        return JsonResponse({
+            "available": False,
+            "message": "Please enter a username.",
+        })
+
+    exists = User.objects.filter(username__iexact=username).exists()
+    if exists:
+        return JsonResponse({
+            "available": False,
+            "message": "This username is already taken.",
+        })
+
+    return JsonResponse({
+        "available": True,
+        "message": "Username is available.",
+    })
+
+
+@require_GET
 def check_organization_username(request):
     username = request.GET.get(
         "organization_username",

@@ -168,6 +168,46 @@ class UsernameSearchTests(TestCase):
         )
         self.assertEqual(response.context["user_results"], [])
 
+    def test_username_suggestions_accept_prefixed_and_unprefixed_queries(self):
+        self.client.force_login(self.talent_user)
+
+        for query in ("coach", "@coach"):
+            with self.subTest(query=query):
+                response = self.client.get(
+                    "/search/username-suggestions/",
+                    {"q": query},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    response.json()["results"][0]["username"],
+                    "coach_handle",
+                )
+
+    def test_username_suggestions_exclude_hidden_talents_and_admins(self):
+        self.client.force_login(self.talent_user)
+
+        private_response = self.client.get(
+            "/search/username-suggestions/",
+            {"q": "private"},
+        )
+        admin_response = self.client.get(
+            "/search/username-suggestions/",
+            {"q": "admin"},
+        )
+
+        self.assertEqual(private_response.json()["results"], [])
+        self.assertEqual(admin_response.json()["results"], [])
+
+        self.client.force_login(self.organization_user)
+        organization_response = self.client.get(
+            "/search/username-suggestions/",
+            {"q": "organization_talent"},
+        )
+        self.assertEqual(
+            organization_response.json()["results"][0]["username"],
+            "organization_talent",
+        )
+
     def test_global_search_has_search_url_and_existing_talent_search_still_works(self):
         self.client.force_login(self.talent_user)
         response = self.client.get("/search/", {"search": "talent"})

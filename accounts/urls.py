@@ -53,5 +53,10 @@ path(
     views.check_organization_username,
     name="check_organization_username",
 ),
+path(
+    "check-username/",
+    views.check_username,
+    name="check_username",
+),
 
 ]

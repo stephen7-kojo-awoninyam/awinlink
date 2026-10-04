@@ -338,6 +338,7 @@ Create Account | Awinlink
             <div
                 id="username-feedback"
                 class="small mt-1"
+                data-availability-url="{% url 'check_username' %}"
             ></div>
 
             <div
@@ -1019,9 +1020,15 @@ roleInputs.forEach(function (input) {
     */
 
     let usernameTimer;
+    let usernameAvailabilityRequest;
 
 
     function validateUsername() {
+
+        clearTimeout(usernameTimer);
+        if (usernameAvailabilityRequest) {
+            usernameAvailabilityRequest.abort();
+        }
 
         const username =
             usernameInput.value.trim().replace(/^@/, "");
@@ -1062,30 +1069,40 @@ roleInputs.forEach(function (input) {
         }
 
 
-        usernameFeedback.textContent =
-            "Checking username...";
+        usernameTimer = setTimeout(async function () {
+            usernameAvailabilityRequest = new AbortController();
+            const url = new URL(
+                usernameFeedback.dataset.availabilityUrl,
+                window.location.origin
+            );
+            url.searchParams.set("username", username);
+            usernameFeedback.textContent = "Checking username availability...";
+            usernameFeedback.className = "text-muted small mt-1";
 
-        usernameFeedback.className =
-            "text-muted small mt-1";
-
-
-        clearTimeout(usernameTimer);
-
-
-        usernameTimer = setTimeout(function () {
-
-            /*
-             * Username availability endpoint will be connected
-             * in the next step.
-             */
-
-            usernameFeedback.textContent =
-                "✓ Username format is valid.";
-
-            usernameFeedback.className =
-                "text-success small mt-1";
-
-        }, 500);
+            try {
+                const response = await fetch(url, {
+                    credentials: "same-origin",
+                    signal: usernameAvailabilityRequest.signal
+                });
+                if (!response.ok) {
+                    throw new Error(
+                        `Username availability request failed (${response.status}).`
+                    );
+                }
+                const result = await response.json();
+                usernameFeedback.textContent =
+                    `${result.available ? "✓" : "✗"} ${result.message}`;
+                usernameFeedback.className = result.available
+                    ? "text-success small mt-1"
+                    : "text-danger small mt-1";
+            } catch (error) {
+                if (error.name === "AbortError") return;
+                console.error(error);
+                usernameFeedback.textContent =
+                    "Unable to check username availability. Please try again.";
+                usernameFeedback.className = "text-danger small mt-1";
+            }
+        }, 300);
 
     }
 

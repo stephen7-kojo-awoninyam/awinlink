@@ -1,5 +1,6 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.db import IntegrityError, transaction
 
 from accounts.forms import UserRegistrationForm
 from accounts.models import User
@@ -43,6 +44,64 @@ class UserRegistrationRoleTests(TestCase):
         )
 
         self.assertTrue(form.is_valid())
+
+    def test_registration_rejects_username_with_different_case(self):
+        User.objects.create_user(username="TakenHandle")
+        form = UserRegistrationForm(
+            data={
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "username": "@takenhandle",
+                "email": "case-check@example.com",
+                "phone_number": "+233501234567",
+                "country": "GH",
+                "role": "COACH",
+                "password1": "StrongPass123!",
+                "password2": "StrongPass123!",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("username", form.errors)
+
+    def test_username_is_case_insensitively_unique_in_database(self):
+        User.objects.create_user(username="UniqueHandle")
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                User.objects.create_user(username="uniquehandle")
+
+
+@override_settings(
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+)
+class UsernameAvailabilityTests(TestCase):
+    def test_registration_page_configures_username_availability_check(self):
+        response = self.client.get(reverse("register"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'data-availability-url="/accounts/check-username/"',
+        )
+
+    def test_availability_check_accepts_prefixed_username(self):
+        User.objects.create_user(username="TakenHandle")
+
+        response = self.client.get(
+            reverse("check_username"),
+            {"username": "@takenhandle"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["available"])
 
 
 class RegistrationProfileTests(TestCase):

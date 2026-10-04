@@ -3,6 +3,11 @@ from . import views
 
 
 urlpatterns = [
+    path(
+        "username-suggestions/",
+        views.username_suggestions,
+        name="username_suggestions",
+    ),
 
     path(
         "",

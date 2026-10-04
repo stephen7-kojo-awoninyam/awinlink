@@ -138,17 +138,204 @@ document.addEventListener("DOMContentLoaded", function () {
        GLOBAL SEARCH
     ===================================================== */
 
-    const searchInput =
-        document.getElementById(
-            "globalSearch"
+    const searchInputs =
+        document.querySelectorAll(
+            "[data-global-search]"
         );
 
+    searchInputs.forEach(function (searchInput) {
+        const searchContainer = searchInput.closest(".header-search");
+        const predictions = document.createElement("div");
+        const listId = `${searchInput.id}-predictions`;
+        predictions.className = "header-search-predictions";
+        predictions.id = listId;
+        predictions.setAttribute("role", "listbox");
+        predictions.hidden = true;
+        searchContainer.appendChild(predictions);
+        searchInput.setAttribute("role", "combobox");
+        searchInput.setAttribute("aria-controls", listId);
+        searchInput.setAttribute("aria-expanded", "false");
 
-    if (searchInput) {
+        let suggestionTimer;
+        let suggestionRequest;
+        let activeSuggestion = -1;
+        let suggestionResults = [];
+
+        function closePredictions() {
+            predictions.hidden = true;
+            searchInput.setAttribute("aria-expanded", "false");
+            searchInput.removeAttribute("aria-activedescendant");
+            activeSuggestion = -1;
+        }
+
+        function goToUsername(username) {
+            const searchUrl = searchInput.dataset.searchUrl;
+            window.location.href =
+                `${searchUrl}?search=${encodeURIComponent(`@${username}`)}`;
+        }
+
+        function selectSuggestion(index) {
+            if (index < 0 || index >= suggestionResults.length) return;
+            goToUsername(suggestionResults[index].username);
+        }
+
+        function setActiveSuggestion(index) {
+            const options = predictions.querySelectorAll(
+                "[role='option']"
+            );
+            if (options.length === 0) return;
+
+            activeSuggestion = (index + options.length) % options.length;
+            options.forEach(function (option, optionIndex) {
+                option.setAttribute(
+                    "aria-selected",
+                    String(optionIndex === activeSuggestion)
+                );
+            });
+            searchInput.setAttribute(
+                "aria-activedescendant",
+                options[activeSuggestion].id
+            );
+        }
+
+        function showPredictionStatus(message) {
+            predictions.replaceChildren();
+            const status = document.createElement("div");
+            status.className = "header-search-prediction-status";
+            status.textContent = message;
+            predictions.appendChild(status);
+            predictions.hidden = false;
+            searchInput.setAttribute("aria-expanded", "true");
+        }
+
+        function renderPredictions(results) {
+            predictions.replaceChildren();
+            suggestionResults = results;
+            activeSuggestion = -1;
+
+            results.forEach(function (result, index) {
+                const option = document.createElement("button");
+                option.type = "button";
+                option.className = "header-search-prediction";
+                option.id = `${listId}-option-${index}`;
+                option.setAttribute("role", "option");
+                option.setAttribute("aria-selected", "false");
+
+                const username = document.createElement("strong");
+                username.textContent = `@${result.username}`;
+                const detail = document.createElement("small");
+                detail.textContent = [result.display_name, result.role]
+                    .filter(Boolean)
+                    .join(" · ");
+                option.append(username, detail);
+                option.addEventListener("click", function () {
+                    selectSuggestion(index);
+                });
+                predictions.appendChild(option);
+            });
+
+            predictions.hidden = results.length === 0;
+            searchInput.setAttribute(
+                "aria-expanded",
+                String(results.length > 0)
+            );
+        }
+
+        searchInput.addEventListener("input", function () {
+            clearTimeout(suggestionTimer);
+            if (suggestionRequest) suggestionRequest.abort();
+            closePredictions();
+            suggestionResults = [];
+            predictions.replaceChildren();
+
+            const query = searchInput.value.trim().replace(/^@/, "").trim();
+            if (!query) {
+                closePredictions();
+                return;
+            }
+
+            suggestionTimer = setTimeout(async function () {
+                suggestionRequest = new AbortController();
+                const url = new URL(
+                    searchInput.dataset.suggestionsUrl,
+                    window.location.origin
+                );
+                url.searchParams.set("q", query);
+
+                try {
+                    const response = await fetch(url, {
+                        credentials: "same-origin",
+                        signal: suggestionRequest.signal
+                    });
+                    if (!response.ok) {
+                        throw new Error(
+                            `Username suggestions request failed (${response.status}).`
+                        );
+                    }
+                    const data = await response.json();
+                    const currentQuery = searchInput.value
+                        .trim()
+                        .replace(/^@/, "")
+                        .trim();
+                    if (currentQuery !== query) return;
+                    renderPredictions(data.results);
+                } catch (error) {
+                    if (error.name === "AbortError") return;
+                    console.error(error);
+                    showPredictionStatus("Unable to load username suggestions.");
+                }
+            }, 180);
+        });
 
         searchInput.addEventListener(
             "keydown",
             function (event) {
+                if (!predictions.hidden && event.key === "ArrowDown") {
+                    event.preventDefault();
+                    setActiveSuggestion(activeSuggestion + 1);
+                    return;
+                }
+
+                if (!predictions.hidden && event.key === "ArrowUp") {
+                    event.preventDefault();
+                    setActiveSuggestion(
+                        activeSuggestion < 0
+                            ? predictions.querySelectorAll("[role='option']").length - 1
+                            : activeSuggestion - 1
+                    );
+                    return;
+                }
+
+                if (
+                    event.key === "Enter"
+                    && !predictions.hidden
+                    && activeSuggestion >= 0
+                ) {
+                    event.preventDefault();
+                    selectSuggestion(activeSuggestion);
+                    return;
+                }
+
+                if (event.key === "Enter" && !predictions.hidden) {
+                    const query = searchInput.value
+                        .trim()
+                        .replace(/^@/, "")
+                        .trim()
+                        .toLocaleLowerCase();
+                    const exactMatch = suggestionResults.find(function (result) {
+                        return result.username.toLocaleLowerCase() === query;
+                    });
+                    if (exactMatch) {
+                        event.preventDefault();
+                        goToUsername(exactMatch.username);
+                        return;
+                    }
+                }
+
+                if (event.key === "Escape") {
+                    closePredictions();
+                    return;
+                }
 
                 if (
                     event.key === "Enter"
@@ -171,7 +358,12 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         );
 
-    }
+        document.addEventListener("click", function (event) {
+            if (!searchContainer.contains(event.target)) {
+                closePredictions();
+            }
+        });
+    });
 
 
     /* =====================================================

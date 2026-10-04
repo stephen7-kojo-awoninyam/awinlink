@@ -152,6 +152,10 @@
         transition: background-color 140ms ease;
     }
 
+    .messenger-row[hidden] {
+        display: none;
+    }
+
     .messenger-row:hover {
         background: var(--messenger-hover);
         color: inherit;
@@ -421,6 +425,8 @@
                             href="{% url 'messaging:conversation' conversation.id %}"
                             data-conversation-row
                             data-unread="{% if conversation.unread_count %}true{% else %}false{% endif %}"
+                            data-search-name="{{ conversation.participant_name|default:'Unknown User' }}"
+                            data-search-username="{{ conversation.participant_username|default:'' }}"
                         >
                             <span class="messenger-avatar" aria-hidden="true">
                                 {% if conversation.participant_image %}
@@ -515,7 +521,12 @@
             let visibleCount = 0;
 
             rows.forEach((row) => {
-                const matchesSearch = row.textContent.toLocaleLowerCase().includes(query);
+                const searchableText = [
+                    row.textContent,
+                    row.dataset.searchName,
+                    row.dataset.searchUsername
+                ].join(" ").toLocaleLowerCase();
+                const matchesSearch = searchableText.includes(query);
                 const matchesFilter = activeFilter === "all" || row.dataset.unread === "true";
                 row.hidden = !(matchesSearch && matchesFilter);
                 if (!row.hidden) visibleCount += 1;

@@ -27,6 +27,44 @@ class MessagingUrlNamesTest(SimpleTestCase):
         self.assertEqual(reverse("messaging:start_coach_conversation", args=[11]), "/messages/start-coach/11/")
 
 
+@override_settings(
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+)
+class ConversationListSearchTests(TestCase):
+    def test_list_search_includes_participant_username(self):
+        user_model = get_user_model()
+        current_user = user_model.objects.create_user(username="search_owner")
+        participant = user_model.objects.create_user(
+            username="search_handle",
+            first_name="Taylor",
+            last_name="Example",
+        )
+        conversation = Conversation.objects.create(created_by=current_user)
+        ConversationParticipant.objects.create(
+            conversation=conversation,
+            user=current_user,
+        )
+        ConversationParticipant.objects.create(
+            conversation=conversation,
+            user=participant,
+        )
+        self.client.force_login(current_user)
+
+        response = self.client.get(reverse("messaging:conversation_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="mobileGlobalSearch"')
+        self.assertContains(response, 'data-search-name="Taylor Example"')
+        self.assertContains(response, 'data-search-username="search_handle"')
+
+
 class StartConversationTests(TestCase):
     def test_unconnected_user_is_redirected_to_connections_page(self):
         user_model = get_user_model()

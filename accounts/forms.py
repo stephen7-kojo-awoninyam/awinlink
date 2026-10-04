@@ -348,8 +348,8 @@ class UserRegistrationForm(UserCreationForm):
         if not username:
             raise ValidationError("Please enter a username.")
 
-        # Remove accidental @ symbol if user enters @username.
-        username = username.lstrip("@")
+        # Accept the @username spelling used throughout the site.
+        username = username.removeprefix("@")
 
         if User.objects.filter(username__iexact=username).exists():
             raise ValidationError(

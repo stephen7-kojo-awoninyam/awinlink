@@ -56,7 +56,7 @@
 
 </head>
 
-<body class="auth-page">
+<body class="auth-page" data-season="{{ seasonal_theme }}">
 
 <!-- =========================================================
      AUTHENTICATION LAYOUT
@@ -96,6 +96,17 @@
 
 <main class="auth-main">
 
+    {% if seasonal_theme %}
+        <aside class="seasonal-greeting" role="note">
+            <span class="seasonal-greeting-icon" aria-hidden="true">
+                <i class="bi {{ seasonal_icon }}"></i>
+            </span>
+            <span>
+                <strong>{{ seasonal_title }}</strong>
+                <span>{{ seasonal_message }}</span>
+            </span>
+        </aside>
+    {% endif %}
 
     <!-- DJANGO MESSAGES -->
 

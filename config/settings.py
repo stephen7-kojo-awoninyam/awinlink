@@ -142,6 +142,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "notifications.context_processors.notifications",
                 "core.context_processors.unread_messages",
+                "core.seasonal.seasonal_theme",
             ],
         },
     },

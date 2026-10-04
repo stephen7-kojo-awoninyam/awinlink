@@ -1,7 +1,10 @@
 from django.shortcuts import render
 from twisted import python
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.urls import reverse
+from django.views.decorators.http import require_GET
 from talents.models import TalentProfile
 from skills.models import Skill
 from domains.models import TalentDomain
@@ -15,6 +18,55 @@ from domains.models import TalentDomain
 from opportunities.models import Opportunity
 
 from django.db.models import Q
+
+
+@login_required
+@require_GET
+def username_suggestions(request):
+    query = request.GET.get("q", "").strip().removeprefix("@").strip()
+    if not query:
+        return JsonResponse({"results": []})
+
+    visible_accounts = (
+        ~Q(role="ATHLETE")
+        | Q(role="ATHLETE", talent_profile__profile_visibility="PUBLIC")
+    )
+    if request.user.role == "ORGANIZATION":
+        visible_accounts |= Q(
+            role="ATHLETE",
+            talent_profile__profile_visibility="ORGANIZATIONS",
+        )
+    visible_accounts |= Q(
+        pk=request.user.pk,
+        role="ATHLETE",
+        talent_profile__isnull=False,
+    )
+
+    user_model = get_user_model()
+    users = user_model.objects.filter(
+        username__istartswith=query,
+        is_active=True,
+    ).exclude(
+        Q(role="ADMIN") | Q(is_superuser=True)
+    ).filter(
+        visible_accounts
+    ).select_related(
+        "talent_profile",
+    ).order_by(
+        "username",
+    )[:8]
+
+    results = []
+    for user in users:
+        results.append({
+            "username": user.username,
+            "display_name": user.get_full_name() or user.username,
+            "role": user.get_role_display(),
+        })
+        if len(results) == 8:
+            break
+
+    return JsonResponse({"results": results})
 
 
 def talent_search(request):

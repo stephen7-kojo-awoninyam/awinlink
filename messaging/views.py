@@ -707,6 +707,7 @@ def conversation_list(request):
                 or f"Group Conversation {conversation.id}"
             )
 
+            conversation.participant_username = ""
             conversation.participant_role = ""
             conversation.participant_image = None
 
@@ -720,6 +721,7 @@ def conversation_list(request):
                     user.get_full_name()
                     or user.username
                 )
+                conversation.participant_username = user.username
 
                 # ======================================
                 # PARTICIPANT ROLE
@@ -765,6 +767,7 @@ def conversation_list(request):
                 # ======================================
 
                 conversation.participant_name = "Unknown User"
+                conversation.participant_username = ""
                 conversation.participant_role = ""
                 conversation.participant_image = None
 

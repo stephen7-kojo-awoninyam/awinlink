@@ -173,7 +173,7 @@
 
 </head>
 
-<body>
+<body data-season="{{ seasonal_theme }}">
 
 {% if user.is_authenticated %}
 
@@ -199,43 +199,62 @@
 <nav class="mobile-topbar d-lg-none">
 
 
-<div class="container-fluid d-flex align-items-center justify-content-between">
+<div class="container-fluid">
 
-    <button
-        class="btn mobile-menu-btn"
-        type="button"
-        id="mobileSidebarToggle"
-    >
+    <div class="mobile-topbar-row d-flex align-items-center justify-content-between">
 
-        <i class="bi bi-list"></i>
+        <button
+            class="btn mobile-menu-btn"
+            type="button"
+            id="mobileSidebarToggle"
+        >
 
-    </button>
+            <i class="bi bi-list"></i>
 
-
-    <a
-        href="{% url 'home_feed' %}"
-        class="mobile-brand"
-    >
-
-        Awinlink
-
-    </a>
+        </button>
 
 
-    <a
-        href="{% url 'notification_list' %}"
-        class="mobile-icon-link"
-    >
+        <a
+            href="{% url 'home_feed' %}"
+            class="mobile-brand"
+        >
 
-        <i class="bi bi-bell"></i>
+            Awinlink
 
-        {% if unread_notifications > 0 %}
+        </a>
 
-            <span class="notification-dot"></span>
 
-        {% endif %}
+        <a
+            href="{% url 'notification_list' %}"
+            class="mobile-icon-link"
+        >
 
-    </a>
+            <i class="bi bi-bell"></i>
+
+            {% if unread_notifications > 0 %}
+
+                <span class="notification-dot"></span>
+
+            {% endif %}
+
+        </a>
+
+    </div>
+
+    <div class="header-search mobile-header-search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input
+            type="search"
+            placeholder="Search Awinlink..."
+            id="mobileGlobalSearch"
+            data-global-search
+            data-suggestions-url="{% url 'username_suggestions' %}"
+            data-search-url="{% url 'user_search' %}"
+            aria-label="Search Awinlink"
+            aria-autocomplete="list"
+            autocomplete="off"
+        >
+    </div>
 
 </div>
 
@@ -902,8 +921,12 @@
             placeholder="Search talents, organizations, opportunities, or @username..."
             id="globalSearch"
             name="search"
+            data-global-search
+            data-suggestions-url="{% url 'username_suggestions' %}"
             data-search-url="{% url 'user_search' %}"
             aria-label="Search Awinlink"
+            aria-autocomplete="list"
+            autocomplete="off"
         >
 
     </div>
@@ -1018,6 +1041,18 @@
 
 <main class="awinlink-content">
 
+    {% if seasonal_theme %}
+        <aside class="seasonal-greeting" role="note">
+            <span class="seasonal-greeting-icon" aria-hidden="true">
+                <i class="bi {{ seasonal_icon }}"></i>
+            </span>
+            <span>
+                <strong>{{ seasonal_title }}</strong>
+                <span>{{ seasonal_message }}</span>
+            </span>
+        </aside>
+    {% endif %}
+
     <aside
         class="notification-permission-prompt"
         id="notificationPermissionPrompt"
@@ -1104,6 +1139,18 @@
 ========================================================= -->
 
 <main class="public-main">
+
+{% if seasonal_theme %}
+    <aside class="seasonal-greeting seasonal-greeting-public" role="note">
+        <span class="seasonal-greeting-icon" aria-hidden="true">
+            <i class="bi {{ seasonal_icon }}"></i>
+        </span>
+        <span>
+            <strong>{{ seasonal_title }}</strong>
+            <span>{{ seasonal_message }}</span>
+        </span>
+    </aside>
+{% endif %}
 
 {% block public_content %}
 {% endblock %}

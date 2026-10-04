@@ -41,3 +41,4 @@ phonenumbers==9.0.39
 cloudinary==1.46.2
 django-cloudinary-storage==0.3.0
 python-dotenv==1.2.3
+holidays==0.105
