@@ -1,0 +1,22 @@
+{% load learning_ui %}
+{% learning_creator user as can_create %}
+<nav class="lc-nav" aria-label="Learning navigation">
+    <a href="{% url 'courses' %}" {% if active == "discover" %}aria-current="page"{% endif %}>
+<i class="bi bi-compass" aria-hidden="true">
+</i> Discover</a>
+    <a href="{% url 'my_learning' %}" {% if active == "learning" %}aria-current="page"{% endif %}>
+<i class="bi bi-play-circle" aria-hidden="true">
+</i> My learning</a>
+    {% if can_create %}<a href="{% learning_url 'my_courses' %}" {% if active == "studio" %}aria-current="page"{% endif %}>
+<i class="bi bi-camera-reels" aria-hidden="true">
+</i> Creator studio</a>{% endif %}
+    <a href="{% learning_url 'my_quiz_attempts' %}" {% if active == "quizzes" %}aria-current="page"{% endif %}>
+<i class="bi bi-patch-question" aria-hidden="true">
+</i> Quiz history</a>
+    <a href="{% learning_url 'my_certificates' %}" {% if active == "certificates" %}aria-current="page"{% endif %}>
+<i class="bi bi-award" aria-hidden="true">
+</i> Certificates</a>
+    {% if user.role == "ADMIN" %}<a href="{% url 'admin_courses' %}" {% if active == "moderation" %}aria-current="page"{% endif %}>
+<i class="bi bi-shield-check" aria-hidden="true">
+</i> Review queue</a>{% endif %}
+</nav>

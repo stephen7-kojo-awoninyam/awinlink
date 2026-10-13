@@ -1,5 +1,10 @@
+import hashlib
+import secrets
+
 from django.db import models
 from django.conf import settings
+from django.core.validators import RegexValidator
+from django.utils import timezone
 
 
 # =====================================
@@ -244,6 +249,127 @@ class Organization(models.Model):
     def __str__(self):
         return self.name
 
+
+
+# =====================================
+# ORGANIZATION MEMBERSHIP
+# =====================================
+
+class OrganizationMembership(models.Model):
+    class Role(models.TextChoices):
+        OWNER = "OWNER", "Owner"
+        MANAGER = "MANAGER", "Manager"
+        RECRUITER = "RECRUITER", "Recruiter"
+        VIEWER = "VIEWER", "Viewer"
+
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        REMOVED = "REMOVED", "Removed"
+        SUSPENDED = "SUSPENDED", "Suspended"
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="memberships",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="organization_memberships",
+    )
+    role = models.CharField(max_length=20, choices=Role.choices, default="VIEWER")
+    status = models.CharField(max_length=20, choices=Status.choices, default="ACTIVE")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "user"],
+                name="organizations_membership_org_user_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["organization"],
+                condition=models.Q(role="OWNER", status="ACTIVE"),
+                name="organizations_membership_one_active_owner",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(role__in=["OWNER", "MANAGER", "RECRUITER", "VIEWER"]),
+                name="organizations_membership_role_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=["ACTIVE", "REMOVED", "SUSPENDED"]),
+                name="organizations_membership_status_valid",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.organization_id}/{self.user_id}: {self.role} ({self.status})"
+
+
+# =====================================
+# ORGANIZATION TEAM INVITATION
+# =====================================
+
+class OrganizationTeamInvitation(models.Model):
+    Role = OrganizationMembership.Role
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        ACCEPTED = "ACCEPTED", "Accepted"
+        DECLINED = "DECLINED", "Declined"
+        REVOKED = "REVOKED", "Revoked"
+        EXPIRED = "EXPIRED", "Expired"
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="team_invitations",
+    )
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name="received_organization_team_invitations",
+    )
+    inviter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name="sent_organization_team_invitations",
+    )
+    role = models.CharField(max_length=20, choices=Role.choices, default="VIEWER")
+    status = models.CharField(max_length=20, choices=Status.choices, default="PENDING")
+    expires_at = models.DateTimeField()
+    token_hash = models.CharField(
+        max_length=64, unique=True, editable=False,
+        validators=[RegexValidator(r"\A[0-9a-f]{64}\Z", "Enter a SHA-256 token digest.")],
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(role__in=["OWNER", "MANAGER", "RECRUITER", "VIEWER"]),
+                name="organizations_team_invite_role_valid",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=["PENDING", "ACCEPTED", "DECLINED", "REVOKED", "EXPIRED"]),
+                name="organizations_team_invite_status_valid",
+            ),
+        ]
+
+    def generate_token(self):
+        """Set the digest and return a fresh token once, without saving it."""
+        token = secrets.token_urlsafe(32)
+        self.token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        return token
+
+    def check_token(self, token):
+        """Only pending, unexpired invitations can authenticate a token."""
+        if (
+            not isinstance(token, str) or not token or not self.token_hash
+            or self.status != self.Status.PENDING or self.expires_at is None
+            or self.expires_at <= timezone.now()
+        ):
+            return False
+        digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        return secrets.compare_digest(self.token_hash, digest)
+
+    def __str__(self):
+        return f"{self.organization_id}/{self.recipient_id}: {self.role} ({self.status})"
 
 
 # =====================================

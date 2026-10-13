@@ -1,121 +1,25 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container mt-5">
-
-    <div class="d-flex justify-content-between mb-4">
-
-        <div>
-
-            <h2>
-
-                {{ event.title }}
-
-            </h2>
-
-            <small class="text-muted">
-
-                Event Gallery
-
-            </small>
-
-        </div>
-
-        {% if request.user == event.organizer.user %}
-
-        <a href="{% url 'upload_event_media' event.id %}"
-
-           class="btn btn-success">
-
-            Upload Media
-
-        </a>
-
-        {% endif %}
-
-    </div>
-
-    <div class="row">
-
-        {% for item in media %}
-
-        <div class="col-md-4 mb-4">
-
-            <div class="card shadow-sm">
-
-                {% if item.media_type == "IMAGE" %}
-
-                    <img src="{{ item.file.url }}"
-
-                         class="card-img-top"
-
-                         style="height:250px;object-fit:cover;">
-
-                {% else %}
-
-                    <video controls
-
-                           class="w-100"
-
-                           style="height:250px;object-fit:cover;">
-
-                        <source src="{{ item.file.url }}">
-
-                    </video>
-
-                {% endif %}
-
-                <div class="card-body">
-
-                    <p>
-
-                        {{ item.caption }}
-
-                    </p>
-
-                    <small class="text-muted">
-
-                        {{ item.uploaded_at }}
-
-                    </small>
-
-                    {% if request.user == event.organizer.user %}
-
-                    <hr>
-
-                    <a href="{% url 'delete_event_media' item.id %}"
-
-                       class="btn btn-danger btn-sm">
-
-                        Delete
-
-                    </a>
-
-                    {% endif %}
-
-                </div>
-
-            </div>
-
-        </div>
-
-        {% empty %}
-
-        <div class="col-12">
-
-            <div class="alert alert-info">
-
-                No media has been uploaded for this event yet.
-
-            </div>
-
-        </div>
-
-        {% endfor %}
-
-    </div>
-
-</div>
-
+{% extends "events/ui_base.html" %}
+{% load events_ui %}
+{% block title %}Event gallery | Awinlink{% endblock %}
+{% block event_content %}
+{% event_access user event.organizer "manage_events" as can_manage %}
+<a class="ev-back" href="{% url 'event_detail' event.id %}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Back to event</a>
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Moments worth sharing</span>
+<h1>Event gallery</h1>
+<p>{{ event.title }}</p>
+</div>{% if can_manage %}<a class="ev-button" href="{% url 'upload_event_media' event.id %}?organization_id={{ event.organizer.id }}">Upload media</a>{% endif %}</header>
+<div class="ev-grid">{% for item in media %}<article class="ev-card">{% if item.media_type == "IMAGE" %}<img class="ev-media" src="{{ item.file.url }}" alt="{{ item.caption|default:'Event photo' }}" loading="lazy">{% else %}<video class="ev-media" controls preload="metadata">
+<source src="{{ item.file.url }}">
+</video>{% endif %}<p class="ev-prose mt-3">{{ item.caption }}</p>
+<p class="ev-muted">{{ item.uploaded_at|date:"M j, Y" }}</p>{% if can_manage %}<form class="ev-card-footer" method="POST" action="{% url 'delete_event_media' item.id %}?organization_id={{ event.organizer.id }}">{% csrf_token %}<button class="ev-button ev-button-danger" type="submit">Delete</button>
+</form>{% endif %}</article>{% empty %}<section class="ev-card ev-empty">
+<i class="bi bi-images" aria-hidden="true">
+</i>
+<h2>No moments shared yet</h2>
+<p>No media has been uploaded for this event yet.</p>
+</section>{% endfor %}</div>
 {% endblock %}

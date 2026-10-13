@@ -1,3 +1,5 @@
+from django.views.decorators.http import require_POST
+from organizations.permissions import (OrganizationCapability, has_organization_capability, require_active_organization, require_request_organization)
 from django.contrib import messages
 from django.db.models.functions import TruncMonth
 from django.shortcuts import render
@@ -62,13 +64,9 @@ def is_event_organizer(user):
 
 
 @login_required
-@user_passes_test(can_create_event)
 def create_event(request):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.MANAGE_EVENTS)
 
 
     if request.method == "POST":
@@ -127,6 +125,7 @@ def create_event(request):
     
 
 @login_required
+@require_POST
 def register_event(request, event_id):
 
     # ==========================================
@@ -137,6 +136,7 @@ def register_event(request, event_id):
         Event,
         id=event_id
     )
+    require_active_organization(event.organizer)
 
 
     # ==========================================
@@ -309,6 +309,7 @@ def event_list(request):
 
 
     events = Event.objects.filter(
+        organizer__status="ACTIVE",
 
         status="PUBLISHED"
 
@@ -459,6 +460,7 @@ def event_detail(request, event_id):
     
     
 @login_required
+@require_POST
 def like_event(request, event_id):
     event = get_object_or_404(Event, id=event_id)
     like, created = EventLike.objects.get_or_create(user=request.user, event=event)
@@ -546,6 +548,7 @@ def my_events(request):
     )    
     
 @login_required
+@require_POST
 def cancel_registration(request, event_id):
 
     talent = get_object_or_404(
@@ -589,13 +592,9 @@ def cancel_registration(request, event_id):
 
 
 @login_required
-@user_passes_test(is_event_organizer)
 def organization_events(request):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.VIEW_EVENTS)
 
 
     events = Event.objects.filter(
@@ -626,7 +625,7 @@ def organization_events(request):
         ),
 
 
-        certificates=Count(
+        certificate_count=Count(
             "certificates",
             distinct=True
         ),
@@ -779,13 +778,10 @@ def organization_events(request):
     
     
 @login_required
-@user_passes_test(is_event_organizer)
+@require_POST
 def reject_registration(request, registration_id):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.MANAGE_EVENTS)
 
     registration = get_object_or_404(
         EventRegistration,
@@ -838,13 +834,9 @@ def reject_registration(request, registration_id):
     
     
 @login_required
-@user_passes_test(is_event_organizer)
 def event_participants(request, event_id):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.VIEW_EVENTS)
 
     event = get_object_or_404(
         Event,
@@ -888,13 +880,10 @@ def event_participants(request, event_id):
      
 
 @login_required
-@user_passes_test(is_event_organizer)
+@require_POST
 def mark_attendance(request, registration_id):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.MANAGE_EVENTS)
 
     registration = get_object_or_404(
         EventRegistration,
@@ -975,13 +964,9 @@ def mark_attendance(request, registration_id):
     
     
 @login_required
-@user_passes_test(is_event_organizer)
 def issue_certificate(request, event_id, registration_id):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.MANAGE_EVENTS)
 
     event = get_object_or_404(
         Event,
@@ -1068,7 +1053,7 @@ def talent_certificates(request):
 
         }
 
-    )   
+    )
     
      
 def verify_certificate(request, certificate_code):
@@ -1090,13 +1075,9 @@ def verify_certificate(request, certificate_code):
     
     
 @login_required
-@user_passes_test(is_event_organizer)
 def event_dashboard(request, event_id):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.VIEW_EVENTS)
 
     event = get_object_or_404(
         Event,
@@ -1274,13 +1255,13 @@ def give_feedback(request, event_id):
     
     
 @login_required
-@user_passes_test(is_event_organizer)
+@require_POST
 def approve_registration(request, registration_id):
 
-    organization = get_object_or_404(
+    organization = require_active_organization(get_object_or_404(
         Organization,
         user=request.user
-    )
+    ))
 
     registration = get_object_or_404(
         EventRegistration,
@@ -1344,6 +1325,7 @@ def recommended_events(request):
 
 
     events = Event.objects.filter(
+        organizer__status="ACTIVE",
 
         status="PUBLISHED"
 
@@ -1403,16 +1385,9 @@ def recommended_events(request):
     
     
 @login_required
-@user_passes_test(is_event_organizer)
 def upload_event_media(request, event_id):
 
-    organization = get_object_or_404(
-
-        Organization,
-
-        user=request.user
-
-    )
+    organization = require_request_organization(request, OrganizationCapability.MANAGE_EVENTS)
 
 
     event = get_object_or_404(
@@ -1522,16 +1497,10 @@ def event_gallery(request, event_id):
     
     
 @login_required
-@user_passes_test(is_event_organizer)
+@require_POST
 def delete_event_media(request, media_id):
 
-    organization = get_object_or_404(
-
-        Organization,
-
-        user=request.user
-
-    )
+    organization = require_request_organization(request, OrganizationCapability.MANAGE_EVENTS)
 
 
     media = get_object_or_404(
@@ -1570,13 +1539,9 @@ def delete_event_media(request, media_id):
     
     
 @login_required
-@user_passes_test(is_event_organizer)
 def event_analytics(request):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.VIEW_EVENTS)
 
     events = Event.objects.filter(
         organizer=organization
@@ -1698,8 +1663,10 @@ def certificate_detail(request, certificate_id):
         certificate.talent.user == request.user
     )
 
-    is_issuer = (
-        certificate.issued_by.user == request.user
+    is_issuer = has_organization_capability(
+        request.user,
+        certificate.issued_by,
+        OrganizationCapability.VIEW_EVENTS,
     )
 
     if not is_owner and not is_issuer:
@@ -1749,4 +1716,4 @@ def my_certificates(request):
         {
             "certificates": certificates
         }
-    )   
+    )

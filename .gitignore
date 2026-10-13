@@ -39,6 +39,7 @@ Thumbs.db
 .ruff_cache/
 
 # Coverage
+.audit-*/
 .coverage
 htmlcov/
 

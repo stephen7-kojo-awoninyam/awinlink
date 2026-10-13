@@ -1,109 +1,45 @@
-{% extends "base.html" %}
-
-
-{% block content %}
-
-
-<div class="container mt-4">
-
-
-<div class="card shadow">
-
-
-<div class="card-header bg-success text-white">
-
-<h4>
-Create New Event
-</h4>
-
+{% extends "events/ui_base.html" %}
+{% block title %}Create event | Awinlink{% endblock %}
+{% block event_content %}
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Bring your community together</span>
+<h1>Create a memorable experience</h1>
+<p>Set the scene, share the details, and invite talent to take part.</p>
 </div>
-
-
-
-<div class="card-body">
-
-
-<form method="POST" enctype="multipart/form-data">
-
-{% csrf_token %}
-
-
-
-{{ form.non_field_errors }}
-
-
-
-<div class="row">
-
-
-{% for field in form %}
-
-
-<div class="col-md-6 mb-3">
-
-
-<label class="form-label">
-
-{{ field.label }}
-
-</label>
-
-
-
-{{ field }}
-
-
-
-{% if field.errors %}
-
-<div class="text-danger">
-
-{{ field.errors }}
-
+</header>
+<div class="ev-form-layout">
+<form class="ev-card" method="POST" enctype="multipart/form-data">
+{% csrf_token %}{% if form.non_field_errors %}<div class="ev-notice ev-field-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+<fieldset class="ev-form-section">
+<legend>1. The essentials</legend>
+<div class="ev-form-grid">{% include "events/form_field.html" with field=form.title %}{% include "events/form_field.html" with field=form.slug %}{% include "events/form_field.html" with field=form.category %}{% include "events/form_field.html" with field=form.event_type %}{% include "events/form_field.html" with field=form.description %}{% include "events/form_field.html" with field=form.image %}</div>
+</fieldset>
+<fieldset class="ev-form-section">
+<legend>2. Where and when</legend>
+<div class="ev-form-grid">{% include "events/form_field.html" with field=form.location %}{% include "events/form_field.html" with field=form.online %}{% include "events/form_field.html" with field=form.meeting_link %}{% include "events/form_field.html" with field=form.start_date %}{% include "events/form_field.html" with field=form.end_date %}</div>
+</fieldset>
+<fieldset class="ev-form-section">
+<legend>3. Registration</legend>
+<div class="ev-form-grid">{% include "events/form_field.html" with field=form.registration_deadline %}{% include "events/form_field.html" with field=form.capacity %}</div>
+</fieldset>
+<p class="ev-help mb-3">Fields marked * are required.</p>
+<div class="ev-actions">
+<button class="ev-button" type="submit">
+<i class="bi bi-plus-lg" aria-hidden="true">
+</i> Create event</button>
+<a class="ev-button ev-button-secondary" href="{% url 'organization_dashboard' %}{% if request.GET.organization_id %}?organization_id={{ request.GET.organization_id|urlencode }}{% endif %}">Cancel</a>
 </div>
-
-{% endif %}
-
-
-
-</div>
-
-
-{% endfor %}
-
-
-</div>
-
-
-
-
-<button class="btn btn-success">
-
-Create Event
-
-</button>
-
-
-<a href="{% url 'organization_dashboard' %}"
-
-class="btn btn-secondary">
-
-Cancel
-
-</a>
-
-
-
 </form>
-
-
+<aside class="ev-card">
+<span class="ev-eyebrow">A great event starts here</span>
+<h2 class="mt-2">Make it easy to say yes</h2>
+<p class="ev-prose">Give your event a clear title and a welcoming description. Let people know what to expect and what they will take away.</p>
+<div class="ev-notice">A strong cover image helps your event stand out in discovery.</div>
+<p class="ev-prose">Set registration to close before the event starts, and check that the end time follows the start time.</p>
+<div class="ev-card-footer">
+<p class="ev-muted">Events are hosted by your organization. Your event will be published when you create it.</p>
 </div>
-
-
+</aside>
 </div>
-
-
-</div>
-
-
 {% endblock %}

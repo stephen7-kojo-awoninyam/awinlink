@@ -1,236 +1,64 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container py-5">
-
-    <div class="mb-4">
-
-        <h1 class="fw-bold">
-            Browse Courses
-        </h1>
-
-        <p class="text-muted">
-            Discover courses designed to help you develop your talent.
-        </p>
-
-    </div>
-
-
-    <!-- SEARCH AND FILTER -->
-
-    <div class="card border-0 shadow-sm mb-4">
-
-        <div class="card-body">
-
-            <form method="GET">
-
-                <div class="row g-3">
-
-                    <div class="col-md-5">
-
-                        <label class="form-label">
-                            Search
-                        </label>
-
-                        <input
-                            type="text"
-                            name="search"
-                            value="{{ request.GET.search }}"
-                            class="form-control"
-                            placeholder="Search courses..."
-                        >
-
-                    </div>
-
-
-                    <div class="col-md-3">
-
-                        <label class="form-label">
-                            Category
-                        </label>
-
-                        <select name="category"
-                                class="form-select">
-
-                            <option value="">
-                                All Categories
-                            </option>
-
-                            {% for category in categories %}
-
-                            <option value="{{ category.id }}"
-                                {% if request.GET.category == category.id|stringformat:"s" %}
-                                    selected
-                                {% endif %}>
-
-                                {{ category.name }}
-
-                            </option>
-
-                            {% endfor %}
-
-                        </select>
-
-                    </div>
-
-
-                    <div class="col-md-2">
-
-                        <label class="form-label">
-                            Level
-                        </label>
-
-                        <select name="level"
-                                class="form-select">
-
-                            <option value="">
-                                All Levels
-                            </option>
-
-                            <option value="BEGINNER">
-                                Beginner
-                            </option>
-
-                            <option value="INTERMEDIATE">
-                                Intermediate
-                            </option>
-
-                            <option value="ADVANCED">
-                                Advanced
-                            </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <div class="col-md-2 d-flex align-items-end">
-
-                        <button class="btn btn-primary w-100">
-                            Search
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </form>
-
-        </div>
-
-    </div>
-
-
-    <!-- COURSES -->
-
-    <div class="row g-4">
-
-        {% for course in courses %}
-
-        <div class="col-md-6 col-lg-4">
-
-            <div class="card border-0 shadow-sm h-100 overflow-hidden">
-
-                {% if course.thumbnail %}
-
-                <img src="{{ course.thumbnail.url }}"
-                     class="card-img-top"
-                     style="height:210px; object-fit:cover;">
-
-                {% else %}
-
-                <div class="bg-light d-flex justify-content-center align-items-center"
-                     style="height:210px;">
-
-                    <i class="bi bi-book fs-1 text-muted"></i>
-
-                </div>
-
-                {% endif %}
-
-
-                <div class="card-body">
-
-                    <div class="mb-2">
-
-                        <span class="badge bg-primary">
-                            {{ course.level|title }}
-                        </span>
-
-                        {% if course.is_free %}
-
-                        <span class="badge bg-success">
-                            Free
-                        </span>
-
-                        {% endif %}
-
-                    </div>
-
-
-                    <h5 class="fw-bold">
-                        {{ course.title }}
-                    </h5>
-
-
-                    <p class="text-muted small">
-                        {{ course.description|truncatewords:20 }}
-                    </p>
-
-
-                    <div class="small text-muted mb-3">
-
-                        <div>
-                            <i class="bi bi-folder"></i>
-                            {{ course.category.name }}
-                        </div>
-
-                        <div>
-                            <i class="bi bi-clock"></i>
-                            {{ course.duration }} minutes
-                        </div>
-
-                    </div>
-
-
-                    <a href="{% url 'course_detail' course.slug %}"
-                       class="btn btn-primary w-100">
-
-                        View Course
-
-                    </a>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        {% empty %}
-
-        <div class="col-12">
-
-            <div class="text-center py-5">
-
-                <i class="bi bi-search fs-1 text-muted"></i>
-
-                <h4 class="mt-3">
-                    No courses found
-                </h4>
-
-                <p class="text-muted">
-                    Try adjusting your search filters.
-                </p>
-
-            </div>
-
-        </div>
-
-        {% endfor %}
-
-    </div>
-
+{% extends "learning/ui_base.html" %}
+{% block title %}Discover learning | Awinlink{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="discover" %}{% endblock %}
+{% block learning_content %}
+<section class="lc-hero">
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">Stay curious. Keep growing.</span>
+<h1>A little inspiration.<br>A whole new skill.</h1>
+<p>Discover ideas, learn from your community, and turn your talent into something more.</p>
 </div>
-
+<a class="lc-button lc-button-secondary" href="{% url 'my_learning' %}">Keep learning <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</a>
+</header>
+</section>
+<form method="GET" class="lc-card lc-search-form">
+<div class="lc-search-grid">
+<div>
+<label for="learning-search">What do you want to learn?</label>
+<input id="learning-search" type="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="Search courses">
+</div>
+<div>
+<label for="learning-category">Category</label>
+<select id="learning-category" name="category">
+<option value="">All categories</option>{% for category in categories %}<option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select>
+</div>
+<div>
+<label for="learning-level">Level</label>
+<select id="learning-level" name="level">
+<option value="">All levels</option>
+<option value="BEGINNER" {% if request.GET.level == "BEGINNER" %}selected{% endif %}>Beginner</option>
+<option value="INTERMEDIATE" {% if request.GET.level == "INTERMEDIATE" %}selected{% endif %}>Intermediate</option>
+<option value="ADVANCED" {% if request.GET.level == "ADVANCED" %}selected{% endif %}>Advanced</option>
+</select>
+</div>
+<button class="lc-button" type="submit">
+<i class="bi bi-search" aria-hidden="true">
+</i> Search</button>
+</div>
+<a class="lc-text-link mt-2" href="{% url 'courses' %}">Reset filters</a>
+</form>
+<nav class="lc-category-nav" aria-label="Learning categories">
+<a href="{% url 'courses' %}{% if request.GET.q or request.GET.level %}?q={{ request.GET.q|default:''|urlencode }}&amp;level={{ request.GET.level|default:''|urlencode }}{% endif %}" {% if not request.GET.category %}aria-current="page"{% endif %}>
+<span class="lc-category-ring">
+<i class="bi bi-grid" aria-hidden="true">
+</i>
+</span>For every talent</a>{% for category in categories %}<a href="{% url 'courses' %}?category={{ category.id }}&amp;q={{ request.GET.q|default:''|urlencode }}&amp;level={{ request.GET.level|default:''|urlencode }}" {% if request.GET.category == category.id|stringformat:"s" %}aria-current="page"{% endif %}>
+<span class="lc-category-ring">
+<i class="bi bi-lightning-charge" aria-hidden="true">
+</i>
+</span>{{ category.name }}</a>{% endfor %}</nav>
+<div class="lc-results">
+<h2>Fresh perspectives, practical skills</h2>
+<span>{{ courses|length }} course{{ courses|length|pluralize }}</span>
+</div>
+<div class="lc-grid">{% for course in courses %}{% include "learning/course_card.html" %}{% empty %}<section class="lc-card lc-empty">
+<i class="bi bi-search" aria-hidden="true">
+</i>
+<h2>No courses found</h2>
+<p>Try another keyword, category, or level.</p>
+<a class="lc-button lc-button-secondary" href="{% url 'courses' %}">Reset filters</a>
+</section>{% endfor %}</div>
 {% endblock %}

@@ -217,6 +217,11 @@ COUNTRIES = [
 
 class UserRegistrationForm(UserCreationForm):
 
+    # Platform administrators are provisioned outside public registration.
+    PUBLIC_ROLE_CHOICES = tuple(
+        choice for choice in User.ROLE_CHOICES if choice[0] != "ADMIN"
+    )
+
     email = forms.EmailField(
         required=True,
         label="Email address",
@@ -231,7 +236,7 @@ class UserRegistrationForm(UserCreationForm):
 
     role = forms.ChoiceField(
         required=True,
-        choices=User.ROLE_CHOICES,
+        choices=PUBLIC_ROLE_CHOICES,
         label="Account type",
         widget=forms.RadioSelect(
             attrs={
@@ -331,7 +336,7 @@ class UserRegistrationForm(UserCreationForm):
         if not role:
             raise ValidationError("Please select your account type.")
 
-        valid_roles = {choice[0] for choice in User.ROLE_CHOICES}
+        valid_roles = {choice[0] for choice in self.PUBLIC_ROLE_CHOICES}
 
         if role not in valid_roles:
             raise ValidationError("Please select a valid account type.")

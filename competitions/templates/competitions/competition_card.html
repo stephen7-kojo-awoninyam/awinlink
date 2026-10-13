@@ -1,0 +1,33 @@
+<article class="cp-card cp-competition-card" data-competition-card data-status="{{ competition.status }}" data-format="{% if competition.online %}online{% else %}in-person{% endif %}">
+    <div class="cp-card-identity">
+<span class="cp-avatar">{% if competition.organization.logo %}<img src="{{ competition.organization.logo.url }}" alt="" loading="lazy">{% else %}{{ competition.organization.name|slice:":1" }}{% endif %}</span>
+<span>
+<strong>{{ competition.organization.name }}</strong>
+<small>{{ competition.get_category_display }}</small>
+</span>{% if competition.organization.verified %}<i class="bi bi-patch-check-fill cp-verified" aria-label="Verified organization">
+</i>{% endif %}</div>
+    <a class="cp-poster-link" href="{% url 'competition_detail' competition.id %}" aria-label="View {{ competition.title }}">{% include "competitions/poster.html" %}</a>
+    <div class="cp-card-body">
+<div class="cp-card-status">
+<span class="cp-status cp-status--{{ competition.status|lower }}">{{ competition.get_status_display }}</span>
+<span class="cp-format">{% if competition.online %}Online{% else %}In person{% endif %}</span>
+</div>
+        <h3>
+<a href="{% url 'competition_detail' competition.id %}">{{ competition.title }}</a>
+</h3>
+        <p class="cp-muted cp-card-description">{{ competition.description|truncatewords:24 }}</p>
+        {% if recommendation %}<div class="cp-match">
+<strong>{{ recommendation.score }}/100 match score</strong>
+<ul>{% for reason in recommendation.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+</div>{% endif %}
+        <div class="cp-card-meta">
+<span>
+<i class="bi bi-calendar3" aria-hidden="true">
+</i> Registration closes {{ competition.registration_end|date:"M j, Y" }}</span>{% if competition.discipline %}<span>
+<i class="bi bi-lightning-charge" aria-hidden="true">
+</i> {{ competition.discipline }}</span>{% endif %}</div>
+        <a class="cp-button cp-button-secondary cp-card-link" href="{% url 'competition_detail' competition.id %}">{% if recommendation %}View recommendation{% else %}Explore competition{% endif %} <i class="bi bi-arrow-up-right" aria-hidden="true">
+</i>
+</a>
+    </div>
+</article>

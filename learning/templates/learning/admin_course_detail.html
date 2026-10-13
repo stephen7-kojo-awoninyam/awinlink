@@ -1,239 +1,43 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container py-5">
-
-    <div class="row g-4">
-
-        <!-- COURSE INFORMATION -->
-
-        <div class="col-lg-8">
-
-            <div class="card border-0 shadow-sm">
-
-                {% if course.thumbnail %}
-
-                    <img
-                        src="{{ course.thumbnail.url }}"
-                        class="card-img-top"
-                        style="max-height: 400px; object-fit: cover;"
-                        alt="{{ course.title }}"
-                    >
-
-                {% endif %}
-
-
-                <div class="card-body p-4">
-
-                    <span class="badge bg-warning text-dark mb-3">
-                        Pending Review
-                    </span>
-
-
-                    <h2 class="fw-bold">
-                        {{ course.title }}
-                    </h2>
-
-
-                    {% if course.category %}
-
-                        <p class="text-muted mb-3">
-                            Category:
-                            <strong>
-                                {{ course.category.name }}
-                            </strong>
-                        </p>
-
-                    {% endif %}
-
-
-                    <div class="mb-4">
-
-                        <h5 class="fw-bold">
-                            Course Description
-                        </h5>
-
-                        <p class="text-muted">
-                            {{ course.description|linebreaks }}
-                        </p>
-
-                    </div>
-
-
-                    <!-- COURSE CREATOR -->
-
-                    <div class="border-top pt-3 mb-4">
-
-                        <h5 class="fw-bold">
-                            Course Creator
-                        </h5>
-
-                        <p class="mb-0">
-
-                            {{ course.creator.get_full_name|default:course.creator.username }}
-
-                            <span class="badge bg-secondary ms-2">
-                                {{ course.creator.role }}
-                            </span>
-
-                        </p>
-
-                    </div>
-
-
-                    <!-- LESSONS -->
-
-                    <div class="border-top pt-4">
-
-                        <h5 class="fw-bold mb-3">
-                            Course Lessons
-                        </h5>
-
-
-                        {% if lessons %}
-
-                            <div class="list-group">
-
-                                {% for lesson in lessons %}
-
-                                    <div class="list-group-item">
-
-                                        <div class="d-flex justify-content-between">
-
-                                            <div>
-
-                                                <span class="fw-semibold">
-                                                    Lesson {{ forloop.counter }}:
-                                                </span>
-
-                                                {{ lesson.title }}
-
-                                            </div>
-
-                                        </div>
-
-                                    </div>
-
-                                {% endfor %}
-
-                            </div>
-
-                        {% else %}
-
-                            <p class="text-muted">
-                                This course has no lessons.
-                            </p>
-
-                        {% endif %}
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- ADMIN ACTIONS -->
-
-        <div class="col-lg-4">
-
-            <div
-                class="card border-0 shadow-sm"
-                style="position: sticky; top: 20px;"
-            >
-
-                <div class="card-body p-4">
-
-                    <h5 class="fw-bold mb-3">
-                        Course Review
-                    </h5>
-
-
-                    <p class="text-muted">
-                        Review the course content before deciding
-                        whether it should be published on Awinlink.
-                    </p>
-
-
-                    <!-- APPROVE -->
-
-                    <form
-                        method="POST"
-                        action="{% url 'approve_course' course.id %}"
-                        class="mb-3"
-                    >
-
-                        {% csrf_token %}
-
-                        <button
-                            type="submit"
-                            class="btn btn-success w-100"
-                            onclick="return confirm('Are you sure you want to approve this course?');"
-                        >
-                            Approve Course
-                        </button>
-
-                    </form>
-
-
-                    <!-- REJECT -->
-
-                            <form
-                                method="POST"
-                                action="{% url 'reject_course' course.id %}"
-                            >
-
-                                {% csrf_token %}
-
-                                <div class="mb-3">
-
-                                    <label
-                                        for="rejection_reason"
-                                        class="form-label fw-semibold"
-                                    >
-                                        Reason for rejection
-                                    </label>
-
-                                    <textarea
-                                        name="rejection_reason"
-                                        id="rejection_reason"
-                                        class="form-control"
-                                        rows="5"
-                                        placeholder="Explain what the coach needs to improve..."
-                                        required
-                                    ></textarea>
-
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    class="btn btn-danger w-100"
-                                    onclick="return confirm('Are you sure you want to reject this course?');"
-                                >
-                                    Reject Course
-                                </button>
-
-                            </form>
-
-
-                    <a
-                        href="{% url 'admin_courses' %}"
-                        class="btn btn-outline-secondary w-100 mt-3"
-                    >
-                        Back to Pending Courses
-                    </a>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
+{% extends "learning/ui_base.html" %}
+{% block title %}Review {{ course.title }} | Awinlink{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="moderation" %}{% endblock %}
+{% block learning_content %}
+<a class="lc-back" href="{% url 'admin_courses' %}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Review queue</a>
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">Pending course review</span>
+<h1>{{ course.title }}</h1>
+<p>By {{ course.creator.get_full_name|default:course.creator.username }} &middot; {{ course.creator.role }}</p>
 </div>
-
+</header>
+<div class="lc-detail-grid">
+<div>
+<div class="lc-detail-cover">{% include "learning/course_cover.html" %}</div>
+<section class="lc-card">
+<h2>Course description</h2>
+<div class="lc-prose">{{ course.description|linebreaks }}</div>
+</section>
+<section class="lc-card">
+<h2>Course lessons</h2>{% for lesson in lessons %}<details class="lc-review">
+<summary>{{ lesson.order }}. {{ lesson.title }} &middot; {{ lesson.duration }} min</summary>
+<div class="lc-prose mt-3">{{ lesson.description|linebreaks }}</div>{% if lesson.video %}<div class="lc-watch">
+<video controls playsinline preload="metadata" aria-label="{{ lesson.title }}">
+<source src="{{ lesson.video.url }}">
+</video>
+</div>{% endif %}{% if lesson.notes %}<a class="lc-text-link" href="{{ lesson.notes.url }}" target="_blank" rel="noopener noreferrer">View lesson notes</a>{% endif %}{% if lesson.quiz %}<a class="lc-text-link" href="{% url 'manage_quiz' lesson.quiz.id %}">Review quiz</a>{% endif %}</details>{% empty %}<p class="lc-muted">This course has no lessons.</p>{% endfor %}</section>
+</div>
+<aside class="lc-card">
+<h2>Review decision</h2>
+<p class="lc-muted mb-3">Review the course content before deciding whether it should be published.</p>
+<form method="POST" action="{% url 'approve_course' course.id %}" onsubmit="return confirm('Approve this course?');">{% csrf_token %}<button class="lc-button w-100" type="submit">Approve course</button>
+</form>
+<form method="POST" action="{% url 'reject_course' course.id %}" class="lc-card-footer" onsubmit="return confirm('Reject this course?');">{% csrf_token %}<label for="rejection-reason">Reason for rejection</label>
+<textarea id="rejection-reason" name="rejection_reason" rows="5" required placeholder="Explain what the creator needs to improve">
+</textarea>
+<button class="lc-button lc-button-danger w-100 mt-3" type="submit">Reject course</button>
+</form>
+</aside>
+</div>
 {% endblock %}

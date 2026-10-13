@@ -1,0 +1,6 @@
+<div class="lc-field {% if field.name == 'description' or field.name == 'review' or field.name == 'question' or field.name == 'thumbnail' or field.name == 'video' or field.name == 'notes' %}lc-field-wide{% endif %}">
+    {% if field.field.widget.input_type == "checkbox" %}<div class="lc-checkbox">{{ field }}<label for="{{ field.id_for_label }}">{{ field.label }}</label>
+</div>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span aria-hidden="true"> *</span>{% endif %}</label>{{ field }}{% endif %}
+    {% if field.help_text %}<div class="lc-help">{{ field.help_text }}</div>{% endif %}
+    {% if field.errors %}<div class="lc-errors" role="alert">{{ field.errors }}</div>{% endif %}
+</div>

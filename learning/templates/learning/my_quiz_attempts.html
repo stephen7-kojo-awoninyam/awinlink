@@ -1,140 +1,33 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container py-5">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-            <h2 class="fw-bold mb-1">
-                My Quiz Attempts
-            </h2>
-
-            <p class="text-muted mb-0">
-                Review your quiz performance and previous attempts.
-            </p>
-        </div>
-
-        <a href="{% url 'my_learning' %}"
-           class="btn btn-outline-primary">
-            My Learning
-        </a>
-
-    </div>
-
-
-    {% if attempts %}
-
-        <div class="card shadow-sm border-0">
-
-            <div class="table-responsive">
-
-                <table class="table table-hover align-middle mb-0">
-
-                    <thead class="table-light">
-
-                        <tr>
-
-                            <th>Quiz</th>
-
-                            <th>Course</th>
-
-                            <th>Score</th>
-
-                            <th>Percentage</th>
-
-                            <th>Result</th>
-
-                            <th>Date</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        {% for attempt in attempts %}
-
-                        <tr>
-
-                            <td class="fw-semibold">
-                                {{ attempt.quiz.title }}
-                            </td>
-
-                            <td>
-                                {{ attempt.quiz.lesson.course.title }}
-                            </td>
-
-                            <td>
-                                {{ attempt.score }}
-                                /
-                                {{ attempt.total_questions }}
-                            </td>
-
-                            <td>
-                                {{ attempt.percentage }}%
-                            </td>
-
-                            <td>
-
-                                {% if attempt.passed %}
-
-                                    <span class="badge bg-success">
-                                        Passed
-                                    </span>
-
-                                {% else %}
-
-                                    <span class="badge bg-danger">
-                                        Failed
-                                    </span>
-
-                                {% endif %}
-
-                            </td>
-
-                            <td>
-                                {{ attempt.attempted_at|date:"M d, Y H:i" }}
-                            </td>
-
-                        </tr>
-
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    {% else %}
-
-        <div class="card border-0 shadow-sm">
-
-            <div class="card-body text-center py-5">
-
-                <h5 class="fw-bold">
-                    No quiz attempts yet
-                </h5>
-
-                <p class="text-muted">
-                    Your quiz attempts will appear here after you complete a quiz.
-                </p>
-
-                <a href="{% url 'courses' %}"
-                   class="btn btn-primary">
-                    Browse Courses
-                </a>
-
-            </div>
-
-        </div>
-
-    {% endif %}
-
+{% extends "learning/ui_base.html" %}
+{% load learning_ui %}
+{% block title %}Quiz history | Awinlink learning{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="quizzes" %}{% endblock %}
+{% block learning_content %}
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">Practice is part of progress</span>
+<h1>Your quiz journey</h1>
+<p>Follow your attempts and find the lessons worth revisiting.</p>
 </div>
-
+<a class="lc-button lc-button-secondary" href="{% url 'my_learning' %}">My learning</a>
+</header>
+{% for attempt in attempts %}<article class="lc-card lc-studio-row">
+<div>
+<span class="lc-eyebrow">{{ attempt.quiz.lesson.course.title }}</span>
+<h2 class="mt-2">{{ attempt.quiz.title }}</h2>
+<p class="lc-muted">{{ attempt.score }} / {{ attempt.total_questions }} correct &middot; {{ attempt.attempted_at|date:"M j, Y" }}</p>
+<a class="lc-text-link mt-2" href="{% learning_url 'lesson_detail' attempt.quiz.lesson.id %}">Revisit lesson</a>
+</div>
+<div>
+<strong class="lc-score mt-0">{{ attempt.percentage }}%</strong>
+<br>
+<span class="lc-status {% if attempt.passed %}lc-status--complete{% else %}lc-status--pending{% endif %}">{% if attempt.passed %}Passed{% else %}Try again{% endif %}</span>
+</div>
+</article>{% empty %}<section class="lc-card lc-empty">
+<i class="bi bi-patch-question" aria-hidden="true">
+</i>
+<h2>No quiz attempts yet</h2>
+<p>Your knowledge checks will appear here as you learn.</p>
+<a class="lc-button" href="{% url 'my_learning' %}">Continue learning</a>
+</section>{% endfor %}
 {% endblock %}

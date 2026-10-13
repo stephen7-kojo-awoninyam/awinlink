@@ -1,3 +1,4 @@
+from talents.visibility import visible_talent_profiles_for
 from django.shortcuts import render
 from twisted import python
 from django.contrib.auth import get_user_model
@@ -29,17 +30,7 @@ def username_suggestions(request):
 
     visible_accounts = (
         ~Q(role="ATHLETE")
-        | Q(role="ATHLETE", talent_profile__profile_visibility="PUBLIC")
-    )
-    if request.user.role == "ORGANIZATION":
-        visible_accounts |= Q(
-            role="ATHLETE",
-            talent_profile__profile_visibility="ORGANIZATIONS",
-        )
-    visible_accounts |= Q(
-        pk=request.user.pk,
-        role="ATHLETE",
-        talent_profile__isnull=False,
+        | Q(talent_profile__in=visible_talent_profiles_for(request.user))
     )
 
     user_model = get_user_model()
@@ -72,14 +63,8 @@ def username_suggestions(request):
 def talent_search(request):
     user_model = get_user_model()
 
-    talents = TalentProfile.objects.select_related(
-        "user"
-    ).prefetch_related(
-        "skills",
-        "domains"
-    ).filter(
-        profile_visibility__in=["PUBLIC", "ORGANIZATIONS"]
-    )
+    visible_talents = visible_talent_profiles_for(request.user)
+    talents = visible_talents.select_related("user").prefetch_related("skills", "domains")
 
     # ==========================================
     # GET FILTERS
@@ -130,18 +115,8 @@ def talent_search(request):
                 if profile is None:
                     continue
 
-                is_owner = (
-                    request.user.is_authenticated
-                    and request.user.pk == user.pk
-                )
-                can_view_organization_profile = (
-                    request.user.is_authenticated
-                    and request.user.role == "ORGANIZATION"
-                    and profile.profile_visibility == "ORGANIZATIONS"
-                )
-                if not is_owner and not can_view_organization_profile:
-                    if profile.profile_visibility != "PUBLIC":
-                        continue
+                if not visible_talents.filter(pk=profile.pk).exists():
+                    continue
 
                 detail = profile.headline or profile.talent_area or ""
                 location = ", ".join(

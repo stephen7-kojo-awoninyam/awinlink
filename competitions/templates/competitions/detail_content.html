@@ -1,0 +1,88 @@
+{% load competition_ui %}
+
+{% competition_access user competition.organization "view_competitions" as can_view_workspace %}
+<a class="cp-back" href="{% url 'competition_list' %}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Discover competitions</a>
+<div class="cp-detail-poster">{% include "competitions/poster.html" %}</div>
+<header class="cp-heading">
+<div>
+<span class="cp-eyebrow">{{ competition.get_category_display }}{% if competition.discipline %} / {{ competition.discipline }}{% endif %}</span>
+<h1>{{ competition.title }}</h1>
+<div class="cp-person">
+<span class="cp-avatar">{% if competition.organization.logo %}<img src="{{ competition.organization.logo.url }}" alt="">{% else %}{{ competition.organization.name|slice:":1" }}{% endif %}</span>
+<p class="cp-muted">Hosted by {{ competition.organization.name }}</p>
+</div>
+</div>
+<div class="cp-actions">
+<span class="cp-status cp-status--{{ competition.status|lower }}">{{ competition.get_status_display }}</span>
+<a class="cp-button cp-button-secondary" href="#participation">Your next step</a>{% if is_owner or can_view_workspace %}<a class="cp-button cp-button-secondary" href="{% url 'competition_dashboard' %}?organization_id={{ competition.organization.id }}">Manage</a>{% endif %}</div>
+</header>
+<div class="cp-detail-grid">
+<div class="cp-detail-main">
+<section class="cp-card">
+<h2>About this competition</h2>
+<div class="cp-prose">{{ competition.description|linebreaks }}</div>
+</section>{% if competition.requirements %}<section class="cp-card">
+<h2>What you’ll need</h2>
+<div class="cp-prose">{{ competition.requirements|linebreaks }}</div>
+</section>{% endif %}{% if competition.rules %}<section class="cp-card">
+<h2>Rules of the challenge</h2>
+<div class="cp-prose">{{ competition.rules|linebreaks }}</div>
+</section>{% endif %}{% if competition.prizes %}<section class="cp-card">
+<span class="cp-eyebrow">Something to work toward</span>
+<h2 class="mt-2">Prizes &amp; recognition</h2>
+<div class="cp-prose">{{ competition.prizes|linebreaks }}</div>
+</section>{% endif %}
+{% if is_owner and competition.review_note %}<div class="cp-notice cp-notice--review">
+<strong>Review note</strong>
+<div>{{ competition.review_note|linebreaks }}</div>
+</div>{% endif %}</div>
+<aside aria-label="Competition schedule and registration">
+<section class="cp-card cp-registration-link" id="participation">
+<span class="cp-eyebrow">Make your next move</span>
+<h2 class="mt-2">Your participation</h2>
+{% if request.user.is_authenticated and request.user.role == "ATHLETE" %}
+{% if participation %}<span class="cp-status cp-status--{{ participation.status|lower }}">{{ participation.get_status_display }}</span>
+<p class="cp-muted mt-3">You are {{ participation.get_status_display|lower }} for this competition.</p>{% if competition.status == "ONGOING" and participation.status == "REGISTERED" %}<a class="cp-button w-100 mt-3" href="{% url 'competition_submission' competition.id %}">Submit or update work</a>{% endif %}
+{% elif not request.user.talent_profile %}<div class="cp-notice">You need a talent profile before registering.</div>
+{% elif competition.registration_open %}<p class="cp-muted mb-3">Step forward and show what you can do.</p>
+<form method="post" action="{% url 'competition_register' competition.id %}">{% csrf_token %}<button class="cp-button w-100" type="submit">Register <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</button>
+</form>
+{% else %}<div class="cp-notice">Registration is not currently open.</div>
+<button class="cp-button w-100" disabled>Registration unavailable</button>{% endif %}
+{% elif not request.user.is_authenticated %}<p class="cp-muted mb-3">Log in to your Awinlink account to take part.</p>
+<a class="cp-button w-100" href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in</a>
+{% elif request.user.role == "SCOUT" %}<p class="cp-muted mb-3">Discover the talent taking part in this challenge.</p>
+<a class="cp-button w-100" href="{% url 'competition_participants' competition.id %}">Discover participants</a>{% else %}<p class="cp-muted">Follow the challenge and support the talent taking part.</p>{% endif %}
+{% if participation and participation.result.published_at %}<div class="cp-notice mt-3">
+<strong>Your result</strong>
+<br>{{ participation.result.award|default:participation.result.position }}</div>{% endif %}
+{% if competition.status == "RESULTS" or competition.status == "COMPLETED" %}<a class="cp-button cp-button-secondary w-100 mt-3" href="{% url 'competition_results' competition.id %}">
+<i class="bi bi-award" aria-hidden="true">
+</i> View results</a>{% endif %}</section>
+<section class="cp-card">
+<h2>The key details</h2>
+<dl class="cp-facts">
+<div>
+<dt>Registration</dt>
+<dd>{{ competition.registration_start|date:"M j, Y" }} &ndash; {{ competition.registration_end|date:"M j, Y" }}</dd>
+</div>
+<div>
+<dt>Competition dates</dt>
+<dd>{{ competition.competition_start|date:"M j, Y" }} &ndash; {{ competition.competition_end|date:"M j, Y" }}</dd>
+</div>
+<div>
+<dt>Location</dt>
+<dd>{% if competition.online %}Online{% else %}{{ competition.location|default:"To be announced" }}{% endif %}</dd>
+</div>
+<div>
+<dt>Participants</dt>
+<dd>{{ competition.participant_count }}{% if competition.max_participants != None %} / {{ competition.max_participants }}{% endif %}</dd>
+</div>
+</dl>
+</section>
+</aside>
+</div>

@@ -98,27 +98,27 @@ height="120">
 {% if item.starred %}
 
 
-<a href="{% url 'toggle_star' item.talent.id %}"
+<form method="post" action="{% url 'toggle_star' item.talent.id %}" class="d-inline">{% csrf_token %}<button type="submit"
 class="btn btn-warning btn-sm mb-2">
 
 
 ⭐ Favorite Talent
 
 
-</a>
+</button></form>
 
 
 {% else %}
 
 
-<a href="{% url 'toggle_star' item.talent.id %}"
+<form method="post" action="{% url 'toggle_star' item.talent.id %}" class="d-inline">{% csrf_token %}<button type="submit"
 class="btn btn-outline-warning btn-sm mb-2">
 
 
 ☆ Mark Favorite
 
 
-</a>
+</button></form>
 
 
 {% endif %}
@@ -208,7 +208,7 @@ View Profile
 
 
 
-<a href="{% url 'invite_talent' item.talent.id %}"
+<a href="{% url 'invite_talent_profile' item.talent.id %}"
 
 class="btn btn-success">
 
@@ -224,13 +224,13 @@ class="btn btn-outline-info btn-sm">
 </a>
 
 
-<a href="{% url 'remove_from_shortlist' item.talent.id %}"
+<form method="post" action="{% url 'remove_from_shortlist' item.talent.id %}" class="d-inline">{% csrf_token %}<button type="submit"
 
 class="btn btn-danger">
 
 Remove
 
-</a>
+</button></form>
 
 
 

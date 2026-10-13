@@ -1,11 +1,24 @@
+from django.http import Http404
+from organizations.models import OrganizationMembership
+from organizations.permissions import (
+    OrganizationCapability, get_request_organization,
+    has_organization_capability, require_request_organization,
+)
+from talents.visibility import visible_talent_profiles_for
+from organizations.permissions import (
+    require_active_organization, require_user_organization_active,
+)
 from django.contrib.auth import authenticate
+from django.db import transaction
 from django.db import models
 from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from talents.models import TalentProfile, RoleModelAssignment
 from others.models import OtherTalentProfile
 from talents.services import FollowerAnalyticsService
 from .serializers import EventRecommendationSerializer, RoleModelAssignmentSerializer
 from accounts.models import User
+from accounts.forms import UserRegistrationForm
 from organizations.models import Organization
 from opportunities.models import Opportunity
 from talents.models import TalentProfile
@@ -69,14 +82,6 @@ from .serializers import (
 )
 
 
-def visible_talent_profiles_for(user):
-    visibility = Q(profile_visibility="PUBLIC") | Q(user=user)
-
-    if user.role == "ORGANIZATION":
-        visibility |= Q(profile_visibility="ORGANIZATIONS")
-
-    return TalentProfile.objects.filter(visibility)
-
 # =====================================================
 # LOGIN
 # =====================================================
@@ -131,6 +136,58 @@ class LoginAPIView(APIView):
                 "access": str(refresh.access_token),
             },
             status=status.HTTP_200_OK
+        )
+
+
+# =====================================================
+# REGISTRATION
+# =====================================================
+
+class RegisterAPIView(APIView):
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+
+        if request.data.get("role") == "ADMIN":
+            return Response(
+                {"role": ["Administrator accounts cannot be created here."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        form = UserRegistrationForm(request.data)
+        if not form.is_valid():
+            return Response(
+                {
+                    field: [str(error) for error in errors]
+                    for field, errors in form.errors.items()
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            user = form.save()
+
+            if user.role == "ATHLETE":
+                TalentProfile.objects.create(user=user)
+            elif user.role == "ORGANIZATION":
+                Organization.objects.create(
+                    user=user,
+                    name=form.cleaned_data["organization_name"],
+                    email=form.cleaned_data["organization_email"],
+                    website=form.cleaned_data.get("website", ""),
+                    phone=user.phone_number,
+                    country=user.country,
+                )
+
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "user": UserSerializer(user).data,
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            },
+            status=status.HTTP_201_CREATED,
         )
 
 
@@ -276,6 +333,51 @@ class MyTalentProfileAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
+    def patch(self, request):
+
+        if request.user.role != "ATHLETE":
+            return Response(
+                {"detail": "Only talent accounts can update a talent profile."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        allowed_fields = {
+            "talent_category",
+            "talent_area",
+            "headline",
+            "biography",
+            "country",
+            "city",
+            "experience_level",
+            "preferred_work_type",
+            "availability_status",
+            "profile_visibility",
+        }
+        unexpected_fields = set(request.data) - allowed_fields
+        if unexpected_fields:
+            return Response(
+                {"detail": "Unsupported talent profile fields were supplied."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            talent = TalentProfile.objects.get(user=request.user)
+        except TalentProfile.DoesNotExist:
+            return Response(
+                {"detail": "You do not have a talent profile."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = TalentProfileSerializer(
+            talent,
+            data=request.data,
+            partial=True,
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 # =====================================================
 # MY OTHER TALENT PROFILE API
@@ -417,7 +519,7 @@ class OrganizationListAPIView(APIView):
             .prefetch_related(
                 "followers",
             )
-            .all()
+            .filter(status="ACTIVE")
         )
 
         serializer = OrganizationSerializer(
@@ -491,19 +593,7 @@ class MyOrganizationAPIView(APIView):
         try:
 
             organization = (
-                Organization.objects
-                .select_related(
-                    "category",
-                    "domain",
-                    "sports_profile",
-                    "sports_profile__sport",
-                )
-                .prefetch_related(
-                    "followers",
-                )
-                .get(
-                    user=request.user
-                )
+                get_request_organization(request, OrganizationCapability.VIEW_PROFILE)
             )
 
         except Organization.DoesNotExist:
@@ -524,6 +614,51 @@ class MyOrganizationAPIView(APIView):
             serializer.data,
             status=status.HTTP_200_OK
         )
+
+    def patch(self, request):
+
+
+        allowed_fields = {
+            "name",
+            "category",
+            "domain",
+            "country",
+            "city",
+            "headquarters",
+            "website",
+            "email",
+            "phone",
+            "description",
+            "logo",
+            "cover_photo",
+            "founded_year",
+            "organization_size",
+            "level",
+        }
+        unexpected_fields = set(request.data) - allowed_fields
+        if unexpected_fields:
+            return Response(
+                {"detail": "Unsupported organization profile fields were supplied."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            organization = get_request_organization(request, OrganizationCapability.EDIT_PROFILE)
+        except Organization.DoesNotExist:
+            return Response(
+                {"detail": "You do not have an organization profile."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = OrganizationSerializer(
+            organization,
+            data=request.data,
+            partial=True,
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # =====================================================
@@ -548,6 +683,7 @@ class OpportunityListAPIView(APIView):
                 "requirements__skill",
             )
             .filter(
+                organization__status="ACTIVE",
                 active=True
             )
             .order_by(
@@ -630,9 +766,7 @@ class OpportunityCreateAPIView(APIView):
 
         try:
 
-            organization = Organization.objects.get(
-                user=request.user
-            )
+            organization = get_request_organization(request, OrganizationCapability.MANAGE_OPPORTUNITIES)
 
         except Organization.DoesNotExist:
 
@@ -726,6 +860,7 @@ class ApplicationCreateAPIView(APIView):
             )
 
         opportunity = serializer.validated_data["opportunity"]
+        require_active_organization(opportunity.organization)
 
         # ---------------------------------------------
         # Check if opportunity is active
@@ -787,32 +922,18 @@ class ApplicationListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-
-        applications = (
-            Application.objects
-            .select_related(
-                "talent",
-                "talent__user",
-                "opportunity",
-                "opportunity__organization",
-                "opportunity__domain",
-            )
-            .prefetch_related(
-                "opportunity__skills",
-            )
-            .order_by(
-                "-created_at"
-            )
-        )
-
-        serializer = ApplicationSerializer(
-            applications,
-            many=True
-        )
-
+        applications = Application.objects.select_related(
+            "talent", "talent__user", "opportunity", "opportunity__organization", "opportunity__domain",
+        ).prefetch_related("opportunity__skills")
+        # Keep the existing personal-history contract; a query selects the team workspace.
+        if request.user.role == "ATHLETE" and request.GET.get("organization_id") is None:
+            applications = applications.filter(talent__user=request.user)
+        else:
+            organization = require_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
+            applications = applications.filter(opportunity__organization=organization)
         return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
+            ApplicationSerializer(applications.order_by("-created_at"), many=True).data,
+            status=status.HTTP_200_OK,
         )
 
 
@@ -825,54 +946,54 @@ class ApplicationDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, application_id):
-
-        try:
-
-            application = (
-                Application.objects
-                .select_related(
-                    "talent",
-                    "talent__user",
-                    "opportunity",
-                    "opportunity__organization",
-                    "opportunity__domain",
-                )
-                .get(
-                    id=application_id
-                )
+        application = get_object_or_404(
+            Application.objects.select_related(
+                "talent", "talent__user", "opportunity", "opportunity__organization", "opportunity__domain",
+            ), pk=application_id,
+        )
+        # Applicants retain their own history independently of organisation membership.
+        if application.talent.user_id != request.user.pk:
+            require_request_organization(
+                request, OrganizationCapability.VIEW_RECRUITMENT,
+                organization=application.opportunity.organization,
             )
+        return Response(ApplicationSerializer(application).data, status=status.HTTP_200_OK)
 
-        except Application.DoesNotExist:
 
+class ApplicationStatusUpdateAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, application_id):
+        application = get_object_or_404(
+            Application.objects.select_related("opportunity__organization"),
+            pk=application_id,
+        )
+        organization = application.opportunity.organization
+        # Preserve the existing 404 for another organisation's owner.
+        if request.user.role == "ORGANIZATION" and not has_organization_capability(
+            request.user, organization, OrganizationCapability.VIEW_RECRUITMENT,
+        ) and organization.user_id != request.user.pk and not OrganizationMembership.objects.filter(
+            organization=organization, user=request.user,
+        ).exists():
+            raise Http404("Application not found.")
+        require_request_organization(
+            request, OrganizationCapability.MANAGE_RECRUITMENT, organization=organization,
+        )
+        if application.status not in {"PENDING", "REVIEWING"}:
             return Response(
-                {
-                    "detail": "Application not found."
-                },
-                status=status.HTTP_404_NOT_FOUND
+                {"detail": "Only pending or reviewing applications can be updated."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-
-        is_applicant = application.talent.user_id == request.user.id
-        is_hiring_organization = (
-            application.opportunity.organization.user_id == request.user.id
-        )
-
-        if not (is_applicant or is_hiring_organization):
-
+        new_status = request.data.get("status")
+        if not isinstance(new_status, str) or new_status not in {"REVIEWING", "ACCEPTED", "REJECTED"}:
             return Response(
-                {
-                    "detail": "You do not have permission to view this application."
-                },
-                status=status.HTTP_403_FORBIDDEN
+                {"status": ["Choose REVIEWING, ACCEPTED, or REJECTED."]},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-
-        serializer = ApplicationSerializer(
-            application
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
+        application.status = new_status
+        application.save(update_fields=("status", "updated_at"))
+        return Response(ApplicationSerializer(application).data, status=status.HTTP_200_OK)
 
 
 # =====================================================
@@ -957,7 +1078,7 @@ class ShortlistCreateAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = require_active_organization(request.user.organization_profile)
 
         except Organization.DoesNotExist:
 
@@ -1032,81 +1153,11 @@ class ShortlistListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-
-        # ---------------------------------------------
-        # ORGANIZATION
-        # ---------------------------------------------
-
-        if request.user.role == "ORGANIZATION":
-
-            try:
-
-                organization = request.user.organization_profile
-
-            except Organization.DoesNotExist:
-
-                return Response(
-                    {
-                        "detail": "You do not have an organization profile."
-                    },
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            shortlists = (
-                Shortlist.objects
-                .filter(
-                    organization=organization
-                )
-                .select_related(
-                    "organization",
-                    "talent",
-                    "talent__user",
-                )
-                .order_by(
-                    "-created_at"
-                )
-            )
-
-        # ---------------------------------------------
-        # ADMIN
-        # ---------------------------------------------
-
-        elif request.user.role == "ADMIN":
-
-            shortlists = (
-                Shortlist.objects
-                .select_related(
-                    "organization",
-                    "talent",
-                    "talent__user",
-                )
-                .order_by(
-                    "-created_at"
-                )
-            )
-
-        # ---------------------------------------------
-        # OTHER ROLES
-        # ---------------------------------------------
-
-        else:
-
-            return Response(
-                {
-                    "detail": "You do not have permission to view shortlists."
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        serializer = ShortlistSerializer(
-            shortlists,
-            many=True
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
+        organization = require_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
+        shortlists = Shortlist.objects.filter(organization=organization).select_related(
+            "organization", "talent", "talent__user",
+        ).order_by("-created_at")
+        return Response(ShortlistSerializer(shortlists, many=True).data, status=status.HTTP_200_OK)
         
         
 # =====================================================
@@ -1150,7 +1201,7 @@ class ShortlistDetailAPIView(APIView):
 
             try:
 
-                organization = request.user.organization_profile
+                organization = require_active_organization(request.user.organization_profile)
 
             except Organization.DoesNotExist:
 
@@ -1222,7 +1273,7 @@ class MyShortlistsAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = require_active_organization(request.user.organization_profile)
 
         except Organization.DoesNotExist:
 
@@ -1288,7 +1339,7 @@ class RecruitmentStageCreateAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = require_active_organization(request.user.organization_profile)
 
         except Organization.DoesNotExist:
 
@@ -1378,83 +1429,11 @@ class RecruitmentStageListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-
-        # ---------------------------------------------
-        # ORGANIZATION
-        # ---------------------------------------------
-
-        if request.user.role == "ORGANIZATION":
-
-            try:
-
-                organization = request.user.organization_profile
-
-            except Organization.DoesNotExist:
-
-                return Response(
-                    {
-                        "detail": "You do not have an organization profile."
-                    },
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            stages = (
-                RecruitmentStage.objects
-                .filter(
-                    organization=organization
-                )
-                .select_related(
-                    "organization",
-                    "talent",
-                    "talent__user",
-                    "opportunity",
-                )
-                .order_by(
-                    "-updated_at"
-                )
-            )
-
-        # ---------------------------------------------
-        # ADMIN
-        # ---------------------------------------------
-
-        elif request.user.role == "ADMIN":
-
-            stages = (
-                RecruitmentStage.objects
-                .select_related(
-                    "organization",
-                    "talent",
-                    "talent__user",
-                    "opportunity",
-                )
-                .order_by(
-                    "-updated_at"
-                )
-            )
-
-        # ---------------------------------------------
-        # OTHER ROLES
-        # ---------------------------------------------
-
-        else:
-
-            return Response(
-                {
-                    "detail": "You do not have permission to view the recruitment pipeline."
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        serializer = RecruitmentStageSerializer(
-            stages,
-            many=True
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
+        organization = require_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
+        stages = RecruitmentStage.objects.filter(organization=organization).select_related(
+            "organization", "talent", "talent__user", "opportunity",
+        ).order_by("-updated_at")
+        return Response(RecruitmentStageSerializer(stages, many=True).data, status=status.HTTP_200_OK)
         
 # =====================================================
 # RECRUITMENT PIPELINE DETAIL API
@@ -1498,7 +1477,7 @@ class RecruitmentStageDetailAPIView(APIView):
 
             try:
 
-                organization = request.user.organization_profile
+                organization = require_active_organization(request.user.organization_profile)
 
             except Organization.DoesNotExist:
 
@@ -1577,7 +1556,7 @@ class RecruitmentStageUpdateAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = require_active_organization(request.user.organization_profile)
 
         except Organization.DoesNotExist:
 
@@ -1708,14 +1687,6 @@ class RecommendationGenerateAPIView(APIView):
         # Only organizations can generate recommendations
         # ---------------------------------------------
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": "Only organizations can generate recommendations."
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         # ---------------------------------------------
         # Get organization
@@ -1723,7 +1694,10 @@ class RecommendationGenerateAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(
+                request, OrganizationCapability.MANAGE_RECRUITMENT,
+                organization=get_object_or_404(Opportunity, pk=opportunity_id).organization,
+            )
 
         except Organization.DoesNotExist:
 
@@ -1836,14 +1810,6 @@ class RecommendationListAPIView(APIView):
         # Only organizations can view recommendations
         # ---------------------------------------------
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": "Only organizations can view recommendations."
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         # ---------------------------------------------
         # Get organization
@@ -1851,7 +1817,10 @@ class RecommendationListAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(
+                request, OrganizationCapability.VIEW_RECRUITMENT,
+                organization=get_object_or_404(Opportunity, pk=opportunity_id).organization,
+            )
 
         except Organization.DoesNotExist:
 
@@ -2019,76 +1988,11 @@ class RecommendationHistoryAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-
-        if request.user.role == "ORGANIZATION":
-
-            try:
-
-                organization = request.user.organization_profile
-
-            except Organization.DoesNotExist:
-
-                return Response(
-                    {
-                        "detail": (
-                            "You do not have an organization profile."
-                        )
-                    },
-                    status=status.HTTP_404_NOT_FOUND
-                )
-
-            history = (
-                RecommendationHistory.objects
-                .filter(
-                    organization=organization
-                )
-                .select_related(
-                    "organization",
-                    "talent",
-                    "talent__user",
-                    "opportunity",
-                )
-                .order_by(
-                    "-score"
-                )
-            )
-
-        elif request.user.role == "ADMIN":
-
-            history = (
-                RecommendationHistory.objects
-                .select_related(
-                    "organization",
-                    "talent",
-                    "talent__user",
-                    "opportunity",
-                )
-                .order_by(
-                    "-score"
-                )
-            )
-
-        else:
-
-            return Response(
-                {
-                    "detail": (
-                        "You do not have permission "
-                        "to view recommendation history."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        serializer = RecommendationHistorySerializer(
-            history,
-            many=True
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
+        organization = require_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
+        history = RecommendationHistory.objects.filter(organization=organization).select_related(
+            "organization", "talent", "talent__user", "opportunity",
+        ).order_by("-score")
+        return Response(RecommendationHistorySerializer(history, many=True).data, status=status.HTTP_200_OK)
         
 # =====================================================
 # TALENT PROFILE VIEWS API
@@ -2161,21 +2065,10 @@ class OrganizationAnalyticsAPIView(APIView):
 
     def get(self, request):
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organizations can access "
-                        "organization analytics."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(request, OrganizationCapability.VIEW_ANALYTICS)
 
         except Organization.DoesNotExist:
 
@@ -2288,7 +2181,7 @@ class InvitationCreateAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = require_active_organization(request.user.organization_profile)
 
         except Organization.DoesNotExist:
 
@@ -2400,7 +2293,7 @@ class SentInvitationsAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = require_active_organization(request.user.organization_profile)
 
         except Organization.DoesNotExist:
 
@@ -2548,7 +2441,7 @@ class InvitationDetailAPIView(APIView):
 
             try:
 
-                organization = request.user.organization_profile
+                organization = require_active_organization(request.user.organization_profile)
 
             except Organization.DoesNotExist:
 
@@ -2732,6 +2625,7 @@ class InvitationAcceptAPIView(APIView):
         # Accept
         # ---------------------------------------------
 
+        require_active_organization(invitation.organization)
         invitation.accept()
 
         serializer = InvitationSerializer(
@@ -3990,17 +3884,6 @@ class ShortlistCreateAPIView(APIView):
         # Organization access
         # ---------------------------------------------
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "create shortlists."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         # ---------------------------------------------
         # Get organization profile
@@ -4008,7 +3891,7 @@ class ShortlistCreateAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(request, OrganizationCapability.MANAGE_RECRUITMENT)
 
         except Organization.DoesNotExist:
 
@@ -4107,21 +3990,10 @@ class MyShortlistsAPIView(APIView):
 
     def get(self, request):
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "view shortlists."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
 
         except Organization.DoesNotExist:
 
@@ -4171,21 +4043,13 @@ class ShortlistDetailAPIView(APIView):
 
     def get(self, request, shortlist_id):
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "view shortlists."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(
+                request, OrganizationCapability.VIEW_RECRUITMENT,
+                organization=get_object_or_404(Shortlist, pk=shortlist_id).organization,
+            )
 
         except Organization.DoesNotExist:
 
@@ -4242,21 +4106,13 @@ class ShortlistUpdateAPIView(APIView):
 
     def patch(self, request, shortlist_id):
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "update shortlists."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(
+                request, OrganizationCapability.MANAGE_RECRUITMENT,
+                organization=get_object_or_404(Shortlist, pk=shortlist_id).organization,
+            )
 
         except Organization.DoesNotExist:
 
@@ -4319,21 +4175,13 @@ class ShortlistDeleteAPIView(APIView):
 
     def delete(self, request, shortlist_id):
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "remove shortlists."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(
+                request, OrganizationCapability.MANAGE_RECRUITMENT,
+                organization=get_object_or_404(Shortlist, pk=shortlist_id).organization,
+            )
 
         except Organization.DoesNotExist:
 
@@ -4389,17 +4237,6 @@ class RecruitmentStageCreateAPIView(APIView):
         # ORGANIZATION ACCESS
         # ---------------------------------------------
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "manage recruitment."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         # ---------------------------------------------
         # GET ORGANIZATION
@@ -4407,7 +4244,7 @@ class RecruitmentStageCreateAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(request, OrganizationCapability.MANAGE_RECRUITMENT)
 
         except Organization.DoesNotExist:
 
@@ -4511,7 +4348,7 @@ class RecruitmentStageCreateAPIView(APIView):
             RecruitmentStage.STAGES
         )
 
-        if stage not in valid_stages:
+        if not isinstance(stage, str) or stage not in valid_stages:
 
             return Response(
                 {
@@ -4582,17 +4419,6 @@ class MyRecruitmentPipelineAPIView(APIView):
         # ORGANIZATION ACCESS
         # ---------------------------------------------
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "view recruitment."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         # ---------------------------------------------
         # GET ORGANIZATION
@@ -4600,7 +4426,7 @@ class MyRecruitmentPipelineAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
 
         except Organization.DoesNotExist:
 
@@ -4652,23 +4478,12 @@ class RecruitmentStageDetailAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, recruitment_id):
+    def get(self, request, stage_id):
 
         # ---------------------------------------------
         # ORGANIZATION ACCESS
         # ---------------------------------------------
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "view recruitment."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         # ---------------------------------------------
         # GET ORGANIZATION
@@ -4676,7 +4491,10 @@ class RecruitmentStageDetailAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(
+                request, OrganizationCapability.VIEW_RECRUITMENT,
+                organization=get_object_or_404(RecruitmentStage, pk=stage_id).organization,
+            )
 
         except Organization.DoesNotExist:
 
@@ -4704,7 +4522,7 @@ class RecruitmentStageDetailAPIView(APIView):
                     "opportunity",
                 )
                 .get(
-                    id=recruitment_id,
+                    id=stage_id,
                     organization=organization
                 )
             )
@@ -4737,23 +4555,12 @@ class RecruitmentStageUpdateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def patch(self, request, recruitment_id):
+    def patch(self, request, stage_id):
 
         # ---------------------------------------------
         # ORGANIZATION ACCESS
         # ---------------------------------------------
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "update recruitment."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         # ---------------------------------------------
         # GET ORGANIZATION
@@ -4761,7 +4568,10 @@ class RecruitmentStageUpdateAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(
+                request, OrganizationCapability.MANAGE_RECRUITMENT,
+                organization=get_object_or_404(RecruitmentStage, pk=stage_id).organization,
+            )
 
         except Organization.DoesNotExist:
 
@@ -4781,7 +4591,7 @@ class RecruitmentStageUpdateAPIView(APIView):
         try:
 
             recruitment = RecruitmentStage.objects.get(
-                id=recruitment_id,
+                id=stage_id,
                 organization=organization
             )
 
@@ -4806,7 +4616,7 @@ class RecruitmentStageUpdateAPIView(APIView):
                 RecruitmentStage.STAGES
             )
 
-            if stage not in valid_stages:
+            if not isinstance(stage, str) or stage not in valid_stages:
 
                 return Response(
                     {
@@ -4854,17 +4664,6 @@ class RecruitmentStageDeleteAPIView(APIView):
         # ORGANIZATION ACCESS
         # ---------------------------------------------
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "delete recruitment records."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         # ---------------------------------------------
         # GET ORGANIZATION
@@ -4872,7 +4671,10 @@ class RecruitmentStageDeleteAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(
+                request, OrganizationCapability.MANAGE_RECRUITMENT,
+                organization=get_object_or_404(RecruitmentStage, pk=recruitment_id).organization,
+            )
 
         except Organization.DoesNotExist:
 
@@ -4937,17 +4739,6 @@ class InvitationCreateAPIView(APIView):
         # ORGANIZATION ACCESS
         # ---------------------------------------------
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "send invitations."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         # ---------------------------------------------
         # GET ORGANIZATION
@@ -4955,7 +4746,7 @@ class InvitationCreateAPIView(APIView):
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(request, OrganizationCapability.MANAGE_RECRUITMENT)
 
         except Organization.DoesNotExist:
 
@@ -5188,21 +4979,10 @@ class SentInvitationsAPIView(APIView):
 
     def get(self, request):
 
-        if request.user.role != "ORGANIZATION":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only organization users can "
-                        "view sent invitations."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         try:
 
-            organization = request.user.organization_profile
+            organization = get_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
 
         except Organization.DoesNotExist:
 
@@ -5345,6 +5125,7 @@ class InvitationRespondAPIView(APIView):
 
         if response_status == "ACCEPTED":
 
+            require_active_organization(invitation.organization)
             invitation.accept()
 
             # Update recruitment pipeline
@@ -5410,77 +5191,16 @@ class InvitationDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, invitation_id):
-
-        try:
-
-            invitation = (
-                Invitation.objects
-                .select_related(
-                    "organization",
-                    "talent",
-                    "talent__user",
-                    "opportunity",
-                )
-                .get(
-                    id=invitation_id
-                )
-            )
-
-        except Invitation.DoesNotExist:
-
-            return Response(
-                {
-                    "detail": "Invitation not found."
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # ---------------------------------------------
-        # ACCESS CONTROL
-        # ---------------------------------------------
-
-        is_talent = False
-        is_organization = False
-
-        try:
-
-            is_talent = (
-                invitation.talent.user ==
-                request.user
-            )
-
-        except Exception:
-
-            pass
-
-        try:
-
-            is_organization = (
-                invitation.organization ==
-                request.user.organization_profile
-            )
-
-        except Exception:
-
-            pass
-
-        if not is_talent and not is_organization:
-
-            return Response(
-                {
-                    "detail": "You do not have access to this invitation."
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        serializer = InvitationSerializer(
-            invitation
+        invitation = get_object_or_404(
+            Invitation.objects.select_related("organization", "talent", "talent__user", "opportunity"),
+            pk=invitation_id,
         )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
+        if invitation.talent.user_id != request.user.pk:
+            require_request_organization(
+                request, OrganizationCapability.VIEW_RECRUITMENT,
+                organization=invitation.organization,
+            )
+        return Response(InvitationSerializer(invitation).data, status=status.HTTP_200_OK)
         
  
 # =====================================================
@@ -6296,4 +6016,4 @@ class EventRecommendationAPIView(APIView):
         return Response(
             serializer.data,
             status=status.HTTP_200_OK
-        )                                                                                                                                                                                                                                                                                                                                                                                                                                 
+        )

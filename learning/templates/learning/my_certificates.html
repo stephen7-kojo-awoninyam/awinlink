@@ -1,255 +1,30 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container py-5">
-
-    <!-- =====================================================
-         HEADER
-    ====================================================== -->
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-
-            <h1 class="fw-bold mb-1">
-                My Certificates
-            </h1>
-
-            <p class="text-muted mb-0">
-                View and manage the certificates you have earned.
-            </p>
-
-        </div>
-
-        <a
-            href="{% url 'my_learning' %}"
-            class="btn btn-outline-primary"
-        >
-
-            <i class="bi bi-book me-1"></i>
-
-            My Learning
-
-        </a>
-
-    </div>
-
-
-    <!-- =====================================================
-         CERTIFICATES
-    ====================================================== -->
-
-    <div class="row g-4">
-
-        {% for certificate in certificates %}
-
-        <div class="col-md-6 col-lg-4">
-
-            <div class="card border-0 shadow-sm h-100">
-
-                <div class="card-body p-4 text-center">
-
-                    <!-- CERTIFICATE ICON -->
-
-                    <div class="mb-3">
-
-                        <i
-                            class="bi bi-award-fill text-warning"
-                            style="font-size: 60px;"
-                        ></i>
-
-                    </div>
-
-
-                    <!-- COURSE -->
-
-                    <h5 class="fw-bold">
-
-                        {{ certificate.enrollment.course.title }}
-
-                    </h5>
-
-
-                    <p class="text-muted small mb-2">
-
-                        Certificate of Completion
-
-                    </p>
-
-
-                    <!-- ISSUE DATE -->
-
-                    <div class="small text-muted mb-3">
-
-                        <i class="bi bi-calendar3 me-1"></i>
-
-                        Issued:
-                        {{ certificate.issued_at|date:"M d, Y" }}
-
-                    </div>
-
-
-                    <!-- CERTIFICATE ID -->
-
-                    <div class="border rounded p-2 mb-3">
-
-                        <small class="text-muted d-block">
-
-                            Certificate ID
-
-                        </small>
-
-                        <strong class="text-break">
-
-                            {{ certificate.certificate_id }}
-
-                        </strong>
-
-                    </div>
-
-
-                    <!-- PDF STATUS -->
-
-                    {% if certificate.pdf %}
-
-                    <div class="alert alert-success py-2 small mb-3">
-
-                        <i class="bi bi-check-circle me-1"></i>
-
-                        Certificate PDF available
-
-                    </div>
-
-                    {% else %}
-
-                    <div class="alert alert-warning py-2 small mb-3">
-
-                        <i class="bi bi-clock me-1"></i>
-
-                        Certificate PDF is being prepared
-
-                    </div>
-
-                    {% endif %}
-
-
-                    <!-- ACTIONS -->
-
-                    <div class="d-grid gap-2">
-
-                        <!-- VIEW CERTIFICATE -->
-
-                        <a
-                            href="{% url 'certificate_detail' certificate.certificate_id %}"
-                            class="btn btn-primary"
-                        >
-
-                            <i class="bi bi-eye me-1"></i>
-
-                            View Certificate
-
-                        </a>
-
-
-                        <!-- DOWNLOAD PDF -->
-
-                        {% if certificate.pdf %}
-
-                        <a
-                            href="{{ certificate.pdf.url }}"
-                            target="_blank"
-                            class="btn btn-outline-primary"
-                        >
-
-                            <i class="bi bi-file-earmark-pdf me-1"></i>
-
-                            Download PDF
-
-                        </a>
-
-                        {% endif %}
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        {% empty %}
-
-        <!-- =====================================================
-             NO CERTIFICATES
-        ====================================================== -->
-
-        <div class="col-12">
-
-            <div class="card border-0 shadow-sm">
-
-                <div class="card-body text-center py-5">
-
-                    <i
-                        class="bi bi-award fs-1 text-muted"
-                    ></i>
-
-
-                    <h4 class="fw-bold mt-3">
-
-                        No Certificates Yet
-
-                    </h4>
-
-
-                    <p class="text-muted">
-
-                        Complete a course to earn your first certificate.
-
-                    </p>
-
-
-                    <a
-                        href="{% url 'courses' %}"
-                        class="btn btn-primary"
-                    >
-
-                        <i class="bi bi-book me-1"></i>
-
-                        Browse Courses
-
-                    </a>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        {% endfor %}
-
-    </div>
-
+{% extends "learning/ui_base.html" %}
+{% block title %}My certificates | Awinlink learning{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="certificates" %}{% endblock %}
+{% block learning_content %}
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">Recognition for your growth</span>
+<h1>Look how far you’ve come</h1>
+<p>Your completed courses, recognized.</p>
 </div>
-
-<div class="text-center mt-5">
-
-    <p class="text-muted mb-2">
-        Need to verify a certificate?
-    </p>
-
-    <a
-        href="{% url 'verify_certificate' %}"
-        class="btn btn-outline-primary"
-    >
-
-        <i class="bi bi-patch-check me-1"></i>
-
-        Verify a Certificate
-
-    </a>
-
-</div>
-
+<a class="lc-button lc-button-secondary" href="{% url 'my_learning' %}">My learning</a>
+</header>
+<div class="lc-grid">{% for certificate in certificates %}<article class="lc-card">
+<span class="lc-result-icon">
+<i class="bi bi-award" aria-hidden="true">
+</i>
+</span>
+<h2>{{ certificate.enrollment.course.title }}</h2>
+<p class="lc-muted">Issued {{ certificate.issued_at|date:"M j, Y" }}</p>
+<p class="lc-certificate-code">{{ certificate.certificate_id }}</p>
+<div class="lc-actions">
+<a class="lc-button lc-button-secondary" href="{% url 'certificate_detail' certificate.certificate_id %}">View certificate</a>{% if certificate.pdf %}<a class="lc-text-link" href="{{ certificate.pdf.url }}" target="_blank" rel="noopener noreferrer">View PDF</a>{% endif %}</div>
+</article>{% empty %}<section class="lc-card lc-empty">
+<i class="bi bi-award" aria-hidden="true">
+</i>
+<h2>Your next achievement is ahead</h2>
+<p>Complete a course and its required quizzes to earn a certificate.</p>
+<a class="lc-button" href="{% url 'my_learning' %}">Continue learning</a>
+</section>{% endfor %}</div>
 {% endblock %}

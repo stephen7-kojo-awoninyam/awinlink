@@ -1,0 +1,1 @@
+<span class="ev-status ev-status--{{ registration.status|lower }}">{% if registration.status == "REGISTERED" %}Pending approval{% else %}{{ registration.get_status_display }}{% endif %}</span>

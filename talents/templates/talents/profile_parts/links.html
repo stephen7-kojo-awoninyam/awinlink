@@ -1,0 +1,9 @@
+<div class="talent-external-links">
+    {% if specialty.website %}<a href="{{ specialty.website }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-globe" aria-hidden="true"></i>Website</a>{% endif %}
+    {% if specialty.linkedin %}<a href="{{ specialty.linkedin }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-linkedin" aria-hidden="true"></i>LinkedIn</a>{% endif %}
+    {% if specialty.github %}<a href="{{ specialty.github }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-github" aria-hidden="true"></i>GitHub</a>{% endif %}
+    {% if specialty.portfolio_url %}<a href="{{ specialty.portfolio_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-grid" aria-hidden="true"></i>Portfolio</a>{% endif %}
+    {% if specialty.instagram %}<a href="{{ specialty.instagram }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram" aria-hidden="true"></i>Instagram</a>{% endif %}
+    {% if specialty.youtube %}<a href="{{ specialty.youtube }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-youtube" aria-hidden="true"></i>YouTube</a>{% endif %}
+    {% if specialty.other_link %}<a href="{{ specialty.other_link }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>More information</a>{% endif %}
+</div>

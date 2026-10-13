@@ -61,19 +61,19 @@
 
                     <div>
 
-                        <a
-                            href="{% url 'connections:accept_connection_request' connection.id %}"
+                        <form method="post" action="{% url 'connections:accept_connection_request' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                             class="btn btn-success btn-sm"
                         >
                             ✓ Accept
-                        </a>
+                        </button></form>
 
-                        <a
-                            href="{% url 'connections:reject_connection_request' connection.id %}"
+                        <form method="post" action="{% url 'connections:reject_connection_request' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                             class="btn btn-outline-danger btn-sm"
                         >
                             ✕ Reject
-                        </a>
+                        </button></form>
 
                     </div>
 
@@ -147,20 +147,17 @@
                             {% endif %}
 
 
-                            <a
-                                href="{% url 'messaging:start_conversation' connection.receiver.id %}"
-                                class="btn btn-primary btn-sm"
-                            >
+                            <form method="post" action="{% url 'messaging:start_conversation' connection.receiver.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-primary btn-sm">
                                 💬 Message
-                            </a>
+                            </button></form>
 
 
-                            <a
-                                href="{% url 'connections:remove_connection' connection.id %}"
+                            <form method="post" action="{% url 'connections:remove_connection' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                                 class="btn btn-outline-danger btn-sm"
                             >
                                 Remove
-                            </a>
+                            </button></form>
 
                         </div>
 
@@ -205,19 +202,16 @@
                             👤 Profile
                         </a>
 
-                        <a
-                            href="{% url 'messaging:start_conversation' connection.sender.id %}"
-                            class="btn btn-primary btn-sm"
-                        >
+                        <form method="post" action="{% url 'messaging:start_conversation' connection.sender.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-primary btn-sm">
                             💬 Message
-                        </a>
+                        </button></form>
 
-                        <a
-                            href="{% url 'connections:remove_connection' connection.id %}"
+                        <form method="post" action="{% url 'connections:remove_connection' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                             class="btn btn-outline-danger btn-sm"
                         >
                             Remove
-                        </a>
+                        </button></form>
 
                     </div>
 
@@ -582,12 +576,12 @@
 
                     <div>
 
-                        <a
-                            href="{% url 'connections:cancel_connection_request' connection.id %}"
+                        <form method="post" action="{% url 'connections:cancel_connection_request' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                             class="btn btn-outline-danger btn-sm"
                         >
                             Cancel
-                        </a>
+                        </button></form>
 
                     </div>
 

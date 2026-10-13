@@ -134,6 +134,7 @@ def course_list(request):
 # =========================================================
 
 @login_required
+@require_POST
 def like_course(request, course_id):
     course = get_object_or_404(Course, id=course_id, status="APPROVED")
     like, created = CourseLike.objects.get_or_create(user=request.user, course=course)
@@ -276,6 +277,7 @@ def create_course(request):
 # =========================================================
 
 @login_required
+@require_POST
 def enroll_course(request, course_id):
 
     course = get_object_or_404(
@@ -454,7 +456,7 @@ def complete_lesson(request, lesson_id):
     if request.method != "POST":
 
         return redirect(
-            "lesson_detail",
+            lesson_detail,
             lesson_id=lesson.id
         )
 
@@ -637,7 +639,7 @@ def complete_lesson(request, lesson_id):
             )
 
     return redirect(
-        "lesson_detail",
+        lesson_detail,
         lesson_id=lesson.id
     )
     
@@ -691,7 +693,7 @@ def edit_course(request, course_id):
         )
 
         return redirect(
-            "my_courses"
+            my_courses
         )
 
     # -----------------------------------------------------
@@ -716,7 +718,7 @@ def edit_course(request, course_id):
             )
 
             return redirect(
-                "my_courses"
+                my_courses
             )
 
     else:
@@ -741,6 +743,7 @@ def edit_course(request, course_id):
 
 @login_required
 @user_passes_test(is_course_creator)
+@require_POST
 def submit_course(request, course_id):
 
     course = get_object_or_404(
@@ -761,7 +764,7 @@ def submit_course(request, course_id):
         )
 
         return redirect(
-            "my_courses"
+            my_courses
         )
 
     # -----------------------------------------------------
@@ -776,7 +779,7 @@ def submit_course(request, course_id):
         )
 
         return redirect(
-            "my_courses"
+            my_courses
         )
 
     # -----------------------------------------------------
@@ -802,7 +805,7 @@ def submit_course(request, course_id):
     )
 
     return redirect(
-        "my_courses"
+        my_courses
     )
 
 
@@ -832,7 +835,7 @@ def add_lesson(request, course_id):
         )
 
         return redirect(
-            "my_courses"
+            my_courses
         )
 
     # -----------------------------------------------------
@@ -1184,7 +1187,7 @@ def take_quiz(request, quiz_id):
         )
 
         return redirect(
-            "lesson_detail",
+            lesson_detail,
             lesson_id=lesson.id
         )
 
@@ -2236,7 +2239,7 @@ def certificate_detail(request, certificate_id):
         )
 
         return redirect(
-            "my_certificates"
+            my_certificates
         )
 
     # -----------------------------------------------------
@@ -2535,7 +2538,7 @@ def download_certificate(request, certificate_id):
         )
 
         return redirect(
-            "my_certificates"
+            my_certificates
         )
 
     # -----------------------------------------------------

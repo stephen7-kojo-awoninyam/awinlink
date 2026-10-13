@@ -1,0 +1,20 @@
+<article class="talent-work-card" data-portfolio-item data-item-type="{{ item.item_type }}" aria-labelledby="work-title-{{ item.id }}">
+    {% if item.image %}
+        <a href="{{ item.image.url }}" class="talent-work-media" target="_blank" rel="noopener noreferrer" aria-label="Open image: {{ item.title }}"><img src="{{ item.image.url }}" alt="{{ item.title }}" loading="lazy" decoding="async"></a>
+    {% elif item.item_type == 'VIDEO' and item.file %}
+        <div class="talent-work-media"><video controls playsinline preload="metadata" aria-label="{{ item.title }}"><source src="{{ item.file.url }}">Your browser does not support video. <a href="{{ item.file.url }}">Open the video file</a>.</video></div>
+    {% else %}
+        <div class="talent-work-media talent-work-placeholder"><i class="bi {% if item.item_type == 'DOCUMENT' %}bi-file-earmark-text{% elif item.item_type == 'CERTIFICATE' %}bi-patch-check{% elif item.item_type == 'ACHIEVEMENT' %}bi-award{% elif item.item_type == 'VIDEO' %}bi-play-circle{% else %}bi-layers{% endif %}" aria-hidden="true"></i><span>{{ item.get_item_type_display }}</span></div>
+    {% endif %}
+    <div class="talent-work-copy"><span class="talent-category-pill">{{ item.get_item_type_display }}</span><h3 id="work-title-{{ item.id }}">{{ item.title }}</h3>{% if item.description %}<div class="talent-prose">{{ item.description|linebreaks }}</div>{% endif %}
+        <div class="talent-work-links">{% if item.file %}<a href="{{ item.file.url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-file-earmark" aria-hidden="true"></i>Open file</a>{% endif %}{% if item.link %}<a href="{{ item.link }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-arrow-up-right" aria-hidden="true"></i>Visit link</a>{% endif %}</div>
+        {% if manage %}<div class="talent-work-controls"><a href="{% url 'edit_portfolio_item' item.id %}" class="btn btn-light btn-sm"><i class="bi bi-pencil" aria-hidden="true"></i>Edit</a><button type="button" class="btn btn-light btn-sm talent-delete-button" data-bs-toggle="modal" data-bs-target="#delete-work-{{ item.id }}"><i class="bi bi-trash3" aria-hidden="true"></i>Delete</button><noscript><form method="post" action="{% url 'delete_portfolio_item' item.id %}">{% csrf_token %}<button type="submit" class="btn btn-danger btn-sm">Delete item</button></form></noscript></div>{% endif %}
+    </div>
+</article>
+{% if manage %}
+    <div class="modal fade" id="delete-work-{{ item.id }}" tabindex="-1" aria-labelledby="delete-work-title-{{ item.id }}" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="delete-work-title-{{ item.id }}">Delete portfolio item?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body"><p>Remove <strong>{{ item.title }}</strong> from your portfolio? This cannot be undone.</p></div>
+        <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Keep item</button><form method="post" action="{% url 'delete_portfolio_item' item.id %}">{% csrf_token %}<button type="submit" class="btn btn-danger">Delete item</button></form></div>
+    </div></div></div>
+{% endif %}

@@ -268,7 +268,14 @@ class OpportunityRecommendationTests(TestCase):
 			self.opportunity,
 		)
 
-		self.assertEqual(score, 75)
+		# The existing domain-and-skill relevance bonus adds five points.
+		self.assertEqual(score, 80)
+		self.talent.skills.remove(important_skill)
+		self.talent.skills.add(other_skill)
+		self.assertEqual(
+			RecommendationEngine.calculate_score(self.talent, self.opportunity),
+			60,
+		)
 
 	def test_candidates_are_not_hard_filtered_by_country(self):
 		remote_talent_user = get_user_model().objects.create_user(

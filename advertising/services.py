@@ -1,3 +1,5 @@
+from organizations.permissions import require_active_organization
+
 import hashlib
 import uuid
 from datetime import timedelta
@@ -56,6 +58,9 @@ def transition_campaign(campaign_id, actor, new_status, review_note=""):
     campaign = Campaign.objects.select_for_update().get(pk=campaign_id)
     is_admin = actor.is_staff or actor.is_superuser
     owns_campaign = campaign.organization.user_id == actor.pk
+
+    if new_status not in {"APPROVED", "REJECTED"}:
+        require_active_organization(campaign.organization)
 
     if new_status == "PENDING_REVIEW":
         if not owns_campaign or campaign.status not in {"DRAFT", "REJECTED"}:
@@ -183,6 +188,7 @@ def get_ads_for_user(user, limit=3):
     campaigns = list(
         Campaign.objects.filter(
             status="ACTIVE",
+            organization__status="ACTIVE",
             start_date__lte=today,
             end_date__gte=today,
             advertisement__isnull=False,

@@ -1,164 +1,45 @@
-{% extends "base.html" %}
-
-
-{% block content %}
-
-
-<div class="container mt-5">
-
-
-<h2 class="mb-4">
-My Events
-</h2>
-
-
-
-{% for registration in registrations %}
-
-
-
-<div class="card shadow-sm mb-4">
-
-
-<div class="row g-0">
-
-
-
-<div class="col-md-4">
-
-
-{% if registration.event.image %}
-
-<img src="{{ registration.event.image.url }}"
-class="img-fluid rounded-start"
-style="height:200px;width:100%;object-fit:cover;">
-
-{% endif %}
-
-
-
+{% extends "events/ui_base.html" %}
+{% block title %}My events | Awinlink{% endblock %}
+{% block event_content %}
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Your experiences</span>
+<h1>My events</h1>
+<p>Your upcoming plans, registration updates, and moments worth remembering.</p>
 </div>
-
-
-
-
-
-<div class="col-md-8">
-
-
-<div class="card-body">
-
-
-
-<h4>
-
-{{ registration.event.title }}
-
-</h4>
-
-
-
-<p>
-
-🏢
-
-{{ registration.event.organizer.name }}
-
-</p>
-
-
-
-<p>
-
-📅
-
-{{ registration.event.start_date }}
-
-</p>
-
-
-
-<p>
-
-🎯
-
-{{ registration.event.get_event_type_display }}
-
-</p>
-
-
-
-
-<span class="badge bg-success">
-
-{{ registration.get_status_display }}
-
-</span>
-
-
-
-
-<div class="mt-3">
-
-
-<a href="{% url 'event_detail' registration.event.id %}"
-
-class="btn btn-primary btn-sm">
-
-View Event
-
+<a class="ev-button" href="{% url 'event_list' %}">Discover events <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
 </a>
-
-
-
-<a href="{% url 'cancel_registration' registration.event.id %}"
-
-class="btn btn-danger btn-sm">
-
-Cancel
-
-</a>
-
-
+</header>
+{% for registration in registrations %}<article class="ev-card ev-registration-card">
+<a class="ev-cover ev-cover--{{ registration.event.event_type|lower }}" href="{% url 'event_detail' registration.event.id %}" aria-label="View {{ registration.event.title }}">{% if registration.event.image %}<img src="{{ registration.event.image.url }}" alt="" loading="lazy">{% else %}<div class="ev-cover-art" aria-hidden="true">
+<i class="bi bi-calendar-event">
+</i>
+</div>{% endif %}</a>
+<div>
+<div class="ev-registration-head">
+<div>
+<span class="ev-eyebrow">{{ registration.event.get_event_type_display }}</span>
+<h2 class="mt-2">{{ registration.event.title }}</h2>
+<p class="ev-organizer">{{ registration.event.organizer.name }}</p>
+</div>{% include "events/registration_badge.html" %}</div>
+<div class="ev-meta mt-3">
+<span>
+<i class="bi bi-calendar3" aria-hidden="true">
+</i>{{ registration.event.start_date|date:"M j, Y · g:i A" }}</span>
+<span>
+<i class="bi bi-geo-alt" aria-hidden="true">
+</i>{% if registration.event.online %}Online event{% else %}{{ registration.event.location }}{% endif %}</span>
 </div>
-
-
-
+<div class="ev-actions">
+<a class="ev-button ev-button-secondary" href="{% url 'event_detail' registration.event.id %}">View event</a>{% if registration.status != "CANCELLED" and registration.status != "ATTENDED" %}<form method="POST" action="{% url 'cancel_registration' registration.event.id %}">{% csrf_token %}<button class="ev-button ev-button-danger" type="submit">Cancel registration</button>
+</form>{% endif %}{% if registration.status == "ATTENDED" %}<a class="ev-button ev-button-secondary" href="{% url 'give_feedback' registration.event.id %}">Leave feedback</a>{% endif %}</div>
 </div>
-
-
-</div>
-
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-{% empty %}
-
-
-
-<div class="alert alert-info">
-
-You have not joined any events yet.
-
-</div>
-
-
-
-{% endfor %}
-
-
-
-
-</div>
-
-
-
+</article>{% empty %}<section class="ev-card ev-empty">
+<i class="bi bi-calendar-heart" aria-hidden="true">
+</i>
+<h2>Your next experience starts here</h2>
+<p>You have not joined any events yet.</p>
+<a class="ev-button" href="{% url 'event_list' %}">Explore events</a>
+</section>{% endfor %}
 {% endblock %}

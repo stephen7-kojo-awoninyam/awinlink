@@ -32,9 +32,15 @@ SECRET_KEY = os.environ.get(
     "local-development-secret-change-this"
 )
 
+# Optional coturn REST API credentials. Configure the same secret on coturn with
+# use-auth-secret; the API returns one-hour credentials to authenticated users.
+TURN_SERVER_URLS = os.environ.get("TURN_SERVER_URLS", "")
+TURN_SHARED_SECRET = os.environ.get("TURN_SHARED_SECRET", "")
+EXPO_PUSH_ACCESS_TOKEN = os.environ.get("EXPO_PUSH_ACCESS_TOKEN", "").strip()
+
 DEBUG = os.environ.get(
     "DEBUG",
-    "True"
+    "False" if os.environ.get("RAILWAY_ENVIRONMENT_NAME") or os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER") else "True"
 ).lower() == "true"
 
 
@@ -49,6 +55,13 @@ if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
     ALLOWED_HOSTS.append(
         os.environ["RENDER_EXTERNAL_HOSTNAME"]
     )
+
+if os.environ.get("RAILWAY_PUBLIC_DOMAIN"):
+    ALLOWED_HOSTS.append(os.environ["RAILWAY_PUBLIC_DOMAIN"])
+ALLOWED_HOSTS.extend(
+    host.strip() for host in os.environ.get("ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+)
 
 
 # =====================================================
@@ -352,7 +365,7 @@ REST_FRAMEWORK = {
 # RENDER / HTTPS / SECURITY
 # =====================================================
 
-if os.environ.get("RENDER"):
+if not DEBUG or os.environ.get("RENDER"):
 
     SECURE_PROXY_SSL_HEADER = (
         "HTTP_X_FORWARDED_PROTO",
@@ -380,7 +393,7 @@ if os.environ.get("RENDER"):
 # EMAIL CONFIGURATION
 # =====================================================
 
-if os.environ.get("RENDER"):
+if not DEBUG or os.environ.get("RENDER"):
 
     # Production email backend
     EMAIL_BACKEND = (
@@ -413,4 +426,12 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 
 CSRF_TRUSTED_ORIGINS = [
     "https://awinlink-production.up.railway.app",
-]        
+]
+for domain_setting in ("RENDER_EXTERNAL_HOSTNAME", "RAILWAY_PUBLIC_DOMAIN"):
+    domain = os.environ.get(domain_setting)
+    if domain:
+        CSRF_TRUSTED_ORIGINS.append(f"https://{domain}")
+CSRF_TRUSTED_ORIGINS.extend(
+    origin.strip() for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+)

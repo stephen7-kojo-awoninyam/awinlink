@@ -1,60 +1,13 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container py-5">
-
-    <div class="row justify-content-center">
-
-        <div class="col-lg-7">
-
-            <div class="card border-0 shadow-sm">
-
-                <div class="card-body p-4">
-
-                    <h2 class="fw-bold">
-                        Review Course
-                    </h2>
-
-                    <p class="text-muted">
-                        {{ course.title }}
-                    </p>
-
-
-                    <form method="POST">
-
-                        {% csrf_token %}
-
-                        {{ form.as_p }}
-
-                        <div class="mt-4">
-
-                            <button type="submit"
-                                    class="btn btn-primary">
-
-                                Submit Review
-
-                            </button>
-
-                            <a href="{% url 'course_detail' course.slug %}"
-                               class="btn btn-outline-secondary">
-
-                                Cancel
-
-                            </a>
-
-                        </div>
-
-                    </form>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
+{% extends "learning/ui_base.html" %}
+{% block title %}Review {{ course.title }} | Awinlink{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="learning" %}{% endblock %}
+{% block learning_content %}
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">Your experience helps others</span>
+<h1>Share your perspective</h1>
+<p>{{ course.title }}</p>
 </div>
-
+</header>
+{% url 'course_detail' course.slug as back_url %}{% include "learning/form_panel.html" with save_label="Submit review" %}
 {% endblock %}

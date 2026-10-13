@@ -113,6 +113,19 @@ class CourseDetailAPIView(APIView):
 
         return Response(serializer.data)
 
+    def patch(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        if course.creator_id != request.user.id:
+            return Response({"detail": "Only the course creator can edit this course."}, status=status.HTTP_403_FORBIDDEN)
+        if course.status not in {"DRAFT", "REJECTED"}:
+            return Response({"detail": "Only draft or rejected courses can be edited."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = CourseCreateSerializer(course, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response(CourseSerializer(course).data, status=status.HTTP_200_OK)
+
 
 # ============================================================
 # CREATE COURSE
@@ -914,3 +927,14 @@ class MyQuizAttemptsAPIView(APIView):
         )
 
         return Response(serializer.data)
+
+
+class PendingCoursesAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != "ADMIN":
+            return Response({"detail": "Only administrators can review courses."}, status=status.HTTP_403_FORBIDDEN)
+        courses = Course.objects.filter(status="PENDING").select_related("category", "creator")
+        return Response(CourseSerializer(courses, many=True).data)

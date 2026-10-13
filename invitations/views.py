@@ -1,9 +1,14 @@
+from organizations.permissions import OrganizationCapability, require_request_organization
+from organizations.permissions import require_active_organization, organization_operation
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from organizations.models import Organization
 from talents.models import TalentProfile
 from opportunities.models import Opportunity
-from messaging.models import Conversation
+from messaging.models import Conversation, ConversationParticipant
+from django.db import transaction
+from django.http import HttpResponseBadRequest
+from django.views.decorators.http import require_POST
 from .models import Invitation
 from notifications.utils import create_notification
 from django.contrib.auth.decorators import login_required
@@ -13,120 +18,20 @@ from recruitment.models import RecruitmentStage
 
 
 @login_required
-def invite_talent(request, opportunity_id, talent_id):
-
-
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
-
-
-    opportunity = get_object_or_404(
-        Opportunity,
-        id=opportunity_id,
-        organization=organization
-    )
-
-
-    talent = get_object_or_404(
-        TalentProfile,
-        id=talent_id
-    )
-
-
-
-    invitation, created = Invitation.objects.get_or_create(
-
-        organization=organization,
-
-        talent=talent,
-
-        opportunity=opportunity
-
-    )
-
-    Notification.objects.create(
-
-        user=talent.user,
-
-        sender=request.user,
-
-        notification_type="INVITATION",
-
-        message=f"{organization.name} invited you to apply for {opportunity.title}.",
-
-        opportunity=opportunity
-
-    )
-
-    # Recruitment pipeline
-
-    RecruitmentStage.objects.update_or_create(
-
-        organization=organization,
-
-        talent=talent,
-
-        opportunity=opportunity,
-
-        defaults={
-
-            "stage":"INVITED"
-
-        }
-
-    )
-
-
-
-    if created:
-
-
-        create_notification(
-
-            user=talent.user,
-
-            message=(
-
-                f"{organization.name} invited you "
-                f"for {opportunity.title}"
-
-            ),
-
-            notification_type="INVITATION"
-
-        )
-
-
-
-        Conversation.objects.get_or_create(
-
-            organization=organization,
-
-            talent=talent,
-
-            opportunity=opportunity
-
-        )
-
-
-
-    return redirect(
-
-        "organization_dashboard"
-
-    )
-
+def invite_talent_for_opportunity(request, opportunity_id, talent_id):
+    from organizations.views import invite_talent as invite_for_opportunity
+    return invite_for_opportunity(request, talent_id, opportunity_id)
 
 
 @login_required
+@require_POST
+@transaction.atomic
 def accept_invitation(request, invitation_id):
 
 
     invitation = get_object_or_404(
 
-        Invitation,
+        Invitation.objects.select_for_update(),
 
         id=invitation_id,
 
@@ -136,9 +41,10 @@ def accept_invitation(request, invitation_id):
 
 
 
-    invitation.status = "ACCEPTED"
-
-    invitation.save()
+    require_active_organization(invitation.organization)
+    if invitation.status != "PENDING":
+        return HttpResponseBadRequest("This invitation has already been responded to.")
+    invitation.accept()
 
 
 
@@ -164,15 +70,17 @@ def accept_invitation(request, invitation_id):
 
     # Create conversation automatically
 
-    Conversation.objects.get_or_create(
-
-        talent=invitation.talent,
-
-        organization=invitation.organization,
-
-        opportunity=invitation.opportunity
-
-    )
+    conversation = Conversation.objects.filter(
+        opportunity=invitation.opportunity, is_group=False,
+        participants__user=invitation.talent.user,
+    ).filter(participants__user=invitation.organization.user).first()
+    if conversation is None:
+        conversation = Conversation.objects.create(
+            opportunity=invitation.opportunity,
+            created_by=invitation.organization.user,
+        )
+        for user in (invitation.talent.user, invitation.organization.user):
+            ConversationParticipant.objects.get_or_create(conversation=conversation, user=user)
 
 
 
@@ -208,12 +116,14 @@ def accept_invitation(request, invitation_id):
 
 
 @login_required
+@require_POST
+@transaction.atomic
 def decline_invitation(request, invitation_id):
 
 
     invitation = get_object_or_404(
 
-        Invitation,
+        Invitation.objects.select_for_update(),
 
         id=invitation_id,
 
@@ -223,9 +133,10 @@ def decline_invitation(request, invitation_id):
 
 
 
-    invitation.status = "DECLINED"
-
-    invitation.save()
+    require_active_organization(invitation.organization)
+    if invitation.status != "PENDING":
+        return HttpResponseBadRequest("This invitation has already been responded to.")
+    invitation.decline()
 
 
 
@@ -269,10 +180,7 @@ def invite_talent(request, talent_id):
     )
 
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.MANAGE_RECRUITMENT)
 
 
     opportunities = Opportunity.objects.filter(
@@ -359,4 +267,4 @@ def invite_talent(request, talent_id):
         }
 
     )
-         
+

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/learning.css' %}">{% endblock %}
+{% block content %}<div class="learning-page">{% block learning_nav %}{% include "learning/nav.html" %}{% endblock %}{% block learning_content %}{% endblock %}</div>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/learning.js' %}" defer>
+</script>{% endblock %}

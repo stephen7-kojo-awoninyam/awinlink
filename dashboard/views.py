@@ -3,6 +3,7 @@ from django.shortcuts import render,redirect,get_object_or_404
 from accounts.models import User
 
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
 from django.contrib.auth import get_user_model
 
@@ -18,6 +19,8 @@ from applications.models import Application
 from django.contrib.auth import get_user_model
 
 from django.db.models import Count
+from django.http import HttpResponseBadRequest
+from organizations.permissions import require_user_organization_active, require_request_organization, OrganizationCapability
 
 from skills.models import Skill
 # Create your views here.
@@ -81,13 +84,8 @@ def dashboard(request):
     # =====================================================
 
     elif user.role == "ORGANIZATION":
-
-        print("ORGANIZATION DASHBOARD LOADED")
-
-        return render(
-            request,
-            "dashboard/organization_dashboard.html"
-        )
+        from organizations.views import organization_dashboard
+        return organization_dashboard(request)
 
 
     # =====================================================
@@ -175,6 +173,7 @@ def verification_requests(request):
     
     
 @login_required
+@require_POST
 def approve_verification(request, request_id):
 
 
@@ -216,6 +215,7 @@ def approve_verification(request, request_id):
     
     
 @login_required
+@require_POST
 def reject_verification(request, request_id):
 
 
@@ -281,6 +281,7 @@ def user_management(request):
     
     
 @login_required
+@require_POST
 def toggle_user_status(request, user_id):
 
 
@@ -341,6 +342,7 @@ def talent_management(request):
     )
     
 @login_required
+@require_POST
 def toggle_talent_status(request, talent_id):
 
 
@@ -396,6 +398,7 @@ def organization_management(request):
     
     
 @login_required
+@require_POST
 def toggle_organization_status(request, organization_id):
 
 
@@ -414,9 +417,18 @@ def toggle_organization_status(request, organization_id):
     )
 
 
-    organization.user.is_active = not organization.user.is_active
+    desired_status = request.POST.get("status")
+    if desired_status not in {"ACTIVE", "INACTIVE"}:
+        return HttpResponseBadRequest("Choose Suspend or Reactivate.")
 
-    organization.user.save()
+    # A repeated submission is safe; merged/closed records are not reopened.
+    updated = Organization.objects.filter(
+        pk=organization.pk, status__in={"ACTIVE", "INACTIVE"},
+    ).update(status=desired_status)
+    if not updated:
+        return HttpResponseBadRequest(
+            "Only active or inactive organizations can be suspended or reactivated."
+        )
 
 
 

@@ -188,20 +188,17 @@
 
                         </form>
 
-                        <a
-                            href="{% url 'messaging:start_conversation' talent.user.id %}"
-                            class="btn btn-outline-success"
-                        >
+                        <form method="post" action="{% url 'messaging:start_conversation' talent.user.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-outline-success">
                             <i class="bi bi-chat-dots me-2"></i>
                             Message
-                        </a>
-                        <a
-                            href="{% url 'add_to_shortlist' talent.id %}"
+                        </button></form>
+                        <form method="post" action="{% url 'add_to_shortlist' talent.id %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                             class="btn btn-outline-danger"
                         >
                             <i class="bi bi-star me-2"></i>
                             Shortlist
-                        </a>
+                        </button></form>
 
                     </div>
                         <!-- =====================================================

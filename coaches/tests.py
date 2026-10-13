@@ -48,6 +48,14 @@ class CoachTalentVisibilityTests(TestCase):
             profile_visibility=visibility,
         )
 
+    def test_saved_talent_message_form_uses_talent_profile_id(self):
+        CoachTalentBookmark.objects.create(coach=self.coach, talent=self.public_talent)
+        self.client.force_login(self.coach_user)
+        response = self.client.get(reverse('coach_saved_talents'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'action="{reverse("messaging:start_coach_conversation", args=[self.public_talent.pk])}"')
+        self.assertNotContains(response, f'href="{reverse("messaging:start_coach_conversation", args=[self.public_talent.pk])}"')
+
     @override_settings(
         STORAGES={
             "default": {

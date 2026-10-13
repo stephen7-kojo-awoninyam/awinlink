@@ -1,12 +1,19 @@
+from organizations.permissions import (
+    OrganizationCapability, require_request_organization, has_organization_capability,
+    get_organization_capabilities, get_organization_role,
+)
+from talents.visibility import visible_talent_profiles_for
+from organizations.permissions import require_active_organization, require_user_organization_active
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from events.models import Event
 
 from .models import (
     Organization,
-    OrganizationCategory
+    OrganizationCategory,
+    OrganizationTeamInvitation,
 )
 
 from .forms import OrganizationForm
@@ -52,10 +59,7 @@ from connections.models import OrganizationFollow
 @login_required
 def organization_dashboard(request):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.VIEW_DASHBOARD)
 
     events = Event.objects.filter(
         organizer=organization
@@ -125,19 +129,15 @@ def organization_dashboard(request):
         for match in matches:
 
 
-            RecommendationHistory.objects.get_or_create(
-
-                organization=organization,
-
-                talent=match["talent"],
-
-                opportunity=opportunity,
-
-                defaults={
-                    "score":match["score"]
-                }
-
-            )
+            if has_organization_capability(
+                request.user, organization, OrganizationCapability.MANAGE_RECRUITMENT,
+            ):
+                RecommendationHistory.objects.get_or_create(
+                    organization=organization,
+                    talent=match["talent"],
+                    opportunity=opportunity,
+                    defaults={"score": match["score"]},
+                )
 
 
             recommended_talents.append({
@@ -252,10 +252,18 @@ def organization_dashboard(request):
 
 
 
+    capabilities = get_organization_capabilities(request.user, organization)
     context = {
 
 
         "organization":organization,
+        "organization_role": get_organization_role(request.user, organization),
+        "can_edit_profile": OrganizationCapability.EDIT_PROFILE in capabilities,
+        "can_manage_opportunities": OrganizationCapability.MANAGE_OPPORTUNITIES in capabilities,
+        "can_manage_recruitment": OrganizationCapability.MANAGE_RECRUITMENT in capabilities,
+        "can_manage_members": OrganizationCapability.MANAGE_MEMBERS in capabilities,
+        "can_transfer_ownership": get_organization_role(request.user, organization, allow_legacy_owner=False) == "OWNER",
+        "events": events,
 
 
         "opportunities":opportunities,
@@ -341,6 +349,17 @@ def organization_dashboard(request):
     )
 
 
+@login_required
+@require_GET
+def team_invitation_response(request, invitation_id):
+    """Recipient-only presentation; the existing DRF services handle responses."""
+    invitation = get_object_or_404(
+        OrganizationTeamInvitation.objects.select_related("organization", "inviter", "recipient"),
+        pk=invitation_id, recipient=request.user,
+    )
+    return render(request, "organizations/team_invitation_response.html", {"invitation": invitation})
+
+
 
 # ==================================================
 # ORGANIZATION APPLICATIONS
@@ -349,10 +368,7 @@ def organization_dashboard(request):
 @login_required
 def organization_applications(request):
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
 
 
     applications = Application.objects.filter(
@@ -401,10 +417,7 @@ def organization_applications(request):
 def edit_organization_profile(request):
 
 
-    organization=get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization=require_request_organization(request, OrganizationCapability.EDIT_PROFILE)
 
 
     if request.method=="POST":
@@ -641,12 +654,9 @@ def organization_directory(request):
 def opportunity_recommendations(request, opportunity_id):
 
 
-    organization = get_object_or_404(
-
-        Organization,
-
-        user=request.user
-
+    organization = require_request_organization(
+        request, OrganizationCapability.VIEW_RECRUITMENT,
+        organization=get_object_or_404(Opportunity, pk=opportunity_id).organization,
     )
 
 
@@ -726,12 +736,9 @@ def opportunity_recommendations(request, opportunity_id):
 def invite_talent(request, talent_id, opportunity_id):
 
 
-    organization = get_object_or_404(
-
-        Organization,
-
-        user=request.user
-
+    organization = require_request_organization(
+        request, OrganizationCapability.MANAGE_RECRUITMENT,
+        organization=get_object_or_404(Opportunity, pk=opportunity_id).organization,
     )
 
 
@@ -839,28 +846,11 @@ def invite_talent(request, talent_id, opportunity_id):
 
 @login_required
 def talent_search(request):
+    require_request_organization(request, OrganizationCapability.VIEW_TALENTS)
 
-
-    talents = TalentProfile.objects.filter(
-
-        availability_status="AVAILABLE"
-
-    ).filter(
-
-        Q(profile_visibility="PUBLIC")
-
-        |
-
-        Q(profile_visibility="ORGANIZATIONS")
-
-    ).select_related(
-
-        "user"
-
-    )
-
-
-
+    talents = visible_talent_profiles_for(request.user).filter(
+        availability_status="AVAILABLE",
+    ).select_related("user")
 
     query=request.GET.get(
         "q"
@@ -972,13 +962,7 @@ def talent_search(request):
 def shortlisted_talents(request):
 
 
-    organization=get_object_or_404(
-
-        Organization,
-
-        user=request.user
-
-    )
+    organization=require_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
 
 
 

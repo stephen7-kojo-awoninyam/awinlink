@@ -1,272 +1,101 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container py-5">
-
-    <!-- =====================================================
-         PAGE HEADER
-    ====================================================== -->
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-
-            <h1 class="fw-bold mb-1">
-                Certificate
-            </h1>
-
-            <p class="text-muted mb-0">
-                Your Awinlink course completion certificate.
-            </p>
-
-        </div>
-
-
-        <div>
-
-            <a
-                href="{% url 'my_certificates' %}"
-                class="btn btn-outline-secondary"
-            >
-
-                <i class="bi bi-arrow-left me-1"></i>
-
-                My Certificates
-
-            </a>
-
-        </div>
-
-    </div>
-
-
-    <!-- =====================================================
-         CERTIFICATE
-    ====================================================== -->
-
-    <div class="card border-0 shadow-sm">
-
-        <div class="card-body p-3 p-md-5">
-
-            <div
-                class="border border-3 rounded p-4 p-md-5 text-center"
-                style="min-height: 600px;"
-            >
-
-                <!-- =================================================
-                     BRAND
-                ================================================== -->
-
-                <div class="mb-4">
-
-                    <div class="fw-bold fs-3">
-                        AWINLINK
-                    </div>
-
-                    <div class="small text-muted">
-                        Talent & Learning Platform
-                    </div>
-
-                </div>
-
-
-                <!-- =================================================
-                     AWARD ICON
-                ================================================== -->
-
-                <div class="mb-4">
-
-                    <i
-                        class="bi bi-award-fill text-warning"
-                        style="font-size: 70px;"
-                    ></i>
-
-                </div>
-
-
-                <!-- =================================================
-                     TITLE
-                ================================================== -->
-
-                <h1 class="fw-bold">
-                    Certificate of Completion
-                </h1>
-
-
-                <p class="text-muted mt-3">
-                    This certificate is proudly presented to
-                </p>
-
-
-                <!-- =================================================
-                     LEARNER
-                ================================================== -->
-
-                <h2 class="fw-bold mt-4">
-
-                    {{ enrollment.user.get_full_name|default:enrollment.user.username }}
-
-                </h2>
-
-
-                <div class="mx-auto my-4"
-                     style="max-width: 500px;">
-
-                    <p class="text-muted mb-2">
-                        for successfully completing
-                    </p>
-
-
-                    <!-- =================================================
-                         COURSE
-                    ================================================== -->
-
-                    <h3 class="fw-bold">
-
-                        {{ course.title }}
-
-                    </h3>
-
-                </div>
-
-
-                <!-- =================================================
-                     COMPLETION MESSAGE
-                ================================================== -->
-
-                <p class="text-muted mx-auto"
-                   style="max-width: 650px;">
-
-                    This certificate recognizes the successful completion
-                    of all required lessons in the above course on the
-                    Awinlink Learning platform.
-
-                </p>
-
-
-                <!-- =================================================
-                     CERTIFICATE INFORMATION
-                ================================================== -->
-
-                <div class="row justify-content-center mt-5">
-
-                    <div class="col-md-4 mb-3">
-
-                        <div class="small text-muted">
-                            Certificate ID
-                        </div>
-
-                        <strong>
-                            {{ certificate.certificate_id }}
-                        </strong>
-
-                    </div>
-
-
-                    <div class="col-md-4 mb-3">
-
-                        <div class="small text-muted">
-                            Date Issued
-                        </div>
-
-                        <strong>
-                            {{ certificate.issued_at|date:"F d, Y" }}
-                        </strong>
-
-                    </div>
-
-
-                    <div class="col-md-4 mb-3">
-
-                        <div class="small text-muted">
-                            Issued By
-                        </div>
-
-                        <strong>
-
-                            {{ course.creator.get_full_name|default:course.creator.username }}
-
-                        </strong>
-
-                    </div>
-
-                </div>
-
-
-                <!-- =================================================
-                     VERIFIED
-                ================================================== -->
-
-                <div class="mt-4">
-
-                    <span class="badge bg-success px-3 py-2">
-
-                        <i class="bi bi-patch-check-fill me-1"></i>
-
-                        Certificate Verified
-
-                    </span>
-
-                </div>
-
-
-                <!-- =================================================
-                     ACTIONS
-                ================================================== -->
-
-                <div class="mt-5 d-flex justify-content-center gap-2 flex-wrap">
-
-                    {% if certificate.pdf %}
-
-                    <a
-                        href="{{ certificate.pdf.url }}"
-                        target="_blank"
-                        class="btn btn-primary"
-                    >
-
-                        <i class="bi bi-file-earmark-pdf me-1"></i>
-
-                        View Certificate PDF
-
-                    </a>
-
-                    <a
-                        href="{{ certificate.pdf.url }}"
-                        download
-                        class="btn btn-outline-primary"
-                    >
-
-                        <i class="bi bi-download me-1"></i>
-
-                        Download PDF
-
-                    </a>
-
-                    {% endif %}
-
-
-                    <!-- PUBLIC VERIFICATION -->
-
-                    <a
-                        href="{% url 'verify_certificate' certificate.certificate_id %}"
-                        class="btn btn-outline-success"
-                    >
-
-                        <i class="bi bi-shield-check me-1"></i>
-
-                        Verify Certificate
-
-                    </a>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
+{% extends "learning/ui_base.html" %}
+{% load learning_ui %}
+{% block title %}{{ course.title }} | Awinlink learning{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="discover" %}{% endblock %}
+{% block learning_content %}
+{% course_liked course user as liked %}
+<a class="lc-back" href="{% url 'courses' %}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Discover learning</a>
+<div class="lc-detail-cover">{% include "learning/course_cover.html" %}</div>
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">{{ course.category.name }} / {{ course.get_level_display }}</span>
+<h1>{{ course.title }}</h1>
+<div class="lc-person">
+<span class="lc-avatar">{{ course.creator.username|slice:":1"|upper }}</span>
+<p class="lc-muted">Learn with {{ course.creator.get_full_name|default:course.creator.username }}</p>
 </div>
-
+</div>
+<a class="lc-button lc-button-secondary" href="#enroll">{% if enrollment %}Continue learning{% else %}Start learning{% endif %}</a>
+</header>
+<div class="lc-detail-grid">
+<div class="lc-detail-main">
+<section class="lc-card">
+<div class="lc-social-bar">
+<form method="POST" action="{% url 'like_course' course.id %}">{% csrf_token %}<button class="lc-like" type="submit" aria-pressed="{% if liked %}true{% else %}false{% endif %}">
+<i class="bi {% if liked %}bi-heart-fill{% else %}bi-heart{% endif %}" aria-hidden="true">
+</i> {% if liked %}Unlike{% else %}Like{% endif %} <span>{{ course.likes.count }}</span>
+</button>
+</form>
+<span class="lc-muted">{{ total_reviews }} review{{ total_reviews|pluralize }}{% if average_rating %} &middot; {{ average_rating|floatformat:1 }} / 5{% endif %}</span>
+</div>
+<h2>About this course</h2>
+<div class="lc-prose">{{ course.description|linebreaks }}</div>
+<div class="lc-facts">
+<span>
+<i class="bi bi-clock" aria-hidden="true">
+</i> {{ course.duration }} minutes</span>
+<span>{{ lessons|length }} lesson{{ lessons|length|pluralize }}</span>
+<span>{{ course.get_level_display }}</span>
+</div>
+</section>
+<section class="lc-card">
+<h2>Your learning playlist</h2>{% for item in lessons %}{% if enrollment %}<a class="lc-lesson-row" href="{% learning_url 'lesson_detail' item.id %}">{% else %}<div class="lc-lesson-row">{% endif %}<span class="lc-lesson-number">{{ item.order }}</span>
+<span>
+<strong>{{ item.title }}</strong>
+<small>{{ item.duration }} min{% if item.quiz %} &middot; Quiz included{% endif %}</small>
+</span>
+<i class="bi {% if enrollment %}bi-play-circle{% else %}bi-lock{% endif %}" aria-hidden="true">
+</i>{% if enrollment %}</a>{% else %}</div>{% endif %}{% empty %}<p class="lc-muted">Lessons are being prepared. Check back soon.</p>{% endfor %}</section>
+<section class="lc-card">
+<div class="lc-results mt-0">
+<h2>Community reviews</h2>
+<span>{% if average_rating %}{{ average_rating|floatformat:1 }} / 5{% else %}No ratings yet{% endif %}</span>
+</div>{% for review in reviews %}<article class="lc-review">
+<div class="lc-person">
+<span class="lc-avatar">{{ review.user.username|slice:":1"|upper }}</span>
+<div>
+<strong>{{ review.user.get_full_name|default:review.user.username }}</strong>
+<small>Rating: {{ review.rating }} / 5</small>
+</div>
+</div>
+<div class="lc-prose">{{ review.review|linebreaks }}</div>
+</article>{% empty %}<p class="lc-muted">No reviews yet. Share your experience after enrolling.</p>{% endfor %}{% if enrollment %}<a class="lc-button lc-button-secondary mt-3" href="{% url 'review_course' course.id %}">Write or update your review</a>{% endif %}</section>
+<section class="lc-card">
+<details class="lc-comments">
+<summary>
+<i class="bi bi-chat-dots" aria-hidden="true">
+</i> Course conversation &middot; {{ course.comments.count }}</summary>{% for comment in course.comments.all %}<article class="lc-review">
+<strong>{{ comment.user.get_full_name|default:comment.user.username }}</strong>
+<div class="lc-prose">{{ comment.text|linebreaks }}</div>
+</article>{% empty %}<p class="lc-muted mt-3">Start the conversation.</p>{% endfor %}<form method="POST" action="{% url 'add_course_comment' course.id %}" class="lc-card-footer">{% csrf_token %}<label for="course-comment">Your comment</label>
+<textarea id="course-comment" name="text" rows="3" required placeholder="Share an idea or ask a question">
+</textarea>
+<button class="lc-button mt-3" type="submit">Post comment</button>
+</form>
+</details>
+</section>
+</div>
+<aside aria-label="Course enrollment">
+<section class="lc-card" id="enroll">
+<span class="lc-eyebrow">Make time for your talent</span>
+<h2 class="mt-2">{% if enrollment %}You’re part of this course{% else %}Your next skill starts here{% endif %}</h2>{% if course.is_free %}<span class="lc-status lc-status--approved">Free course</span>{% endif %}<p class="lc-muted mt-3 mb-3">{{ lessons|length }} lessons &middot; {{ course.duration }} minutes</p>
+{% if enrollment %}<a class="lc-button w-100" href="{% learning_url 'course_progress' course.id %}">Continue learning <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</a>{% if lessons %}<a class="lc-text-link mt-2" href="{% learning_url 'lesson_detail' lessons.0.id %}">Open the first lesson</a>{% endif %}{% if enrollment.completed %}<div class="lc-notice mt-3">You have completed this course.</div>{% if enrollment.certificate %}<a class="lc-button lc-button-secondary w-100" href="{% url 'certificate_detail' enrollment.certificate.certificate_id %}">View your certificate</a>{% endif %}{% endif %}
+{% else %}<form method="POST" action="{% url 'enroll_course' course.id %}">{% csrf_token %}<button class="lc-button w-100" type="submit">Enroll in course <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</button>
+</form>
+<p class="lc-help mt-3">Enroll to access the lessons and track your progress.</p>{% endif %}</section>
+<section class="lc-card">
+<h2>Learn at your pace</h2>
+<p class="lc-prose">Work through the lessons, use the learning materials, and test your understanding with any included quizzes.</p>
+<a class="lc-text-link" href="{% url 'my_learning' %}">Your learning journey <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</a>
+</section>
+</aside>
+</div>
 {% endblock %}

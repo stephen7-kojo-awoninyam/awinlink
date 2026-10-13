@@ -1,3 +1,4 @@
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -801,6 +802,7 @@ def conversation_list(request):
 
 
 @login_required
+@require_POST
 def start_conversation(request, user_id, opportunity_id=None):
 
     # ==========================================
@@ -990,6 +992,7 @@ def start_conversation(request, user_id, opportunity_id=None):
 # =====================================================
 
 @login_required
+@require_POST
 def start_coach_conversation(request, talent_id):
 
 

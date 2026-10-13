@@ -1,5 +1,8 @@
+from organizations.permissions import OrganizationCapability, require_request_organization
+from organizations.permissions import require_active_organization
 from django.shortcuts import render, get_object_or_404,redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from organizations.models import Organization
 from .models import Shortlist
 from organizations.models import Organization
@@ -10,35 +13,14 @@ from scouts.models import ScoutProfile
 from django.contrib import messages
 # Create your views here.
 
-def get_user_organization(user):
-
-    if user.role == "ORGANIZATION":
-
-        return get_object_or_404(
-            Organization,
-            user=user
-        )
-
-    elif user.role == "SCOUT":
-
-        scout = get_object_or_404(
-            ScoutProfile,
-            user=user
-        )
-
-        if not scout.organization:
-
-            return None
-
-        return scout.organization
-
-    return None
+def get_user_organization(request, capability):
+    return require_request_organization(request, capability)
 
 
 @login_required
 def organization_shortlist(request):
 
-    organization = get_user_organization(request.user)
+    organization = get_user_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
 
     if not organization:
 
@@ -80,10 +62,11 @@ def organization_shortlist(request):
 
 
 @login_required
+@require_POST
 def add_to_shortlist(request, talent_id):
 
 
-    organization = get_user_organization(request.user)
+    organization = get_user_organization(request, OrganizationCapability.MANAGE_RECRUITMENT)
 
     if not organization:
 
@@ -151,9 +134,10 @@ def add_to_shortlist(request, talent_id):
 
 
 @login_required
+@require_POST
 def remove_from_shortlist(request, talent_id):
 
-    organization = get_user_organization(request.user)
+    organization = get_user_organization(request, OrganizationCapability.MANAGE_RECRUITMENT)
 
     if not organization:
 
@@ -175,9 +159,10 @@ def remove_from_shortlist(request, talent_id):
     )
     
 @login_required
+@require_POST
 def toggle_star(request, talent_id):
 
-    organization = get_user_organization(request.user)
+    organization = get_user_organization(request, OrganizationCapability.MANAGE_RECRUITMENT)
 
     if not organization:
 
@@ -203,7 +188,7 @@ def toggle_star(request, talent_id):
 @login_required
 def update_notes(request, talent_id):
 
-    organization = get_user_organization(request.user)
+    organization = get_user_organization(request, OrganizationCapability.MANAGE_RECRUITMENT)
 
     if not organization:
 
@@ -237,4 +222,4 @@ def update_notes(request, talent_id):
             "shortlist": shortlist
         }
     )    
-    
+

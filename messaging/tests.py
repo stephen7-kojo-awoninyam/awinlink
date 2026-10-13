@@ -1,12 +1,17 @@
 from django.test import SimpleTestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from rest_framework.test import APIClient
 from asgiref.sync import async_to_sync
 from redis.exceptions import TimeoutError as RedisTimeoutError
+from rest_framework_simplejwt.tokens import AccessToken
+import base64
+import hashlib
+import hmac
+import time
 
 from notifications.models import Notification
 from .consumers import UserConsumer
@@ -78,7 +83,7 @@ class StartConversationTests(TestCase):
         )
         self.client.force_login(sender)
 
-        response = self.client.get(
+        response = self.client.post(
             reverse("messaging:start_conversation", args=[talent_user.id])
         )
 
@@ -448,3 +453,132 @@ class UserConsumerRedisFailureTests(SimpleTestCase):
 
         consumer.close.assert_awaited_once_with(code=1013)
         consumer.accept.assert_not_awaited()
+
+
+class MobileCallApiTests(TestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.caller = user_model.objects.create_user(username="native_caller", password="TestPass123!")
+        self.callee = user_model.objects.create_user(username="native_callee", password="TestPass123!")
+        self.conversation = Conversation.objects.create(created_by=self.caller)
+        ConversationParticipant.objects.create(conversation=self.conversation, user=self.caller)
+        ConversationParticipant.objects.create(conversation=self.conversation, user=self.callee)
+        self.client = APIClient()
+
+    @override_settings(CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}})
+    def test_start_and_accept_call_expose_participants_for_webrtc_negotiation(self):
+        self.client.force_authenticate(self.caller)
+        started = self.client.post(
+            f"/api/messaging/conversations/{self.conversation.id}/calls/start/",
+            {"call_type": "VIDEO"},
+            format="json",
+        )
+        self.assertEqual(started.status_code, 201)
+        self.assertEqual(started.data["call_type"], "VIDEO")
+        self.assertEqual(len(started.data["participants"]), 2)
+
+        self.client.force_authenticate(self.callee)
+        accepted = self.client.post(f"/api/messaging/calls/{started.data['id']}/accept/")
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(accepted.data["status"], "ACTIVE")
+        self.assertTrue(any(item["user"]["id"] == self.caller.id for item in accepted.data["participants"]))
+
+    def test_call_start_requires_conversation_membership(self):
+        outsider = get_user_model().objects.create_user(username="call_outsider", password="TestPass123!")
+        self.client.force_authenticate(outsider)
+        response = self.client.post(
+            f"/api/messaging/conversations/{self.conversation.id}/calls/start/",
+            {"call_type": "VOICE"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403)
+
+    @override_settings(CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}})
+    def test_end_call_ends_every_participant_and_rejects_nonparticipants(self):
+        call = Call.objects.create(
+            conversation=self.conversation,
+            initiated_by=self.caller,
+            call_type="VOICE",
+            status="ACTIVE",
+        )
+        CallParticipant.objects.create(call=call, user=self.caller, status="JOINED")
+        CallParticipant.objects.create(call=call, user=self.callee, status="JOINED")
+        outsider = get_user_model().objects.create_user(username="call_end_outsider")
+        self.client.force_authenticate(outsider)
+        denied = self.client.post(f"/api/messaging/calls/{call.id}/end/")
+        self.assertEqual(denied.status_code, 403)
+
+        self.client.force_authenticate(self.caller)
+        ended = self.client.post(f"/api/messaging/calls/{call.id}/end/")
+        self.assertEqual(ended.status_code, 200)
+        call.refresh_from_db()
+        self.assertEqual(call.status, "ENDED")
+        self.assertEqual(
+            set(call.participants.values_list("status", flat=True)),
+            {"LEFT"},
+        )
+
+    def test_incoming_call_feed_only_contains_calls_ringing_this_user(self):
+        call = Call.objects.create(
+            conversation=self.conversation,
+            initiated_by=self.caller,
+            call_type="VOICE",
+            status="RINGING",
+        )
+        CallParticipant.objects.create(call=call, user=self.caller, status="JOINED")
+        CallParticipant.objects.create(call=call, user=self.callee, status="RINGING")
+        self.client.force_authenticate(self.callee)
+
+        response = self.client.get("/api/messaging/calls/incoming/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["id"] for item in response.data], [call.id])
+
+    @override_settings(TURN_SERVER_URLS="turn:turn.example.test:3478,turns:turn.example.test:5349", TURN_SHARED_SECRET="unit-test-secret")
+    def test_ice_endpoint_returns_short_lived_coturn_credentials(self):
+        self.client.force_authenticate(self.caller)
+        response = self.client.get("/api/messaging/calls/ice-servers/")
+        self.assertEqual(response.status_code, 200)
+        turn = response.data["ice_servers"][1]
+        expires, user_id = turn["username"].split(":")
+        self.assertEqual(user_id, str(self.caller.id))
+        self.assertGreaterEqual(int(expires), int(time.time()) + 3590)
+        expected = base64.b64encode(
+            hmac.new(b"unit-test-secret", turn["username"].encode(), hashlib.sha1).digest()
+        ).decode("ascii")
+        self.assertEqual(turn["credential"], expected)
+        self.assertEqual(turn["urls"], ["turn:turn.example.test:3478", "turns:turn.example.test:5349"])
+
+    def test_ice_endpoint_requires_authentication(self):
+        response = self.client.get("/api/messaging/calls/ice-servers/")
+        self.assertEqual(response.status_code, 401)
+
+
+class MobileWebSocketJwtTests(TransactionTestCase):
+    def test_authorization_header_is_attached_to_websocket_scope(self):
+        from config.asgi import JWTWebSocketMiddleware
+
+        user = get_user_model().objects.create_user(username="socket_header_user", password="TestPass123!")
+
+        async def inner(scope, receive, send):
+            return scope["user"]
+
+        scope = {
+            "type": "websocket",
+            "headers": [(b"authorization", f"Bearer {AccessToken.for_user(user)}".encode())],
+        }
+        resolved = async_to_sync(JWTWebSocketMiddleware(inner))(scope, None, None)
+        self.assertEqual(resolved.pk, user.pk)
+
+    def test_jwt_bearer_token_resolves_to_authenticated_channels_user(self):
+        from config.asgi import _user_from_jwt
+
+        user = get_user_model().objects.create_user(username="socket_mobile_user", password="TestPass123!")
+        resolved = async_to_sync(_user_from_jwt)(str(AccessToken.for_user(user)))
+        self.assertEqual(resolved.pk, user.pk)
+        self.assertTrue(resolved.is_authenticated)
+
+    def test_invalid_jwt_is_anonymous(self):
+        from config.asgi import _user_from_jwt
+
+        self.assertIsNone(async_to_sync(_user_from_jwt)("invalid-token"))

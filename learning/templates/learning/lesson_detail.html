@@ -1,352 +1,87 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container-fluid py-4">
-
-    <div class="row g-4">
-
-        <!-- =====================================================
-             LESSON CONTENT
-        ====================================================== -->
-
-        <div class="col-lg-8">
-
-            <div class="card border-0 shadow-sm">
-
-                <div class="card-body p-4">
-
-                    <!-- BACK TO COURSE -->
-
-                    <div class="mb-3">
-
-                        <a
-                            href="{% url 'course_detail' course.slug %}"
-                            class="text-decoration-none"
-                        >
-
-                            <i class="bi bi-arrow-left me-1"></i>
-
-                            Back to Course
-
-                        </a>
-
-                    </div>
-
-
-                    <!-- LESSON NUMBER -->
-
-                    <span class="badge bg-primary">
-
-                        Lesson {{ lesson.order }}
-
-                    </span>
-
-
-                    <!-- TITLE -->
-
-                    <h1 class="fw-bold mt-3">
-
-                        {{ lesson.title }}
-
-                    </h1>
-
-
-                    <!-- DESCRIPTION -->
-
-                    {% if lesson.description %}
-
-                    <p class="text-muted">
-
-                        {{ lesson.description }}
-
-                    </p>
-
-                    {% endif %}
-
-
-                    <!-- =================================================
-                         VIDEO
-                    ================================================== -->
-
-                    {% if lesson.video %}
-
-                    <div class="ratio ratio-16x9 mb-4">
-
-                        <video
-                            controls
-                            class="rounded"
-                        >
-
-                            <source
-                                src="{{ lesson.video.url }}"
-                            >
-
-                            Your browser does not support video playback.
-
-                        </video>
-
-                    </div>
-
-                    {% endif %}
-
-
-                    <!-- =================================================
-                         NOTES
-                    ================================================== -->
-
-                    {% if lesson.notes %}
-
-                    <div class="card bg-light border-0 mb-4">
-
-                        <div class="card-body">
-
-                            <h5 class="fw-bold">
-
-                                <i class="bi bi-file-earmark-text me-1"></i>
-
-                                Lesson Notes
-
-                            </h5>
-
-
-                            <p class="text-muted small">
-
-                                Download the lesson notes for additional
-                                study material.
-
-                            </p>
-
-
-                            <a
-                                href="{{ lesson.notes.url }}"
-                                target="_blank"
-                                class="btn btn-outline-primary"
-                            >
-
-                                <i class="bi bi-download me-1"></i>
-
-                                Download Notes
-
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                    {% endif %}
-
-
-                            {% if quiz %}
-
-                            <div class="card border-0 shadow-sm mt-4">
-
-                                <div class="card-body">
-
-                                    <div class="d-flex justify-content-between align-items-center">
-
-                                        <div>
-
-                                            <h5 class="fw-bold mb-1">
-
-                                                <i class="bi bi-question-circle me-1"></i>
-
-                                                Lesson Quiz
-
-                                            </h5>
-
-                                            <p class="text-muted mb-0">
-
-                                                {{ quiz.title }}
-
-                                                · Passing score:
-                                                {{ quiz.passing_score }}%
-
-                                            </p>
-
-                                        </div>
-
-
-                                        <a
-                                            href="{% url 'take_quiz' quiz.id %}"
-                                            class="btn btn-primary"
-                                        >
-
-                                            Take Quiz
-
-                                        </a>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                            {% endif %}
-
-
-                    <!-- =================================================
-                         COMPLETION
-                    ================================================== -->
-
-                    {% if progress.completed %}
-
-                    <div class="alert alert-success">
-
-                        <i class="bi bi-check-circle me-1"></i>
-
-                        <strong>
-                            Lesson completed.
-                        </strong>
-
-                        <div class="small mt-1">
-
-                            You have successfully completed this lesson.
-
-                        </div>
-
-                    </div>
-
-
-                    {% else %}
-
-                    <form
-                        method="POST"
-                        action="{% url 'complete_lesson' lesson.id %}"
-                    >
-
-                        {% csrf_token %}
-
-                        <button
-                            type="submit"
-                            class="btn btn-success"
-                        >
-
-                            <i class="bi bi-check-circle me-1"></i>
-
-                            Mark Lesson as Complete
-
-                        </button>
-
-                    </form>
-
-                    {% endif %}
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- =====================================================
-             COURSE CONTENT
-        ====================================================== -->
-
-        <div class="col-lg-4">
-
-            <div class="card border-0 shadow-sm">
-
-                <div class="card-header bg-white">
-
-                    <strong>
-
-                        <i class="bi bi-list-ul me-1"></i>
-
-                        Course Content
-
-                    </strong>
-
-                </div>
-
-
-                <div class="list-group list-group-flush">
-
-                    {% for item in lessons %}
-
-                    <a
-                        href="{% url 'lesson_detail' item.id %}"
-                        class="list-group-item list-group-item-action
-                        {% if item.id == lesson.id %}active{% endif %}"
-                    >
-
-                        <div class="d-flex justify-content-between align-items-center">
-
-                            <span>
-
-                                {{ item.order }}.
-                                {{ item.title }}
-
-                            </span>
-
-
-                            {% if item.id == lesson.id %}
-
-                            <i class="bi bi-play-circle"></i>
-
-                            {% endif %}
-
-                        </div>
-
-                    </a>
-
-
-                    {% empty %}
-
-                    <div class="p-3 text-muted">
-
-                        No lessons available.
-
-                    </div>
-
-                    {% endfor %}
-
-                </div>
-
-            </div>
-
-
-            <!-- =====================================================
-                 PROGRESS
-            ====================================================== -->
-
-            <div class="card border-0 shadow-sm mt-4">
-
-                <div class="card-body">
-
-                    <h6 class="fw-bold">
-
-                        <i class="bi bi-bar-chart me-1"></i>
-
-                        Course Progress
-
-                    </h6>
-
-
-                    <p class="small text-muted mb-3">
-
-                        Track your progress through this course.
-
-                    </p>
-
-
-                    <a
-                        href="{% url 'course_progress' course.id %}"
-                        class="btn btn-outline-primary w-100"
-                    >
-
-                        View Course Progress
-
-                    </a>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
+{% extends "learning/ui_base.html" %}
+{% load learning_ui %}
+{% block title %}{{ lesson.title }} | Awinlink learning{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="learning" %}{% endblock %}
+{% block learning_content %}
+{% adjacent_lessons lessons lesson as adjacent %}
+<a class="lc-back" href="{% url 'course_detail' course.slug %}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> {{ course.title }}</a>
+<div class="lc-watch-grid" data-lesson-viewer data-user-id="{{ user.id }}" data-lesson-id="{{ lesson.id }}">
+<div>
+{% if lesson.video %}<div class="lc-watch">
+<video controls playsinline preload="metadata" {% if course.thumbnail %}poster="{{ course.thumbnail.url }}"{% endif %} aria-label="{{ lesson.title }}">
+<source src="{{ lesson.video.url }}">Your browser does not support video playback.</video>
+<div class="lc-video-tools">
+<div>
+<label for="lesson-playback-speed">Playback speed</label>
+<select id="lesson-playback-speed" data-video-speed>
+<option value="0.75">0.75x</option>
+<option value="1" selected>1x</option>
+<option value="1.25">1.25x</option>
+<option value="1.5">1.5x</option>
+<option value="2">2x</option>
+</select>
 </div>
-
+<button type="button" data-focus-video aria-pressed="false">Focus view</button>
+</div>
+<div class="lc-resume" data-video-resume hidden>Pick up at <strong data-resume-time>
+</strong>
+<button type="button" data-resume-playback>Resume</button>
+<button type="button" data-start-over>Start over</button>
+</div>
+<div class="lc-video-error" data-video-error hidden role="status">This video could not be loaded. <a href="{{ lesson.video.url }}" target="_blank" rel="noopener noreferrer">Open the video directly</a>.</div>
+</div>{% endif %}
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">Lesson {{ lesson.order }} &middot; {{ lesson.duration }} min</span>
+<h1>{{ lesson.title }}</h1>{% if lesson.description %}<div class="lc-prose">{{ lesson.description|linebreaks }}</div>{% endif %}</div>
+</header>
+{% if not lesson.video %}<div class="lc-notice">
+<i class="bi bi-journal-text" aria-hidden="true">
+</i> This lesson has no video. Work through the description and any resources below.</div>{% endif %}
+{% if lesson.notes %}<section class="lc-card">
+<h2>Take the ideas with you</h2>
+<p class="lc-muted mb-3">Download the lesson notes for additional study material.</p>
+<a class="lc-button lc-button-secondary" href="{{ lesson.notes.url }}" target="_blank" rel="noopener noreferrer">
+<i class="bi bi-download" aria-hidden="true">
+</i> Download notes</a>
+</section>{% endif %}
+{% if quiz %}<section class="lc-card">
+<div class="lc-heading mb-0">
+<div>
+<span class="lc-eyebrow">Put it into practice</span>
+<h2 class="mt-2">{{ quiz.title }}</h2>
+<p class="lc-muted">Passing score: {{ quiz.passing_score }}%</p>
+</div>
+<a class="lc-button" href="{% url 'take_quiz' quiz.id %}">Take quiz</a>
+</div>
+</section>{% endif %}
+<section class="lc-card">{% if progress.completed %}<span class="lc-status lc-status--complete">
+<i class="bi bi-check2-circle" aria-hidden="true">
+</i> Lesson completed</span>
+<p class="lc-muted mt-3">Keep going, or revisit this lesson whenever you need it.</p>{% else %}<h2>Ready for the next step?</h2>{% if quiz %}<p class="lc-muted mb-3">Pass the lesson quiz before marking this lesson complete.</p>{% endif %}<form method="POST" data-learning-return="{% learning_url 'lesson_detail' lesson.id %}" data-learning-legacy-return="{% url 'lesson_detail' lesson.id %}" action="{% url 'complete_lesson' lesson.id %}">{% csrf_token %}<button class="lc-button" type="submit">
+<i class="bi bi-check2-circle" aria-hidden="true">
+</i> Mark lesson as complete</button>
+</form>{% endif %}
+<div class="lc-actions lc-card-footer">{% if adjacent.previous %}<a class="lc-button lc-button-secondary" href="{% learning_url 'lesson_detail' adjacent.previous.id %}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Previous lesson</a>{% endif %}{% if adjacent.next %}<a class="lc-button lc-button-secondary" href="{% learning_url 'lesson_detail' adjacent.next.id %}">Next lesson <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</a>{% endif %}</div>
+</section>
+</div>
+<aside aria-label="Course playlist">
+<section class="lc-card">
+<span class="lc-eyebrow">Your learning playlist</span>
+<h2 class="mt-2">{{ course.title }}</h2>{% for item in lessons %}<a class="lc-lesson-row" href="{% learning_url 'lesson_detail' item.id %}" {% if item.id == lesson.id %}aria-current="page"{% endif %}>
+<span class="lc-lesson-number">{{ item.order }}</span>
+<span>
+<strong>{{ item.title }}</strong>
+<small>{{ item.duration }} min</small>
+</span>{% if item.id == lesson.id %}<i class="bi bi-play-circle" aria-hidden="true">
+</i>{% endif %}</a>{% empty %}<p class="lc-muted">No lessons available.</p>{% endfor %}<a class="lc-button lc-button-secondary w-100 mt-4" href="{% learning_url 'course_progress' course.id %}">View course progress</a>
+</section>
+</aside>
+</div>
 {% endblock %}

@@ -92,23 +92,27 @@ Declined
 {% if invitation.status == "PENDING" %}
 
 
-<a href="{% url 'accept_invitation' invitation.id %}"
+<form method="post" action="{% url 'accept_invitation' invitation.id %}" style="display:inline">
+{% csrf_token %}
+<button type="submit"
 
 class="btn btn-success">
 
 Accept
 
-</a>
+</button></form>
 
 
 
-<a href="{% url 'decline_invitation' invitation.id %}"
+<form method="post" action="{% url 'decline_invitation' invitation.id %}" style="display:inline">
+{% csrf_token %}
+<button type="submit"
 
 class="btn btn-danger">
 
 Decline
 
-</a>
+</button></form>
 
 
 

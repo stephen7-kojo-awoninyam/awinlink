@@ -60,23 +60,17 @@ View Document
 <br><br>
 
 
-<a href="{% url 'approve_verification' request.id %}"
-
-class="btn btn-success">
-
-Approve
-
-</a>
+<form method="post" action="{% url 'approve_verification' request.id %}" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">Approve</button>
+</form>
 
 
 
-<a href="{% url 'reject_verification' request.id %}"
-
-class="btn btn-danger">
-
-Reject
-
-</a>
+<form method="post" action="{% url 'reject_verification' request.id %}" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Reject</button>
+</form>
 
 
 

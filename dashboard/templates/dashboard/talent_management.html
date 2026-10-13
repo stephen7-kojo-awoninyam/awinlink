@@ -100,13 +100,13 @@ Disabled
 <td>
 
 
-<a href="{% url 'toggle_talent_status' talent.id %}"
+<form method="post" action="{% url 'toggle_talent_status' talent.id %}" class="d-inline">{% csrf_token %}<button type="submit"
 
 class="btn btn-warning btn-sm">
 
 Toggle
 
-</a>
+</button></form>
 
 
 </td>

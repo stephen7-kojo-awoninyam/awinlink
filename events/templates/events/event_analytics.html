@@ -1,123 +1,61 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container mt-5">
-
-<h2 class="mb-4">
-
-Event Analytics
-
-</h2>
-
-<div class="row">
-
-<div class="col-md-3">
-
-<div class="card text-center shadow">
-
-<div class="card-body">
-
-<h3>{{ total_events }}</h3>
-
-<p>Total Events</p>
-
+{% extends "events/ui_base.html" %}
+{% load events_ui %}
+{% block title %}Event analytics | Awinlink{% endblock %}
+{% block event_content %}
+{% event_workspace as workspace %}
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Organizer insights</span>
+<h1>Event analytics</h1>
+<p>Understand how your experiences connect with the community.</p>
 </div>
-
+<a class="ev-button ev-button-secondary" href="{% url 'organization_events' %}{% if workspace %}?organization_id={{ workspace.id }}{% endif %}">Your events</a>
+</header>
+<div class="ev-stats">
+<div class="ev-card ev-stat">
+<i class="bi bi-calendar-event" aria-hidden="true">
+</i>
+<strong>{{ total_events }}</strong>
+<span>Total events</span>
 </div>
-
+<div class="ev-card ev-stat">
+<i class="bi bi-people" aria-hidden="true">
+</i>
+<strong>{{ total_participants }}</strong>
+<span>Participants</span>
 </div>
-
-<div class="col-md-3">
-
-<div class="card text-center shadow">
-
-<div class="card-body">
-
-<h3>{{ total_participants }}</h3>
-
-<p>Participants</p>
-
+<div class="ev-card ev-stat">
+<i class="bi bi-check2-circle" aria-hidden="true">
+</i>
+<strong>{{ attendance_rate }}%</strong>
+<span>Attendance rate</span>
 </div>
-
+<div class="ev-card ev-stat">
+<i class="bi bi-award" aria-hidden="true">
+</i>
+<strong>{{ certificates }}</strong>
+<span>Certificates</span>
 </div>
-
 </div>
-
-<div class="col-md-3">
-
-<div class="card text-center shadow">
-
-<div class="card-body">
-
-<h3>{{ attendance_rate }}%</h3>
-
-<p>Attendance</p>
-
-</div>
-
-</div>
-
-</div>
-
-<div class="col-md-3">
-
-<div class="card text-center shadow">
-
-<div class="card-body">
-
-<h3>{{ certificates }}</h3>
-
-<p>Certificates</p>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-<hr>
-
-<h3>
-
-Top Performing Events
-
-</h3>
-
-<table class="table table-striped">
-
+<section class="ev-card">
+<h2>Top performing events</h2>
+<div class="ev-table-wrap">
+<table class="ev-table">
 <thead>
-
 <tr>
-
-<th>Event</th>
-
-<th>Participants</th>
-
+<th scope="col">Event</th>
+<th scope="col">Participants</th>
 </tr>
-
 </thead>
-
-<tbody>
-
-{% for event in top_events %}
-
-<tr>
-
-<td>{{ event.title }}</td>
-
+<tbody>{% for event in top_events %}<tr>
+<td>
+<a class="ev-text-link" href="{% url 'event_detail' event.id %}">{{ event.title }}</a>
+</td>
 <td>{{ event.participants }}</td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
+</tr>{% empty %}<tr>
+<td colspan="2" class="ev-muted">Your event performance will appear here.</td>
+</tr>{% endfor %}</tbody>
 </table>
-
 </div>
-
+</section>
 {% endblock %}

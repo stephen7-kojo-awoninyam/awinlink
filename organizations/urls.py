@@ -3,6 +3,7 @@ from . import views
 
 
 urlpatterns = [
+    path("team-invitations/<int:invitation_id>/", views.team_invitation_response, name="team_invitation_response"),
 
     path(
         "dashboard/",

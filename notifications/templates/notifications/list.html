@@ -1,103 +1,19 @@
-{% extends "base.html" %}
-
-
+{% extends "base.html" %}{% load static %}
+{% block title %}Notifications · Awinlink{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/communications.css' %}">{% endblock %}
 {% block content %}
-
-
-<div class="container mt-5">
-
-
-<div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-    <h2>Notifications 🔔</h2>
-    <label class="form-check form-switch mb-0">
-        <input class="form-check-input" type="checkbox" id="notificationSoundToggle">
-        <span class="form-check-label">Notification sound</span>
-    </label>
-</div>
-
-
-{% if unread_notifications %}
-
-<form method="post" action="{% url 'mark_all_notifications_read' %}" class="mb-3">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-outline-primary btn-sm">
-        Mark all as read
-    </button>
-</form>
-
-{% endif %}
-
-
-<hr>
-
-
-{% for notification in notifications %}
-
-<div class="card mb-3 p-3">
-
-    <h5>
-
-        {{ notification.notification_type }}
-
-        {% if not notification.is_read %}
-
-            <span class="badge bg-danger">
-                New
-            </span>
-
-        {% else %}
-
-            <span class="badge bg-success">
-                Read
-            </span>
-
-        {% endif %}
-
-    </h5>
-
-    <p>
-        {{ notification.message }}
-    </p>
-
-    <small>
-        {{ notification.created_at }}
-    </small>
-
-    <br>
-
-    {% if notification.notification_type == "MESSAGE" or notification.notification_type == "INCOMING_CALL" or notification.notification_type == "MISSED_CALL" %}
-
-        <a
-            href="{% url 'notification_detail' notification.id %}"
-            class="btn btn-primary btn-sm mt-3"
-        >
-            Open conversation
-        </a>
-
-    {% elif not notification.is_read %}
-
-        <form method="post" action="{% url 'mark_notification_read' notification.id %}" class="d-inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-primary btn-sm mt-3">
-                Mark as read
-            </button>
-        </form>
-
-    {% endif %}
-
-</div>
-
-{% empty %}
-
-<div class="alert alert-info">
-    No notifications available.
-</div>
-
-{% endfor %}
-
-
-
-</div>
-
-
+<section class="notifications-page" aria-labelledby="notificationsTitle">
+    <header class="notifications-heading"><div><span class="communications-eyebrow">YOUR COMMUNITY, IN THE LOOP</span><h1 id="notificationsTitle">Notifications</h1><p>The moments, messages, and connections that matter.</p></div>{% if unread_notifications %}<span class="notifications-unread-pill"><span class="notifications-unread-dot" aria-hidden="true"></span>{{ unread_notifications }} unread</span>{% endif %}</header>
+    <div class="notifications-toolbar"><div class="notification-filters" role="group" aria-label="Filter notifications" data-notification-filters hidden><button type="button" data-notification-filter="all" aria-pressed="true">All activity</button><button type="button" data-notification-filter="unread" aria-pressed="false">Unread</button><button type="button" data-notification-filter="calls" aria-pressed="false"><i class="bi bi-telephone" aria-hidden="true"></i>Calls</button></div><label class="notification-sound-control" for="notificationSoundToggle"><i class="bi bi-volume-up" aria-hidden="true"></i><span>Sound</span><input type="checkbox" id="notificationSoundToggle" class="form-check-input" aria-label="Notification sound"></label></div>
+    <div class="notifications-section-heading"><h2>Latest activity</h2>{% if unread_notifications %}<form method="post" action="{% url 'mark_all_notifications_read' %}">{% csrf_token %}<button type="submit" class="notification-read-all"><i class="bi bi-check2-all" aria-hidden="true"></i>Mark all as read</button></form>{% endif %}</div>
+    <div class="notification-card-list">
+        {% for notification in notifications %}
+            <article class="notification-card{% if not notification.is_read %} is-unread{% endif %}" data-notification-card data-unread="{% if notification.is_read %}false{% else %}true{% endif %}" data-notification-type="{{ notification.notification_type }}" aria-labelledby="notification-title-{{ notification.id }}">
+                <span class="notification-avatar" aria-hidden="true">{% if notification.sender and notification.sender.profile_picture %}<img src="{{ notification.sender.profile_picture.url }}" alt="" loading="lazy">{% else %}<i class="bi {% if notification.notification_type == 'MESSAGE' %}bi-chat{% elif notification.notification_type == 'INCOMING_CALL' %}bi-telephone-inbound{% elif notification.notification_type == 'MISSED_CALL' %}bi-telephone-x{% elif notification.notification_type == 'LIKE' %}bi-heart{% elif notification.notification_type == 'COMMENT' %}bi-chat-left-text{% elif notification.notification_type == 'SHARE' %}bi-send{% elif notification.notification_type == 'CONNECTION' %}bi-people{% elif notification.notification_type == 'APPLICATION' %}bi-briefcase{% else %}bi-bell{% endif %}"></i>{% endif %}</span>
+                <div class="notification-card-body"><div class="notification-card-top"><h3 id="notification-title-{{ notification.id }}">{{ notification.get_notification_type_display|title }}</h3><time datetime="{{ notification.created_at|date:'c' }}" title="{{ notification.created_at|date:'M j, Y, H:i' }}">{{ notification.created_at|timesince }} ago</time></div>{% if notification.sender %}<span class="notification-sender">{{ notification.sender.get_full_name|default:notification.sender.username }}</span>{% endif %}<p>{{ notification.message }}</p><div class="notification-card-actions">{% if notification.notification_type == 'MESSAGE' or notification.notification_type == 'INCOMING_CALL' or notification.notification_type == 'MISSED_CALL' %}<a href="{% url 'notification_detail' notification.id %}" class="notification-open-link">Open conversation <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>{% elif not notification.is_read %}<form method="post" action="{% url 'mark_notification_read' notification.id %}">{% csrf_token %}<button type="submit" class="notification-mark-read"><i class="bi bi-check2" aria-hidden="true"></i>Mark as read</button></form>{% endif %}<span class="notification-state">{% if notification.is_read %}Read{% else %}<span class="notifications-unread-dot" aria-hidden="true"></span>New{% endif %}</span></div></div>
+            </article>
+        {% empty %}<div class="notifications-empty"><span><i class="bi bi-bell" aria-hidden="true"></i></span><h2>You're all caught up.</h2><p>No notifications available. Your latest updates will appear here.</p></div>{% endfor %}
+    </div><p class="notifications-empty" data-notification-empty aria-live="polite" hidden>No notifications match this filter.</p>
+</section>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'js/communications.js' %}"></script>{% endblock %}

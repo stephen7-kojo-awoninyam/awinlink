@@ -1,4 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
+{% block site_messages %}{% endblock %}
+{% block title %}{{ conversation_display_name }} · Messages · Awinlink{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/communications.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'js/communications.js' %}"></script>{% endblock %}
 
 {% block content %}
 
@@ -427,6 +432,7 @@
 
 
 <div class="container chat-wrapper">
+    <div class="chat-page-heading"><a href="{% url 'messaging:conversation_list' %}"><i class="bi bi-arrow-left" aria-hidden="true"></i>Back to inbox</a><span class="communications-eyebrow">YOUR CONVERSATION</span></div>
 
     <div class="card shadow chat-card">
 
@@ -441,13 +447,7 @@
 
                 <div>
 
-                <h4>
-                    {% if conversation.is_group %}
-                        👥 {{ conversation_display_name }}
-                    {% else %}
-                        👤 {{ conversation_display_name }}
-                    {% endif %}
-                </h4>
+                <h1 id="conversationTitle">{{ conversation_display_name }}</h1>
 
                 {% if conversation.is_group %}
                     <small>
@@ -478,9 +478,10 @@
                         type="button"
                         class="btn btn-light"
                         title="Voice call"
+                        aria-label="Start voice call"
                         onclick="startConversationVoiceCall()"
                     >
-                        📞
+                        <i class="bi bi-telephone" aria-hidden="true"></i>
                     </button>
 
 
@@ -490,8 +491,9 @@
                         type="button"
                         class="btn btn-light"
                         title="Video call"
+                        aria-label="Start video call"
                         onclick="startConversationVideoCall()"                    >
-                        📹
+                        <i class="bi bi-camera-video" aria-hidden="true"></i>
                     </button>
 
                 </div>
@@ -507,6 +509,7 @@
 
         <div
             id="chatBody"
+            role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation messages"
             class="chat-body"
         >
 
@@ -886,6 +889,7 @@
 
                 <!-- TEXT -->
 
+                <label for="messageInput" class="visually-hidden">Write a message</label>
                 <textarea
                     id="messageInput"
                     name="content"
@@ -977,9 +981,10 @@
                     <label
                         for="imageInput"
                         class="btn btn-outline-secondary attachment-button"
+                        tabindex="0" role="button"
                         title="Attach image"
                     >
-                        🖼️ Image
+                        <i class="bi bi-image" aria-hidden="true"></i><span>Image</span>
                     </label>
 
                     <input
@@ -996,9 +1001,10 @@
                     <label
                         for="videoInput"
                         class="btn btn-outline-secondary attachment-button"
+                        tabindex="0" role="button"
                         title="Attach video"
                     >
-                        🎬 Video
+                        <i class="bi bi-camera-video" aria-hidden="true"></i><span>Video</span>
                     </label>
 
                     <input
@@ -1015,9 +1021,10 @@
                     <label
                         for="fileInput"
                         class="btn btn-outline-secondary attachment-button"
+                        tabindex="0" role="button"
                         title="Attach file"
                     >
-                        📎 File
+                        <i class="bi bi-paperclip" aria-hidden="true"></i><span>File</span>
                     </label>
 
                     <input
@@ -1036,7 +1043,7 @@
                         class="btn btn-outline-danger record-button"
                         title="Record voice message"
                     >
-                        🎙️ Voice
+                        <i class="bi bi-mic" aria-hidden="true"></i><span>Voice</span>
                     </button>
 
 

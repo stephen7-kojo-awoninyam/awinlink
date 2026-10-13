@@ -110,12 +110,16 @@ class CallConsumer(AsyncWebsocketConsumer):
                 self.channel_name
             )
 
-    async def receive(self, text_data):
+    async def receive(self, text_data=None, bytes_data=None):
+
+        if not await self.check_participant():
+            await self.close(code=4003)
+            return
 
         try:
             data = json.loads(text_data)
 
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, TypeError):
 
             await self.send(
                 text_data=json.dumps({
@@ -124,6 +128,12 @@ class CallConsumer(AsyncWebsocketConsumer):
                 })
             )
 
+            return
+
+        if not isinstance(data, dict):
+            await self.send(text_data=json.dumps({
+                "type": "error", "message": "Signaling messages must be JSON objects."
+            }))
             return
 
 
@@ -225,6 +235,9 @@ class CallConsumer(AsyncWebsocketConsumer):
         return CallParticipant.objects.filter(
             call_id=self.call_id,
             user=self.user,
+            user__is_active=True,
+            call__status__in=["RINGING", "ACTIVE"],
+            call__conversation__participants__user=self.user,
             status__in=[
                 "INVITED",
                 "RINGING",

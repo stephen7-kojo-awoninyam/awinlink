@@ -11,7 +11,7 @@
 
 <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
 >
 
 <title>{% block title %}Awinlink{% endblock %}</title>
@@ -51,6 +51,8 @@
     href="{% static 'css/main.css' %}"
 >
 
+
+<link rel="stylesheet" href="{% static 'css/layout.css' %}">
 
 {% block extra_css %}
 {% endblock %}
@@ -173,7 +175,9 @@
 
 </head>
 
-<body data-season="{{ seasonal_theme }}">
+<body data-season="{{ seasonal_theme }}" class="{% if user.is_authenticated %}awinlink-shell{% endif %}">
+
+<a class="shell-skip-link" href="#awinlinkContent">Skip to content</a>
 
 {% if user.is_authenticated %}
 
@@ -196,7 +200,7 @@
      MOBILE TOP BAR
 ========================================================= -->
 
-<nav class="mobile-topbar d-lg-none">
+<nav class="mobile-topbar d-lg-none" aria-label="Mobile header">
 
 
 <div class="container-fluid">
@@ -207,6 +211,9 @@
             class="btn mobile-menu-btn"
             type="button"
             id="mobileSidebarToggle"
+            aria-label="Open navigation"
+            aria-controls="awinlinkSidebar"
+            aria-expanded="false"
         >
 
             <i class="bi bi-list"></i>
@@ -227,6 +234,7 @@
         <a
             href="{% url 'notification_list' %}"
             class="mobile-icon-link"
+            aria-label="Notifications{% if unread_notifications > 0 %}, {{ unread_notifications }} unread{% endif %}"
         >
 
             <i class="bi bi-bell"></i>
@@ -268,6 +276,7 @@
 <aside
     class="awinlink-sidebar"
     id="awinlinkSidebar"
+    aria-label="Main navigation"
 >
 
 
@@ -283,9 +292,14 @@
 
         <span class="brand-text">
             Awinlink
+            <small class="brand-caption">Where talent connects</small>
         </span>
 
     </a>
+
+    <button type="button" class="sidebar-close d-lg-none" id="sidebarCloseButton" aria-label="Close navigation">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+    </button>
 
 </div>
 
@@ -507,14 +521,6 @@
 
 </div>
 
-<a
-    href="{% url 'logout' %}"
-    class="sidebar-link"
-    title="Log out"
->
-    <i class="bi bi-box-arrow-right"></i>
-    <span>Log out</span>
-</a>
 
 
 <!-- =====================================================
@@ -524,7 +530,7 @@
 <div class="sidebar-section">
 
     <span class="sidebar-label">
-        MAIN
+        Explore
     </span>
 
 
@@ -576,20 +582,6 @@
     </a>
 
 
-    <!-- Talents -->
-
-    <a
-        href="{% url 'talent_search' %}"
-        class="sidebar-link"
-    >
-
-        <i class="bi bi-people"></i>
-
-        <span>
-            Talents
-        </span>
-
-    </a>
 
 
     <!-- Organizations -->
@@ -651,7 +643,7 @@
 <div class="sidebar-section">
 
     <span class="sidebar-label">
-        PLATFORM
+        Community
     </span>
 
 
@@ -812,7 +804,6 @@
     </a>
 
 </div>
-</div>
 {% endif %}
 {% if request.user.role == "ORGANIZATION" %}
 <div class="sidebar-section">
@@ -867,20 +858,13 @@
     </a>
 
 
-    <!-- Logout -->
-
-    <a
-        href="{% url 'logout' %}"
-        class="sidebar-link logout-link"
-    >
-
-        <i class="bi bi-box-arrow-right"></i>
-
-        <span>
-            Logout
-        </span>
-
-    </a>
+    <form class="sidebar-logout" method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="sidebar-link logout-link">
+            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            <span>Log out</span>
+        </button>
+    </form>
 
 </div>
 
@@ -978,6 +962,39 @@
 
         </a>
 
+<!-- Account options: three-dot menu -->
+<div class="dropdown account-options">
+    <button
+        class="account-options-btn"
+        type="button"
+        id="accountOptionsMenu"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        aria-label="Account options"
+        title="Account options"
+    >
+        <i class="bi bi-three-dots-vertical"></i>
+    </button>
+
+    <ul
+        class="dropdown-menu dropdown-menu-end account-options-menu"
+        aria-labelledby="accountOptionsMenu"
+    >
+
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="dropdown-item text-danger">
+                    <i class="bi bi-box-arrow-right me-2"></i>
+                    Log out
+                </button>
+            </form>
+        </li>
+    </ul>
+</div>
+
+
 
         <!-- Profile -->
 
@@ -1039,7 +1056,7 @@
      PAGE CONTENT
 ====================================================== -->
 
-<main class="awinlink-content">
+<main class="awinlink-content" id="awinlinkContent" tabindex="-1">
 
     {% if seasonal_theme %}
         <aside class="seasonal-greeting" role="note">
@@ -1079,6 +1096,7 @@
 
     <!-- DJANGO MESSAGES -->
 
+    {% block site_messages %}
     {% if messages %}
 
         {% for message in messages %}
@@ -1103,11 +1121,30 @@
     {% endif %}
 
 
+    {% endblock %}
+
+{% else %}
+<main class="public-main" id="awinlinkContent" tabindex="-1">
+{% if seasonal_theme %}
+    <aside class="seasonal-greeting seasonal-greeting-public" role="note">
+        <span class="seasonal-greeting-icon" aria-hidden="true">
+            <i class="bi {{ seasonal_icon }}"></i>
+        </span>
+        <span>
+            <strong>{{ seasonal_title }}</strong>
+            <span>{{ seasonal_message }}</span>
+        </span>
+    </aside>
+{% endif %}
+{% block public_content %}{% endblock %}
+{% endif %}
+
     <!-- THE ONLY CONTENT BLOCK -->
 
     {% block content %}
     {% endblock %}
 
+{% if user.is_authenticated %}
 
 </main>
 
@@ -1132,30 +1169,39 @@
 
 </div>
 
+<nav class="mobile-bottom-nav d-lg-none" aria-label="Mobile navigation">
+    <a href="{% url 'home_feed' %}" class="mobile-nav-link">
+        <i class="bi bi-house-door" aria-hidden="true"></i>
+        <span>Home</span>
+    </a>
+    <a href="{% url 'talent_search' %}" class="mobile-nav-link">
+        <i class="bi bi-compass" aria-hidden="true"></i>
+        <span>Discover</span>
+    </a>
+    <a href="{% url 'opportunity_list' %}" class="mobile-nav-link">
+        <i class="bi bi-briefcase" aria-hidden="true"></i>
+        <span>Opportunities</span>
+    </a>
+    <a href="{% url 'messaging:conversation_list' %}" class="mobile-nav-link">
+        <span class="mobile-nav-icon">
+            <i class="bi bi-chat-square" aria-hidden="true"></i>
+            {% if unread_message_count > 0 %}
+                <span class="mobile-nav-badge">{{ unread_message_count }}<span class="visually-hidden"> unread messages</span></span>
+            {% endif %}
+        </span>
+        <span>Messages</span>
+    </a>
+    <button type="button" class="mobile-nav-link" id="mobileMoreToggle" aria-controls="awinlinkSidebar" aria-expanded="false">
+        <i class="bi bi-grid" aria-hidden="true"></i>
+        <span>More</span>
+    </button>
+</nav>
+
 {% else %}
 
 <!-- =========================================================
      PUBLIC / LOGGED-OUT AREA
 ========================================================= -->
-
-<main class="public-main">
-
-{% if seasonal_theme %}
-    <aside class="seasonal-greeting seasonal-greeting-public" role="note">
-        <span class="seasonal-greeting-icon" aria-hidden="true">
-            <i class="bi {{ seasonal_icon }}"></i>
-        </span>
-        <span>
-            <strong>{{ seasonal_title }}</strong>
-            <span>{{ seasonal_message }}</span>
-        </span>
-    </aside>
-{% endif %}
-
-{% block public_content %}
-{% endblock %}
-
-
 </main>
 
 {% endif %}
@@ -1183,6 +1229,8 @@
 <script
     src="{% static 'js/main.js' %}"
 ></script>
+
+<script src="{% static 'js/layout.js' %}"></script>
 
 <script
     src="{% static 'js/notifications.js' %}"

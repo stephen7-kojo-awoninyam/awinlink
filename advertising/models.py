@@ -1,3 +1,4 @@
+from organizations.models import Organization
 from decimal import Decimal
 
 from cloudinary.models import CloudinaryField
@@ -229,6 +230,9 @@ class Campaign(models.Model):
         on_date = on_date or timezone.localdate()
         return (
             self.status == "ACTIVE"
+            and Organization.objects.filter(
+                pk=self.organization_id, status="ACTIVE",
+            ).exists()
             and self.start_date <= on_date <= self.end_date
         )
 

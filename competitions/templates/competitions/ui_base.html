@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/competitions.css' %}">{% endblock %}
+{% block content %}<div class="competition-page">{% block competition_content %}{% endblock %}</div>{% endblock %}
+{% block public_content %}<div class="competition-page">
+<nav class="cp-public-nav" aria-label="Public navigation"><a class="cp-wordmark" href="{% url 'competition_list' %}">Awinlink</a><a class="cp-text-link" href="{% url 'login' %}">Log in <i class="bi bi-arrow-right" aria-hidden="true"></i></a></nav>
+{% block competition_public_content %}{% endblock %}</div>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/competitions.js' %}" defer>
+</script>{% endblock %}

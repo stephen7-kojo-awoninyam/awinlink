@@ -149,13 +149,13 @@ Invite Talent
 
 
 
-<a href="{% url 'add_to_shortlist' item.talent.id %}"
+<form method="post" action="{% url 'add_to_shortlist' item.talent.id %}" class="d-inline">{% csrf_token %}<button type="submit"
 
 class="btn btn-warning">
 
 ⭐ Shortlist
 
-</a>
+</button></form>
 
 
 

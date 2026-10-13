@@ -63,14 +63,12 @@ Action
 
 <td>
 
-{% if organization.user.is_active %}
-
-Active
-
+{% if organization.status == "INACTIVE" %}Suspended (Inactive){% else %}{{ organization.get_status_display }}{% endif %}
+<br>
+{% if organization.user %}
+    Account: {% if organization.user.is_active %}Active{% else %}Disabled{% endif %}
 {% else %}
-
-Disabled
-
+    No linked account
 {% endif %}
 
 </td>
@@ -80,13 +78,18 @@ Disabled
 <td>
 
 
-<a href="{% url 'toggle_organization_status' organization.id %}"
-
-class="btn btn-warning btn-sm">
-
-Toggle
-
-</a>
+{% if organization.status == "ACTIVE" or organization.status == "INACTIVE" %}
+<form method="post" action="{% url 'toggle_organization_status' organization.id %}" class="d-inline">
+    {% csrf_token %}
+    {% if organization.status == "ACTIVE" %}
+        <input type="hidden" name="status" value="INACTIVE">
+        <button type="submit" class="btn btn-warning btn-sm">Suspend</button>
+    {% else %}
+        <input type="hidden" name="status" value="ACTIVE">
+        <button type="submit" class="btn btn-success btn-sm">Reactivate</button>
+    {% endif %}
+</form>
+{% endif %}
 
 
 </td>

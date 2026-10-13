@@ -1,3 +1,6 @@
+from organizations.permissions import (
+    OrganizationCapability, has_organization_capability, require_active_organization,
+)
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -43,7 +46,8 @@ class CompetitionListAPIView(APIView):
 
     def get(self, request):
         competitions = Competition.objects.filter(
-            status__in=Competition.PUBLIC_STATUSES
+            status__in=Competition.PUBLIC_STATUSES,
+            organization__status="ACTIVE",
         ).select_related("organization")
         category = request.query_params.get("category")
         search = request.query_params.get("search", "").strip()
@@ -110,7 +114,9 @@ class CompetitionCreateAPIView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def post(self, request):
-        organization = get_owned_organization(request.user)
+        organization = get_owned_organization(
+            request, OrganizationCapability.MANAGE_COMPETITIONS,
+        )
         if organization is None:
             return Response(
                 {"detail": "Only organizations can create competitions."},
@@ -139,8 +145,10 @@ class CompetitionDetailAPIView(APIView):
         return Response(CompetitionSerializer(competition).data)
 
     def patch(self, request, competition_id):
-        competition = get_managed_competition(request.user, competition_id)
-        if competition is None or competition.organization.user_id != request.user.pk:
+        competition = get_managed_competition(request, competition_id)
+        if competition is None or not has_organization_capability(
+        request.user, competition.organization, OrganizationCapability.MANAGE_COMPETITIONS,
+    ):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         if competition.status not in {"DRAFT", "REJECTED"}:
             return Response(
@@ -175,7 +183,7 @@ class CompetitionActionAPIView(APIView):
     }
 
     def post(self, request, competition_id):
-        competition = get_managed_competition(request.user, competition_id)
+        competition = get_managed_competition(request, competition_id)
         if competition is None:
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         action = request.data.get("action", "")
@@ -190,7 +198,11 @@ class CompetitionActionAPIView(APIView):
                 {"action": ["Unknown competition action."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        owner = competition.organization.user_id == request.user.pk
+        owner = has_organization_capability(
+            request.user,
+            competition.organization,
+            OrganizationCapability.MANAGE_COMPETITIONS,
+        )
         if target_status in {"APPROVED", "REJECTED"}:
             if not is_platform_admin(request.user):
                 return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
@@ -229,6 +241,7 @@ class CompetitionRegisterAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         competition = get_object_or_404(Competition, pk=competition_id)
+        require_active_organization(competition.organization)
         talent = get_object_or_404(TalentProfile, user=request.user)
         try:
             with transaction.atomic():
@@ -277,7 +290,9 @@ class MyOrganizationCompetitionsAPIView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        organization = get_owned_organization(request.user)
+        organization = get_owned_organization(
+            request, OrganizationCapability.VIEW_COMPETITIONS,
+        )
         if organization is None:
             return Response(
                 {"detail": "Only organizations can view managed competitions."},
@@ -337,6 +352,8 @@ class CompetitionParticipantsAPIView(APIView):
 
     def get(self, request, competition_id):
         competition = get_object_or_404(Competition, pk=competition_id)
+        if not is_platform_admin(request.user):
+            require_active_organization(competition.organization)
         if not can_view_competition(request.user, competition):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         participants = CompetitionParticipant.objects.filter(
@@ -349,7 +366,9 @@ class CompetitionParticipantsAPIView(APIView):
             participants = participants.filter(talent__profile_visibility="PUBLIC")
         elif not (
             is_platform_admin(request.user)
-            or competition.organization.user_id == request.user.pk
+            or has_organization_capability(
+                    request.user, competition.organization, OrganizationCapability.VIEW_COMPETITIONS,
+                )
             or competition.judges.filter(coach=request.user).exists()
         ):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
@@ -363,9 +382,13 @@ class CompetitionJudgeAPIView(APIView):
 
     def get(self, request, competition_id):
         competition = get_object_or_404(Competition, pk=competition_id)
+        if not is_platform_admin(request.user):
+            require_active_organization(competition.organization)
         if (
             not is_platform_admin(request.user)
-            and competition.organization.user_id != request.user.pk
+            and not has_organization_capability(
+            request.user, competition.organization, OrganizationCapability.MANAGE_COMPETITIONS,
+        )
         ):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         assignments = CompetitionJudge.objects.filter(
@@ -375,7 +398,11 @@ class CompetitionJudgeAPIView(APIView):
 
     def post(self, request, competition_id):
         competition = get_object_or_404(Competition, pk=competition_id)
-        if competition.organization.user_id != request.user.pk:
+        if not is_platform_admin(request.user):
+            require_active_organization(competition.organization)
+        if not has_organization_capability(
+            request.user, competition.organization, OrganizationCapability.MANAGE_COMPETITIONS,
+        ):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         coach_id = request.data.get("coach")
         try:
@@ -423,6 +450,8 @@ class CompetitionEvaluationAPIView(APIView):
         if request.user.role != "COACH":
             return Response({"detail": "Only coaches can evaluate."}, status=403)
         competition = get_object_or_404(Competition, pk=competition_id)
+        if not is_platform_admin(request.user):
+            require_active_organization(competition.organization)
         assignment = competition.judges.filter(coach=request.user).first()
         if assignment is None:
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
@@ -468,7 +497,9 @@ class CompetitionResultsAPIView(APIView):
             request.user.is_authenticated
             and (
                 is_platform_admin(request.user)
-                or competition.organization.user_id == request.user.pk
+                or has_organization_capability(
+                    request.user, competition.organization, OrganizationCapability.VIEW_COMPETITIONS,
+                )
             )
         ):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -487,8 +518,10 @@ class CompetitionResultsAPIView(APIView):
                 {"detail": "Specify a participant result to update."},
                 status=status.HTTP_405_METHOD_NOT_ALLOWED,
             )
-        competition = get_managed_competition(request.user, competition_id)
-        if competition is None or competition.organization.user_id != request.user.pk:
+        competition = get_managed_competition(request, competition_id)
+        if competition is None or not has_organization_capability(
+        request.user, competition.organization, OrganizationCapability.MANAGE_COMPETITIONS,
+    ):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         if competition.status not in {"JUDGING", "RESULTS"}:
             return Response(

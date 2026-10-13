@@ -1,0 +1,37 @@
+<article class="op-card op-list-card">
+    <div class="op-card-top">
+<span class="op-symbol" aria-hidden="true">
+<i class="bi bi-briefcase">
+</i>
+</span>
+<span class="op-tag">{{ opportunity.get_opportunity_type_display }}</span>
+</div>
+    <p class="op-organization">{{ opportunity.organization.name }} {% if opportunity.organization.verified %}<span class="op-verified">
+<i class="bi bi-patch-check-fill" aria-hidden="true">
+</i> Verified</span>{% endif %}</p>
+    <h3>
+<a href="{% url 'opportunity_detail' opportunity.id %}">{{ opportunity.title }}</a>
+</h3>
+    <div class="op-tags">
+<span>{{ opportunity.domain.name }}</span>
+<span>{{ opportunity.get_work_type_display }}</span>
+</div>
+    <p class="op-description">{{ opportunity.description|truncatewords:24 }}</p>
+    <div class="op-meta">
+<span>
+<i class="bi bi-bar-chart" aria-hidden="true">
+</i> {{ opportunity.get_experience_level_display }}</span>{% if opportunity.location %}<span>
+<i class="bi bi-geo-alt" aria-hidden="true">
+</i> {{ opportunity.location }}</span>{% endif %}{% if opportunity.deadline %}<span>
+<i class="bi bi-calendar3" aria-hidden="true">
+</i> Deadline: {{ opportunity.deadline|date:"M j, Y" }}</span>{% endif %}</div>
+    <div class="op-tags">{% for skill in opportunity.skills.all %}<span>{{ skill.name }}</span>{% endfor %}</div>
+    {% if match_score != None %}<div class="op-match">
+<label>Match score <strong>{{ match_score|floatformat:0 }}%</strong>
+</label>
+<progress max="100" value="{{ match_score }}">{{ match_score }}%</progress>
+</div>{% endif %}
+    <a class="op-button op-button-secondary op-card-link" href="{% url 'opportunity_detail' opportunity.id %}">View opportunity <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</a>
+</article>

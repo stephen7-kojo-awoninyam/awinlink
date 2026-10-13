@@ -43,9 +43,9 @@ class LearningService:
                 "Only the course creator can submit this course."
             )
 
-        if course.status != "DRAFT":
+        if course.status not in {"DRAFT", "REJECTED"}:
             raise ValueError(
-                "Only draft courses can be submitted."
+                "Only draft or rejected courses can be submitted."
             )
 
         course.status = "PENDING"

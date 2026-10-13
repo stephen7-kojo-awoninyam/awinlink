@@ -59,19 +59,19 @@
 
                                 {% endif %}
 
-                                <a
-                                    href="{% url 'update_pipeline_stage' item.id 'INVITED' %}"
+                                <form method="post" action="{% url 'update_pipeline_stage' item.id 'INVITED' %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                                     class="btn btn-primary btn-sm"
                                 >
                                     Invite
-                                </a>
+                                </button></form>
 
-                                <a
-                                    href="{% url 'update_pipeline_stage' item.id 'REJECTED' %}"
+                                <form method="post" action="{% url 'update_pipeline_stage' item.id 'REJECTED' %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                                     class="btn btn-outline-danger btn-sm"
                                 >
                                     Reject
-                                </a>
+                                </button></form>
 
                             </div>
 
@@ -128,19 +128,19 @@
 
                                 {% endif %}
 
-                                <a
-                                    href="{% url 'update_pipeline_stage' item.id 'INTERVIEW' %}"
+                                <form method="post" action="{% url 'update_pipeline_stage' item.id 'INTERVIEW' %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                                     class="btn btn-warning btn-sm"
                                 >
                                     Move to Interview
-                                </a>
+                                </button></form>
 
-                                <a
-                                    href="{% url 'update_pipeline_stage' item.id 'REJECTED' %}"
+                                <form method="post" action="{% url 'update_pipeline_stage' item.id 'REJECTED' %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                                     class="btn btn-outline-danger btn-sm"
                                 >
                                     Reject
-                                </a>
+                                </button></form>
 
                             </div>
 
@@ -197,19 +197,19 @@
 
                                 {% endif %}
 
-                                <a
-                                    href="{% url 'update_pipeline_stage' item.id 'SELECTED' %}"
+                                <form method="post" action="{% url 'update_pipeline_stage' item.id 'SELECTED' %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                                     class="btn btn-success btn-sm"
                                 >
                                     Select
-                                </a>
+                                </button></form>
 
-                                <a
-                                    href="{% url 'update_pipeline_stage' item.id 'REJECTED' %}"
+                                <form method="post" action="{% url 'update_pipeline_stage' item.id 'REJECTED' %}" class="d-inline">{% csrf_token %}<button type="submit"
+
                                     class="btn btn-danger btn-sm"
                                 >
                                     Reject
-                                </a>
+                                </button></form>
 
                             </div>
 

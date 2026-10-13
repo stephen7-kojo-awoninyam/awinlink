@@ -1,0 +1,31 @@
+{% if kind == 'event' %}
+    {% url 'like_event' activity.id as like_url %}{% url 'add_event_comment' activity.id as comment_url %}{% url 'event_detail' activity.id as detail_url %}
+{% else %}
+    {% url 'like_course' activity.id as like_url %}{% url 'add_course_comment' activity.id as comment_url %}{% url 'lesson_detail' activity.id as detail_url %}
+{% endif %}
+<article class="feed-post feed-activity" data-feed-card data-kind="{{ kind }}" data-post-id="{{ activity.id }}" aria-labelledby="activity-{{ kind }}-{{ activity.id }}">
+    <div class="feed-post-copy">
+        <span class="feed-category">{% if kind == 'event' %}{{ activity.get_event_type_display }}{% else %}Learning{% endif %}</span>
+        <h3 id="activity-{{ kind }}-{{ activity.id }}"><a href="{{ detail_url }}">{{ activity.title }}</a></h3>
+        <p class="feed-empty-copy">{{ activity.description|truncatewords:30 }}</p>
+        {% if kind == 'event' %}
+            <div class="feed-event-meta"><span><i class="bi bi-geo-alt" aria-hidden="true"></i> {{ activity.location }}</span><time datetime="{{ activity.start_date|date:'c' }}"><i class="bi bi-calendar3" aria-hidden="true"></i> {{ activity.start_date|date:'M j, Y, H:i' }}</time><span>Hosted by {{ activity.organizer.name }}</span>{% if activity.online %}<span class="feed-category">Online event</span>{% endif %}</div>
+        {% endif %}
+    </div>
+    {% if kind == 'event' and activity.image %}<div class="feed-media"><img src="{{ activity.image.url }}" alt="{{ activity.title }}" loading="lazy" decoding="async"></div>{% endif %}
+    <div class="feed-post-footer">
+        <div class="feed-actions">
+            <form method="post" action="{{ like_url }}" class="feed-like-form" data-kind="{{ kind }}" data-post-id="{{ activity.id }}">{% csrf_token %}<button type="submit" class="feed-action {% if activity.id in liked_ids %}is-active{% endif %} {% if kind == 'event' %}event-like-button{% else %}course-like-button{% endif %}" data-liked="{% if activity.id in liked_ids %}true{% else %}false{% endif %}" aria-pressed="{% if activity.id in liked_ids %}true{% else %}false{% endif %}" aria-label="Like {{ activity.title }}"><i class="bi {% if activity.id in liked_ids %}bi-heart-fill{% else %}bi-heart{% endif %}" aria-hidden="true"></i><span class="like-count">{{ activity.likes.count }}</span><span class="visually-hidden"> likes</span></button></form>
+            <button type="button" class="feed-action feed-comment-focus" data-comment-target="comments-{{ kind }}-{{ activity.id }}" aria-controls="comments-{{ kind }}-{{ activity.id }}" aria-label="Comment on {{ activity.title }}"><i class="bi bi-chat" aria-hidden="true"></i><span data-comment-count>{{ activity.comments.count }}</span><span class="visually-hidden"> comments</span></button>
+            <a href="{{ detail_url }}" class="feed-text-link feed-activity-link">{% if kind == 'event' %}View event{% else %}Start learning{% endif %} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
+        </div>
+        <details class="feed-comments" id="comments-{{ kind }}-{{ activity.id }}">
+            <summary>View comments (<span data-comment-count>{{ activity.comments.count }}</span>)</summary>
+            <div class="feed-comment-list" data-comments-list>
+                {% for comment in activity.comments.all %}<div class="feed-comment"><strong>{{ comment.user.get_full_name|default:comment.user.username }}</strong><p>{{ comment.text }}</p><time datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|date:'M j, Y, H:i' }}</time></div>{% empty %}<p class="feed-empty-copy" data-no-comments>No comments yet. Start the conversation.</p>{% endfor %}
+            </div>
+            <form method="post" action="{{ comment_url }}" class="feed-comment-form {% if kind == 'event' %}event-comment-form{% else %}course-comment-form{% endif %}" data-kind="{{ kind }}" data-post-id="{{ activity.id }}" data-url="{{ comment_url }}">{% csrf_token %}<label for="comment-input-{{ kind }}-{{ activity.id }}" class="visually-hidden">Comment on {{ activity.title }}</label><input type="text" id="comment-input-{{ kind }}-{{ activity.id }}" name="text" placeholder="Add a comment…" required><button type="submit">Post<span class="visually-hidden"> comment</span></button></form>
+        </details>
+        <p class="feed-action-feedback" aria-live="polite" data-feed-feedback hidden></p>
+    </div>
+</article>

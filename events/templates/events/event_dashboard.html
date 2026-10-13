@@ -1,152 +1,68 @@
-{% extends "base.html" %}
-
-
-{% block content %}
-
-
-<div class="container mt-5">
-
-
-<h2>
-
-{{event.title}} Dashboard
-
-</h2>
-
-
-<div class="row mt-4">
-
-
-<div class="col-md-3">
-
-<div class="card shadow p-3">
-
-<h5>
-Registrations
-</h5>
-
-<h2>
-
-{{total_registrations}}
-
-</h2>
-
+{% extends "events/ui_base.html" %}
+{% load events_ui %}
+{% block title %}Event dashboard | Awinlink{% endblock %}
+{% block event_content %}
+{% event_access user event.organizer "manage_events" as can_manage %}
+<a class="ev-back" href="{% url 'organization_events' %}?organization_id={{ event.organizer.id }}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Organization events</a>
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Event dashboard</span>
+<h1>{{ event.title }}</h1>
+<p>A clear view of your community’s participation.</p>
 </div>
-
+<div class="ev-actions">
+<a class="ev-button" href="{% url 'event_participants' event.id %}?organization_id={{ event.organizer.id }}">Manage participants</a>
+<a class="ev-button ev-button-secondary" href="{% url 'event_detail' event.id %}">View event</a>
 </div>
-
-
-
-<div class="col-md-3">
-
-<div class="card shadow p-3">
-
-<h5>
-Approved
-</h5>
-
-<h2>
-
-{{approved}}
-
-</h2>
-
+</header>
+<div class="ev-stats">
+<div class="ev-card ev-stat">
+<i class="bi bi-people" aria-hidden="true">
+</i>
+<strong>{{ total_registrations }}</strong>
+<span>Registrations</span>
 </div>
-
+<div class="ev-card ev-stat">
+<i class="bi bi-person-check" aria-hidden="true">
+</i>
+<strong>{{ approved }}</strong>
+<span>Approved</span>
 </div>
-
-
-
-<div class="col-md-3">
-
-<div class="card shadow p-3">
-
-<h5>
-Attended
-</h5>
-
-<h2>
-
-{{attended}}
-
-</h2>
-
+<div class="ev-card ev-stat">
+<i class="bi bi-check2-circle" aria-hidden="true">
+</i>
+<strong>{{ attended }}</strong>
+<span>Attended</span>
 </div>
-
+<div class="ev-card ev-stat">
+<i class="bi bi-award" aria-hidden="true">
+</i>
+<strong>{{ certificates }}</strong>
+<span>Certificates</span>
 </div>
-
-
-
-<div class="col-md-3">
-
-<div class="card shadow p-3">
-
-<h5>
-Certificates
-</h5>
-
-<h2>
-
-{{certificates}}
-
-</h2>
-
 </div>
-
+<div class="ev-grid ev-management-grid">
+<section class="ev-card">
+<h2>Attendance rate</h2>
+<div class="ev-stat p-0">
+<strong>{{ attendance_rate }}%</strong>
+<span>Attendance among approved and attended participants</span>
 </div>
-
-
+</section>
+<section class="ev-card">
+<h2>Community rating</h2>
+<div class="ev-stat p-0">
+<strong>{% if average_rating %}{{ average_rating|floatformat:1 }} / 5{% else %}No ratings yet{% endif %}</strong>
+<span>Feedback from your attendees</span>
 </div>
-
-
-
-<div class="card shadow p-4 mt-4">
-
-
-<h4>
-Attendance Rate
-</h4>
-
-
-<h2>
-
-{{attendance_rate}} %
-
-</h2>
-
-
+</section>
 </div>
-
-
-
-<div class="card shadow p-4 mt-4">
-
-
-<h4>
-Average Rating
-</h4>
-
-
-<h2>
-
-{% if average_rating %}
-
-{{average_rating|floatformat:1}} ⭐
-
-{% else %}
-
-No ratings yet
-
-{% endif %}
-
-
-</h2>
-
-
-</div>
-
-
-</div>
-
-
+<section class="ev-card">
+<h2>Keep the experience going</h2>
+<p class="ev-muted mb-3">{{ rejected }} rejected registration{{ rejected|pluralize }}. Capture the moments and share them with your community.</p>
+<div class="ev-actions">
+<a class="ev-button ev-button-secondary" href="{% url 'event_gallery' event.id %}?organization_id={{ event.organizer.id }}">View gallery</a>{% if can_manage %}<a class="ev-button" href="{% url 'upload_event_media' event.id %}?organization_id={{ event.organizer.id }}">Upload media</a>{% endif %}</div>
+</section>
 {% endblock %}

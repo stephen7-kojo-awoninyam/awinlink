@@ -1,3 +1,4 @@
+from organizations.permissions import require_active_organization
 import hashlib
 import hmac
 import json
@@ -42,7 +43,7 @@ class PaystackError(Exception):
 def _organization_for_user(user):
     if user.role != "ORGANIZATION":
         return None
-    return Organization.objects.filter(user=user).first()
+    return require_active_organization(Organization.objects.filter(user=user).first())
 
 
 def _owned_campaign(user, campaign_id):

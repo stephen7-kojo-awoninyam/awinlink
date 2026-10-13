@@ -1,0 +1,52 @@
+<aside class="feed-discovery" aria-label="Discover talent and opportunities" tabindex="0">
+    <section class="feed-panel" aria-labelledby="feed-talents-title">
+        <div class="feed-panel-heading"><div><span class="feed-eyebrow">MAKE YOUR NEXT CONNECTION</span><h2 id="feed-talents-title">Talent to discover</h2></div><a href="{% url 'talent_search' %}" class="feed-text-link">Explore <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+        {% for talent in recommended_talents %}
+            <div class="feed-talent-row">
+                <a href="{% url 'talent_profile' talent.id %}" class="feed-suggestion-person">
+                    <span class="feed-avatar">{% if talent.profile_photo %}<img src="{{ talent.profile_photo.url }}" alt="" loading="lazy">{% elif talent.user.profile_picture %}<img src="{{ talent.user.profile_picture.url }}" alt="" loading="lazy">{% else %}<i class="bi bi-person" aria-hidden="true"></i>{% endif %}</span>
+                    <span class="feed-suggestion-meta"><strong>{{ talent.user.get_full_name|default:talent.user.username }}</strong><small>{{ talent.headline|default:talent.get_talent_category_display }}</small></span>
+                    <i class="bi bi-arrow-up-right feed-suggestion-arrow" aria-hidden="true"></i>
+                </a>
+                <div class="feed-connection-actions">
+                    {% if talent.connection %}
+                        {% if talent.connection.status == 'ACCEPTED' %}
+                            <span class="feed-connected"><i class="bi bi-check2" aria-hidden="true"></i>Connected</span>
+                            <form method="post" action="{% url 'messaging:start_conversation' talent.user.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="feed-text-link">Message</button></form>
+                        {% elif talent.connection.status == 'PENDING' %}
+                            {% if talent.connection.sender_id == request.user.id %}
+                                <form method="post" action="{% url 'connections:cancel_connection_request' talent.connection.id %}" class="connection-state-form">{% csrf_token %}<button type="submit" class="btn btn-sm btn-light" title="Cancel connection request">Request sent</button></form>
+                            {% else %}
+                                <form method="post" action="{% url 'connections:accept_connection_request' talent.connection.id %}" class="connection-state-form">{% csrf_token %}<button type="submit" class="btn btn-sm btn-primary">Accept</button></form>
+                                <form method="post" action="{% url 'connections:reject_connection_request' talent.connection.id %}" class="connection-state-form">{% csrf_token %}<button type="submit" class="btn btn-sm btn-light">Reject</button></form>
+                            {% endif %}
+                        {% elif talent.connection.status == 'REJECTED' %}
+                            <form method="post" action="{% url 'connections:send_connection_request' talent.user.id %}" class="connection-request-form">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-person-plus" aria-hidden="true"></i> Connect</button></form>
+                        {% endif %}
+                    {% else %}
+                        <form method="post" action="{% url 'connections:send_connection_request' talent.user.id %}" class="connection-request-form">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-person-plus" aria-hidden="true"></i> Connect</button></form>
+                    {% endif %}
+                </div>
+                <p class="feed-action-feedback" aria-live="polite" data-feed-feedback hidden></p>
+            </div>
+        {% empty %}<p class="feed-empty-copy">New connections start with discovery. <a href="{% url 'talent_search' %}">Explore talents</a>.</p>{% endfor %}
+    </section>
+
+    <section class="feed-panel" aria-labelledby="feed-opportunities-title">
+        <div class="feed-panel-heading"><h2 id="feed-opportunities-title">Your next opportunity</h2><i class="bi bi-briefcase" aria-hidden="true"></i></div>
+        {% for opportunity in opportunities %}
+            <a href="{% url 'opportunity_detail' opportunity.id %}" class="feed-opportunity"><span class="feed-attachment-icon"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></span><span><strong>{{ opportunity.title }}</strong><small>{{ opportunity.organization.name }}</small></span></a>
+        {% empty %}<p class="feed-empty-copy">No opportunities available right now.</p>{% endfor %}
+        <a href="{% url 'opportunity_list' %}" class="feed-text-link">Explore opportunities <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </section>
+
+    <section class="feed-panel" aria-labelledby="feed-organizations-title">
+        <div class="feed-panel-heading"><h2 id="feed-organizations-title">Organizations to explore</h2><i class="bi bi-building" aria-hidden="true"></i></div>
+        {% for organization in recommended_organizations %}
+            <a href="{% url 'organization_profile' organization.id %}" class="feed-suggestion-person feed-organization-suggestion">
+                <span class="feed-avatar">{% if organization.logo %}<img src="{{ organization.logo.url }}" alt="" loading="lazy">{% elif organization.user and organization.user.profile_picture %}<img src="{{ organization.user.profile_picture.url }}" alt="" loading="lazy">{% else %}<i class="bi bi-building" aria-hidden="true"></i>{% endif %}</span>
+                <span class="feed-suggestion-meta"><strong>{{ organization.name }}</strong><small>{{ organization.country }}</small></span><i class="bi bi-arrow-up-right feed-suggestion-arrow" aria-hidden="true"></i>
+            </a>
+        {% empty %}<p class="feed-empty-copy">No organizations available right now.</p>{% endfor %}
+    </section>
+</aside>

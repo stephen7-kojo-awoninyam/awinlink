@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/opportunities.css' %}">{% endblock %}
+{% block content %}<div class="opportunity-page">{% block opportunity_content %}{% endblock %}</div>{% endblock %}

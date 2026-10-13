@@ -1,39 +1,61 @@
-{% extends "base.html" %}
-
+{% extends "competitions/ui_base.html" %}
 {% block title %}Competition judging | Awinlink{% endblock %}
-
-{% block content %}
-<div class="container py-4">
-    {% if is_organizer %}
-        <h1 class="h2">Assign coaches</h1>
-        <p class="text-muted">{{ competition.title }} · Only coach accounts can be assigned.</p>
-        <form method="post" class="card card-body mb-4">
-            {% csrf_token %}
-            {% for field in form %}
-                <div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
-            {% endfor %}
-            <button class="btn btn-primary align-self-start">Assign coach</button>
-        </form>
-        <h2 class="h5">Current assignments</h2>
-        <ul class="list-group">
-            {% for assignment in assignments %}
-                <li class="list-group-item">{{ assignment.coach.get_full_name|default:assignment.coach.username }} · {{ assignment.get_role_display }}</li>
-            {% empty %}
-                <li class="list-group-item text-muted">No coaches assigned.</li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <h1 class="h2">My judging assignments</h1>
-        <div class="list-group mt-3">
-            {% for assignment in assignments %}
-                <div class="list-group-item d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                    <div><strong>{{ assignment.competition.title }}</strong><div class="small text-muted">{{ assignment.competition.get_status_display }} · {{ assignment.get_role_display }}</div></div>
-                    {% if assignment.competition.status == "JUDGING" or assignment.role == "MENTOR" and assignment.competition.status == "ONGOING" %}<a class="btn btn-sm btn-primary" href="{% url 'competition_participants' assignment.competition.id %}">{% if assignment.role == "MENTOR" %}Mentor participants{% else %}Review participants{% endif %}</a>{% endif %}
-                </div>
-            {% empty %}
-                <p class="text-muted">You have no competition assignments.</p>
-            {% endfor %}
-        </div>
-    {% endif %}
+{% block competition_content %}
+{% if is_organizer %}<a class="cp-back" href="{% url 'competition_dashboard' %}?organization_id={{ competition.organization.id }}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Organizer workspace</a>
+<header class="cp-heading">
+<div>
+<span class="cp-eyebrow">Support and recognize talent</span>
+<h1>Build your coaching team</h1>
+<p>{{ competition.title }} &middot; Only coach accounts can be assigned.</p>
 </div>
+</header>
+<div class="cp-form-layout">
+<form method="post" class="cp-card">{% csrf_token %}{% if form.non_field_errors %}<div class="cp-notice cp-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}<div class="cp-form-grid">{% for field in form %}{% include "competitions/form_field.html" %}{% endfor %}</div>
+<div class="cp-actions cp-card-footer">
+<button class="cp-button" type="submit">Assign coach</button>
+</div>
+</form>
+<aside class="cp-card">
+<h2>The right role for each coach</h2>
+<p class="cp-prose">Mentors share feedback during the competition. Judges and evaluators review participants during judging.</p>
+</aside>
+</div>
+<div class="cp-results-heading">
+<h2>Current assignments</h2>
+<span>{{ assignments|length }} assigned</span>
+</div>{% for assignment in assignments %}<article class="cp-card cp-assignment">
+<div class="cp-person">
+<span class="cp-avatar">
+<i class="bi bi-person" aria-hidden="true">
+</i>
+</span>
+<strong>{{ assignment.coach.get_full_name|default:assignment.coach.username }}</strong>
+</div>
+<span class="cp-status">{{ assignment.get_role_display }}</span>
+</article>{% empty %}<section class="cp-card cp-empty">
+<i class="bi bi-person-plus" aria-hidden="true">
+</i>
+<h2>No coaches assigned</h2>
+<p>Assign your first coach using the form above.</p>
+</section>{% endfor %}
+{% else %}<header class="cp-heading">
+<div>
+<span class="cp-eyebrow">Help talent reach the next level</span>
+<h1>My judging assignments</h1>
+<p>Your competitions to mentor, evaluate, and judge.</p>
+</div>
+</header>
+{% for assignment in assignments %}<article class="cp-card cp-assignment">
+<div>
+<span class="cp-eyebrow">{{ assignment.competition.get_category_display }}</span>
+<h2 class="mt-2">{{ assignment.competition.title }}</h2>
+<p class="cp-muted">{{ assignment.competition.get_status_display }} &middot; {{ assignment.get_role_display }}</p>
+</div>{% if assignment.competition.status == "JUDGING" or assignment.role == "MENTOR" and assignment.competition.status == "ONGOING" %}<a class="cp-button" href="{% url 'competition_participants' assignment.competition.id %}">{% if assignment.role == "MENTOR" %}Mentor participants{% else %}Review participants{% endif %}</a>{% endif %}</article>{% empty %}<section class="cp-card cp-empty">
+<i class="bi bi-clipboard-check" aria-hidden="true">
+</i>
+<h2>No competition assignments</h2>
+<p>Your coaching assignments will appear here.</p>
+</section>{% endfor %}{% endif %}
 {% endblock %}

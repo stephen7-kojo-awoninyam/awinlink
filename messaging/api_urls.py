@@ -13,6 +13,7 @@ from .api_views import (
     RejectCallAPIView,
     EndCallAPIView,
     IncomingCallsAPIView,
+    CallIceServersAPIView,
     AddGroupMemberAPIView,
     RemoveGroupMemberAPIView,
 )
@@ -22,6 +23,8 @@ app_name = "messaging_api"
 
 
 urlpatterns = [
+
+    path("calls/ice-servers/", CallIceServersAPIView.as_view(), name="call_ice_servers"),
 
     # =====================================================
     # CONVERSATIONS

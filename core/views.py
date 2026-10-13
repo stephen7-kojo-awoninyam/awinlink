@@ -735,6 +735,8 @@ def home_feed(request):
     # CONTEXT
     # ==================================
 
+    sub_ecosystems = RecommendationEngine.recommend_sub_ecosystems(request.user)
+
     context = {
 
         "feed_items": feed_items,
@@ -748,6 +750,8 @@ def home_feed(request):
         "recommended_talents": recommended_talents,
 
         "recommended_organizations": recommended_organizations,
+
+        "sub_ecosystems": sub_ecosystems,
 
         "saved_post_ids": saved_post_ids,
 
@@ -814,7 +818,7 @@ def explore(request):
 
 
     learning_content = LearningContent.objects.filter(
-        published=True
+        status="APPROVED"
     ).order_by(
         "-created_at"
     )[:8]
@@ -827,6 +831,8 @@ def explore(request):
         "name"
     )[:20]
 
+
+    sub_ecosystems = RecommendationEngine.recommend_sub_ecosystems(request.user)
 
     context = {
 

@@ -1,499 +1,136 @@
-{% extends "base.html" %}
-
-
-{% block content %}
-
-
-<div class="container mt-5">
-
-
-<div class="card shadow p-4">
-
-
-{% if event.image %}
-
-<img src="{{ event.image.url }}"
-class="img-fluid rounded mb-4">
-
-{% endif %}
-
-
-
-<h2>
-
-{{ event.title }}
-
-</h2>
-
-
-
-<span class="badge bg-primary">
-
-{{ event.get_event_type_display }}
-
+{% extends "events/ui_base.html" %}
+{% load events_ui %}
+{% block title %}{{ event.title }} | Awinlink{% endblock %}
+{% block event_content %}
+{% event_access user event.organizer "view_events" as can_view %}
+{% event_registration_open event capacity_full as registration_open %}
+<a class="ev-back" href="{% url 'event_list' %}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Discover events</a>
+<div class="ev-cover ev-detail-cover ev-cover--{{ event.event_type|lower }}">{% if event.image %}<img src="{{ event.image.url }}" alt="{{ event.title }}">{% else %}<div class="ev-cover-art" aria-hidden="true">
+<i class="bi bi-calendar-event">
+</i>
+<span>{{ event.get_event_type_display }}</span>
+</div>{% endif %}<span class="ev-date-tile">
+<strong>{{ event.start_date|date:"d" }}</strong>
+<span>{{ event.start_date|date:"M" }}</span>
 </span>
-
-
-
-<hr>
-
-
-
-<p>
-
-<strong>Organizer:</strong>
-
-{{ event.organizer.name }}
-
-</p>
-
-
-
-<p>
-
-<strong>Category:</strong>
-
-{{ event.category }}
-
-</p>
-
-
-
-<p>
-
-<strong>Description:</strong>
-
-</p>
-
-
-<p>
-
-{{ event.description|linebreaks }}
-
-</p>
-
-
-
-
-<div class="row">
-
-
-<div class="col-md-6">
-
-
-<p>
-
-<strong>Location:</strong>
-
-{{ event.location }}
-
-</p>
-
-
-
-<p>
-
-<strong>Start:</strong>
-
-{{ event.start_date }}
-
-</p>
-
-
-
-<p>
-
-<strong>End:</strong>
-
-{{ event.end_date }}
-
-</p>
-
-
-
+<span class="ev-cover-label">{% if event.online %}Online{% else %}In person{% endif %}</span>
 </div>
-
-
-
-
-<div class="col-md-6">
-
-
-<p>
-
-<strong>Registration Deadline:</strong>
-
-{{ event.registration_deadline }}
-
-</p>
-
-
-
-<p>
-
-<strong>Capacity:</strong>
-
-{{ event.capacity }}
-
-</p>
-
-
-
-<p>
-
-<strong>Participants:</strong>
-
-{{ participants.count }}
-
-</p>
-
-
-
-</div>
-
-
-</div>
-
-
-
-<hr>
-
-
-
-{% if event.online %}
-
-
-<div class="alert alert-info">
-
-
-This is an online event.
-
-
-<br>
-
-
-{% if event.meeting_link %}
-
-<a href="{{event.meeting_link}}"
-target="_blank"
-class="btn btn-primary mt-2">
-
-Join Meeting
-
-</a>
-
-{% endif %}
-
-
-</div>
-
-
-
-{% endif %}
-
-
-
-
-<!-- REGISTRATION -->
-
-
-{% if registered %}
-
-
-<a href="{% url 'cancel_registration' event.id %}"
-
-class="btn btn-danger">
-
-Cancel Registration
-
-</a>
-
-
-
-{% else %}
-
-
-
-<a href="{% url 'register_event' event.id %}"
-
-class="btn btn-success">
-
-Register Now
-
-</a>
-
-
-
-{% endif %}
-
-
-
-<hr>
-
-
-
-<h4>
-
-Registered Participants
-
-</h4>
-
-
-
-{% for participant in participants %}
-
-
-<div class="d-flex align-items-center mb-3">
-
-
-{% if participant.talent.profile_photo %}
-
-<img src="{{participant.talent.profile_photo.url}}"
-
-width="50"
-
-height="50"
-
-class="rounded-circle me-3">
-
-
-{% endif %}
-
-
-
+<header class="ev-heading">
 <div>
-
-
-<strong>
-
-{{participant.talent.user.get_full_name}}
-
-</strong>
-
-
-<br>
-
-
-<small>
-
-{{participant.status}}
-
-</small>
-
-
+<div class="ev-tags">
+<span>{{ event.get_event_type_display }}</span>{% if event.category %}<span>{{ event.category }}</span>{% endif %}</div>
+<h1>{{ event.title }}</h1>
+<p>Hosted by {{ event.organizer.name }} {% if event.organizer.verified %}<i class="bi bi-patch-check-fill text-primary" aria-label="Verified organization">
+</i>{% endif %}</p>
 </div>
-
-
+<div class="ev-actions">
+<span class="ev-status ev-status--{{ event.status|lower }}">{{ event.get_status_display }}</span>
+<a class="ev-button ev-button-secondary" href="#registration">View registration</a>
 </div>
-
-
-
-{% empty %}
-
-
-<p class="text-muted">
-
-No participants yet.
-
-</p>
-
-
-{% endfor %}
-
-
-<hr>
-
-
-<h4>
-Feedback
-</h4>
-
-
-{% for feedback in feedbacks %}
-
-<div class="card p-3 mb-2">
-
-<strong>
-
-{{feedback.reviewer.get_full_name}}
-
-</strong>
-
-
-<p>
-
-Rating:
-
-{{feedback.rating}} ⭐
-
-</p>
-
-
-<p>
-
-{{feedback.comment}}
-
-</p>
-
-
+</header>
+<div class="ev-detail-grid">
+<div>
+<section class="ev-card">
+<h2>About this event</h2>
+<div class="ev-prose">{{ event.description|linebreaks }}</div>
+</section>
+<section class="ev-card">
+<div class="ev-results mt-0">
+<h2>Registered participants</h2>
+<span>{{ participants|length }} participating</span>
 </div>
-
-
-{% empty %}
-
-<p>
-No feedback yet.
-</p>
-
-{% endfor %}
-
-
-<hr>
-
-
-<h4>
-Event Feedback
-</h4>
-
-
-<div class="card p-3 mb-3">
-
-
-<h5>
-
-Average Rating:
-
-{% if feedback_summary.average_rating %}
-
-{{ feedback_summary.average_rating|floatformat:1 }} ⭐
-
-{% else %}
-
-No ratings yet
-
-{% endif %}
-
-</h5>
-
-
-<p>
-
-Total Reviews:
-
-{{ feedback_summary.total_feedback }}
-
-</p>
-
-
+{% for participant in participants %}<div class="ev-person-row">
+<div class="ev-person">
+<span class="ev-avatar">{% if participant.talent.profile_photo %}<img src="{{ participant.talent.profile_photo.url }}" alt="" loading="lazy">{% else %}<i class="bi bi-person" aria-hidden="true">
+</i>{% endif %}</span>
+<div>
+<strong>{{ participant.talent.user.get_full_name|default:participant.talent.user.username }}</strong>
+<small>{{ participant.get_status_display }}</small>
 </div>
-
-
-
-
-{% for feedback in feedbacks %}
-
-
-<div class="card p-3 mb-2">
-
-
-<strong>
-
-{{feedback.reviewer.get_full_name}}
-
-</strong>
-
-
-<p>
-
-{{feedback.rating}} ⭐
-
-</p>
-
-
-<p>
-
-{{feedback.comment}}
-
-</p>
-
-
 </div>
-
-
-{% empty %}
-
-
-<p>
-
-No feedback submitted yet.
-
-</p>
-
-
-{% endfor %}
-
+</div>{% empty %}<p class="ev-muted">No participants yet. You could be the first.</p>{% endfor %}</section>
+<section class="ev-card">
+<h2>Community feedback</h2>
+<p class="ev-muted">{% if feedback_summary.average_rating %}<i class="bi bi-star-fill" aria-hidden="true">
+</i> {{ feedback_summary.average_rating|floatformat:1 }} / 5{% else %}No ratings yet{% endif %} &middot; {{ feedback_summary.total_feedback|default:0 }} review{{ feedback_summary.total_feedback|pluralize }}</p>
+{% for feedback in feedbacks %}<article class="ev-review">
+<div class="ev-person">
+<span class="ev-avatar">
+<i class="bi bi-person" aria-hidden="true">
+</i>
+</span>
+<div>
+<strong>{{ feedback.reviewer.get_full_name|default:feedback.reviewer.username }}</strong>
+<small>Rating: {{ feedback.rating }} / 5</small>
 </div>
-
-{% if registered %}
-
-    <button class="btn btn-secondary" disabled>
-        Already Registered
-    </button>
-
-{% elif capacity_full %}
-
-    <button class="btn btn-secondary" disabled>
-        Event Full
-    </button>
-
-{% elif event.registration_deadline <= now %}
-
-    <button class="btn btn-secondary" disabled>
-        Registration Closed
-    </button>
-
-{% else %}
-
-    <a href="{% url 'register_event' event.id %}"
-       class="btn btn-primary">
-        Register for Event
-    </a>
-
-{% endif %}
-
-
-
-{% if registered %}
-
-{% for registration in event.registrations.all %}
-
-
-{% if registration.status == "ATTENDED" %}
-
-
-<a href="{% url 'give_feedback' event.id %}"
-
-class="btn btn-warning">
-
-Leave Feedback ⭐
-
-</a>
-
-
-{% endif %}
-
-
-{% endfor %}
-
-{% endif %}
-<a href="{% url 'event_gallery' event.id %}"
-
-   class="btn btn-outline-secondary">
-
-    View Gallery
-
-</a>
 </div>
-
-
+<div class="ev-prose">{{ feedback.comment|linebreaks }}</div>
+</article>{% empty %}<p class="ev-muted mt-3">No feedback submitted yet.</p>{% endfor %}
+{% if current_registration.status == "ATTENDED" %}<a class="ev-button ev-button-secondary mt-3" href="{% url 'give_feedback' event.id %}">Leave feedback</a>{% endif %}</section>
+</div>
+<aside aria-label="Event details and registration">
+<section class="ev-card">
+<h2>Plan your visit</h2>
+<dl class="ev-facts">
+<div>
+<dt>Starts</dt>
+<dd>{{ event.start_date|date:"l, M j, Y · g:i A T" }}</dd>
+</div>
+<div>
+<dt>Ends</dt>
+<dd>{{ event.end_date|date:"M j, Y · g:i A T" }}</dd>
+</div>
+<div>
+<dt>Location</dt>
+<dd>{% if event.online %}Online event{% else %}{{ event.location }}{% endif %}</dd>
+</div>
+<div>
+<dt>Registration deadline</dt>
+<dd>{{ event.registration_deadline|date:"M j, Y · g:i A T" }}</dd>
+</div>
+<div>
+<dt>Capacity</dt>
+<dd>{% if event.capacity %}{{ event.capacity }} places{% else %}Unlimited{% endif %}</dd>
+</div>
+<div>
+<dt>Registrations</dt>
+<dd>{{ total_registrations }}</dd>
+</div>
+</dl>
+</section>
+<section class="ev-card" id="registration">
+<span class="ev-eyebrow">Be part of it</span>
+<h2 class="mt-2">Your registration</h2>
+{% if current_registration and current_registration.status != "CANCELLED" %}
+{% include "events/registration_badge.html" with registration=current_registration %}
+<p class="ev-muted mt-3">You have registered for this event.</p>
+{% if current_registration.status != "ATTENDED" %}<form method="POST" action="{% url 'cancel_registration' event.id %}" class="mt-3">{% csrf_token %}<button class="ev-button ev-button-danger w-100" type="submit">Cancel registration</button>
+</form>{% endif %}
+{% elif not user.talent_profile %}<div class="ev-notice">You need a talent profile to register for events.</div>
+{% elif registration_open %}
+{% if current_registration.status == "CANCELLED" %}<p class="ev-muted mb-3">Your previous registration was cancelled. You can join again.</p>{% else %}<p class="ev-muted mb-3">Join this experience and connect with your community.</p>{% endif %}
+<form method="POST" action="{% url 'register_event' event.id %}">{% csrf_token %}<button class="ev-button w-100" type="submit">{% if current_registration.status == "CANCELLED" %}Register again{% else %}Register for event{% endif %}<i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</button>
+</form>
+{% elif capacity_full %}<div class="ev-notice">This event has reached its capacity.</div>
+<button class="ev-button w-100" disabled>Event full</button>
+{% else %}<div class="ev-notice">Registration for this event is closed.</div>
+<button class="ev-button w-100" disabled>Registration closed</button>{% endif %}
+{% if event.online and event.meeting_link %}<div class="ev-card-footer">
+<p class="ev-muted mb-3">This event takes place online.</p>
+<a class="ev-button ev-button-secondary w-100" href="{{ event.meeting_link }}" target="_blank" rel="noopener noreferrer">
+<i class="bi bi-camera-video" aria-hidden="true">
+</i> Join meeting</a>
+</div>{% endif %}
+</section>
+<section class="ev-card">
+<h2>More from this event</h2>
+<div class="ev-actions">
+<a class="ev-button ev-button-secondary" href="{% url 'event_gallery' event.id %}">View gallery</a>{% if can_view %}<a class="ev-button ev-button-secondary" href="{% url 'event_dashboard' event.id %}?organization_id={{ event.organizer.id }}">Organizer dashboard</a>{% endif %}</div>
+</section>
+</aside>
+</div>
 {% endblock %}

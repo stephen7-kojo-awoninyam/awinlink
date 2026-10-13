@@ -1,8 +1,13 @@
 from accounts.models import User
+import base64
+import hashlib
+import hmac
 from notifications.models import Notification
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from datetime import timedelta
+import time
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.response import Response
@@ -29,6 +34,33 @@ from .serializers import (
 # ============================================================
 
 CALL_RING_TIMEOUT = timedelta(seconds=30)
+
+
+class CallIceServersAPIView(APIView):
+    """Return STUN and optional time-limited TURN credentials for authenticated callers."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        ice_servers = [{"urls": "stun:stun.l.google.com:19302"}]
+        turn_urls = [
+            url.strip()
+            for url in getattr(settings, "TURN_SERVER_URLS", "").split(",")
+            if url.strip()
+        ]
+        shared_secret = getattr(settings, "TURN_SHARED_SECRET", "")
+        if turn_urls and shared_secret:
+            expires_at = int(time.time()) + 3600
+            username = f"{expires_at}:{request.user.pk}"
+            credential = base64.b64encode(
+                hmac.new(
+                    shared_secret.encode(), username.encode(), hashlib.sha1
+                ).digest()
+            ).decode("ascii")
+            ice_servers.append(
+                {"urls": turn_urls, "username": username, "credential": credential}
+            )
+        return Response({"ice_servers": ice_servers}, status=status.HTTP_200_OK)
 
 
 @transaction.atomic
@@ -1451,7 +1483,7 @@ class RejectCallAPIView(APIView):
         return Response(
             serializer.data,
             status=status.HTTP_200_OK
-        )        
+        )
         
 
 class EndCallAPIView(APIView):
@@ -1968,4 +2000,4 @@ class RemoveGroupMemberAPIView(APIView):
                 "User removed from the group successfully."
             },
             status=status.HTTP_200_OK
-        )        
+        )

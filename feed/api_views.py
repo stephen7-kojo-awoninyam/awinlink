@@ -1,3 +1,4 @@
+from organizations.permissions import require_active_organization, require_user_organization_active
 from django.db.models import Q
 
 from rest_framework.views import APIView
@@ -23,6 +24,8 @@ class PostCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if request.user.role == "ORGANIZATION":
+            require_user_organization_active(request.user)
 
         serializer = PostSerializer(
             data=request.data,
@@ -414,6 +417,7 @@ class PostDeleteAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        require_active_organization(post.organization)
         post.delete()
 
         return Response(

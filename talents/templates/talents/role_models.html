@@ -179,7 +179,7 @@ No skills added
 
 
 
-<a href="{% url 'unfollow_talent' talent.id %}"
+<form method="post" action="{% url 'unfollow_talent' talent.id %}" class="d-inline">{% csrf_token %}<button type="submit"
 
 class="btn btn-danger btn-sm">
 
@@ -187,7 +187,7 @@ class="btn btn-danger btn-sm">
 Unfollow
 
 
-</a>
+</button></form>
 
 
 
@@ -195,7 +195,7 @@ Unfollow
 
 
 
-<a href="{% url 'follow_talent' talent.id %}"
+<form method="post" action="{% url 'follow_talent' talent.id %}" class="d-inline">{% csrf_token %}<button type="submit"
 
 class="btn btn-primary btn-sm">
 
@@ -203,7 +203,7 @@ class="btn btn-primary btn-sm">
 Follow
 
 
-</a>
+</button></form>
 
 
 

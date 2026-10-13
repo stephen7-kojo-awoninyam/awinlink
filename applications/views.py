@@ -1,3 +1,5 @@
+from organizations.permissions import OrganizationCapability, require_request_organization
+from organizations.permissions import require_active_organization
 from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from opportunities.models import Opportunity
@@ -25,6 +27,7 @@ def apply_opportunity(request, opportunity_id):
         Opportunity,
         id=opportunity_id
     )
+    require_active_organization(opportunity.organization)
 
 
     # ==================================
@@ -166,17 +169,16 @@ def review_application(request, application_id):
     # VERIFY ORGANIZATION OWNER
     # ==========================================
 
-    if (
-        application.opportunity.organization.user
-        != request.user
-    ):
-
-        return redirect("home")
 
 
     # ==========================================
     # UPDATE STATUS
     # ==========================================
+
+    require_request_organization(
+        request, OrganizationCapability.MANAGE_RECRUITMENT,
+        organization=application.opportunity.organization,
+    )
 
     application.status = "REVIEWING"
 
@@ -241,17 +243,16 @@ def accept_application(request, application_id):
     # VERIFY ORGANIZATION OWNER
     # ==========================================
 
-    if (
-        application.opportunity.organization.user
-        != request.user
-    ):
-
-        return redirect("home")
 
 
     # ==========================================
     # UPDATE APPLICATION
     # ==========================================
+
+    require_request_organization(
+        request, OrganizationCapability.MANAGE_RECRUITMENT,
+        organization=application.opportunity.organization,
+    )
 
     application.status = "ACCEPTED"
 
@@ -358,17 +359,16 @@ def reject_application(request, application_id):
     # VERIFY ORGANIZATION OWNER
     # ==========================================
 
-    if (
-        application.opportunity.organization.user
-        != request.user
-    ):
-
-        return redirect("home")
 
 
     # ==========================================
     # UPDATE APPLICATION
     # ==========================================
+
+    require_request_organization(
+        request, OrganizationCapability.MANAGE_RECRUITMENT,
+        organization=application.opportunity.organization,
+    )
 
     application.status = "REJECTED"
 

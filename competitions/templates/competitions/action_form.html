@@ -1,0 +1,4 @@
+<form method="post" action="{% url 'competition_action' competition.id %}?organization_id={{ competition.organization.id }}" {% if action == "cancel" %}onsubmit="return confirm('Cancel this competition?');"{% endif %}>
+    {% csrf_token %}<input type="hidden" name="action" value="{{ action }}">
+<button type="submit" class="cp-button {% if action == 'cancel' %}cp-button-danger{% elif secondary %}cp-button-secondary{% endif %}">{{ label }}</button>
+</form>

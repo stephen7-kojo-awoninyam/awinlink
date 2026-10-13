@@ -1,0 +1,104 @@
+<article class="feed-post" aria-labelledby="creator-{{ card_prefix }}-{{ entry_id }}" data-feed-card data-kind="post" data-post-id="{{ post.id }}">
+    {% if shared %}
+        <div class="feed-repost-note">
+            <i class="bi bi-repeat" aria-hidden="true"></i>
+            <span><strong>{{ shared.user.get_full_name|default:shared.user.username }}</strong> shared a post</span>
+            <time datetime="{{ shared.created_at|date:'c' }}" title="{{ shared.created_at|date:'M j, Y, H:i' }}">{{ shared.created_at|timesince }} ago</time>
+        </div>
+        {% if shared.caption %}<div class="feed-repost-caption">{{ shared.caption|linebreaks }}</div>{% endif %}
+    {% endif %}
+
+    <header class="feed-post-header">
+        <div class="feed-creator">
+            {% if post.organization %}
+                <a href="{% url 'organization_profile' post.organization.id %}" class="feed-avatar" aria-label="{{ post.organization.name }} profile">
+                    {% if post.organization.logo %}<img src="{{ post.organization.logo.url }}" alt="" loading="lazy" decoding="async">{% else %}<i class="bi bi-building" aria-hidden="true"></i>{% endif %}
+                </a>
+                <div class="feed-creator-copy">
+                    <a href="{% url 'organization_profile' post.organization.id %}" id="creator-{{ card_prefix }}-{{ entry_id }}" class="feed-creator-name">{{ post.organization.name }}{% if post.organization.verified %}<i class="bi bi-patch-check-fill feed-verified" aria-label="Verified organization"></i>{% endif %}</a>
+                    <span class="feed-creator-meta">Organization{% if post.location %} · {{ post.location }}{% endif %}</span>
+                </div>
+            {% elif post.talent %}
+                <a href="{% url 'talent_profile' post.talent.id %}" class="feed-avatar" aria-label="{{ post.author.get_full_name|default:post.author.username }} profile">
+                    {% if post.talent.profile_photo %}<img src="{{ post.talent.profile_photo.url }}" alt="" loading="lazy" decoding="async">{% elif post.author.profile_picture %}<img src="{{ post.author.profile_picture.url }}" alt="" loading="lazy" decoding="async">{% else %}<i class="bi bi-person" aria-hidden="true"></i>{% endif %}
+                </a>
+                <div class="feed-creator-copy">
+                    <a href="{% url 'talent_profile' post.talent.id %}" id="creator-{{ card_prefix }}-{{ entry_id }}" class="feed-creator-name">{{ post.author.get_full_name|default:post.author.username }}</a>
+                    <span class="feed-creator-meta">{{ post.talent.get_talent_category_display|default:post.author.get_role_display }}{% if post.location %} · {{ post.location }}{% endif %}</span>
+                </div>
+            {% else %}
+                <span class="feed-avatar">{% if post.author.profile_picture %}<img src="{{ post.author.profile_picture.url }}" alt="" loading="lazy" decoding="async">{% else %}<i class="bi bi-person" aria-hidden="true"></i>{% endif %}</span>
+                <div class="feed-creator-copy">
+                    <strong id="creator-{{ card_prefix }}-{{ entry_id }}" class="feed-creator-name">{{ post.author.get_full_name|default:post.author.username }}</strong>
+                    <span class="feed-creator-meta">{{ post.author.get_role_display }}{% if post.location %} · {{ post.location }}{% endif %}</span>
+                </div>
+            {% endif %}
+        </div>
+        <time class="feed-post-time" datetime="{{ post.created_at|date:'c' }}" title="{{ post.created_at|date:'M j, Y, H:i' }}">{{ post.created_at|timesince }} ago</time>
+    </header>
+
+    <div class="feed-post-copy">
+        <span class="feed-category">{{ post.get_post_type_display }}</span>
+        {% if post.caption %}<div class="feed-caption">{{ post.caption|linebreaks }}</div>{% endif %}
+        {% if post.event %}
+            <a href="{% url 'event_detail' post.event.id %}" class="feed-event-attachment">
+                <span class="feed-attachment-icon"><i class="bi bi-calendar-event" aria-hidden="true"></i></span>
+                <span><strong>{{ post.event.title }}</strong><small>{{ post.event.location }} · {{ post.event.start_date|date:'M j, Y' }}</small></span>
+                <i class="bi bi-arrow-up-right" aria-hidden="true"></i>
+            </a>
+        {% endif %}
+    </div>
+
+    {% if post.image %}<div class="feed-media"><img src="{{ post.image.url }}" alt="{{ post.get_post_type_display }} shared by {% if post.organization %}{{ post.organization.name }}{% else %}{{ post.author.get_full_name|default:post.author.username }}{% endif %}" loading="lazy" decoding="async"></div>{% endif %}
+    {% if post.video %}<div class="feed-media"><video controls playsinline preload="metadata" aria-label="Video shared by {{ post.author.get_full_name|default:post.author.username }}"><source src="{{ post.video.url }}">Your browser does not support video. <a href="{{ post.video.url }}">Download the video</a>.</video></div>{% endif %}
+
+    <div class="feed-post-footer">
+        <div class="feed-actions" aria-label="Post actions">
+            <form method="post" action="{% url 'like_post' post.id %}" class="feed-like-form" data-kind="post" data-post-id="{{ post.id }}">
+                {% csrf_token %}
+                <button type="submit" class="feed-action like-button {% if post.id in liked_post_ids %}is-active{% endif %}" data-url="{% url 'like_post' post.id %}" data-post-id="{{ post.id }}" data-liked="{% if post.id in liked_post_ids %}true{% else %}false{% endif %}" aria-pressed="{% if post.id in liked_post_ids %}true{% else %}false{% endif %}" aria-label="Like post">
+                    <i class="bi {% if post.id in liked_post_ids %}bi-heart-fill{% else %}bi-heart{% endif %}" aria-hidden="true"></i>
+                    <span class="like-count">{{ post.likes.count }}</span><span class="visually-hidden"> likes</span>
+                </button>
+            </form>
+            <button type="button" class="feed-action feed-comment-focus" data-comment-target="comments-{{ card_prefix }}-{{ entry_id }}" aria-controls="comments-{{ card_prefix }}-{{ entry_id }}" aria-label="Comment on post"><i class="bi bi-chat" aria-hidden="true"></i><span data-comment-count>{{ post.comments.count }}</span><span class="visually-hidden"> comments</span></button>
+            <button type="button" class="feed-action share-count-button" data-post-id="{{ post.id }}" data-bs-toggle="modal" data-bs-target="#share-{{ card_prefix }}-{{ entry_id }}" aria-label="Share post with your network"><i class="bi bi-send" aria-hidden="true"></i><span class="share-count">{{ post.shares.count }}</span><span class="visually-hidden"> shares</span></button>
+            <form method="post" action="{% url 'save_post' post.id %}" class="feed-save-form" data-post-id="{{ post.id }}">
+                {% csrf_token %}
+                <button type="submit" class="feed-action save-button {% if post.id in saved_post_ids %}is-active{% endif %}" data-post-id="{{ post.id }}" data-url="{% url 'save_post' post.id %}" data-saved="{% if post.id in saved_post_ids %}true{% else %}false{% endif %}" aria-pressed="{% if post.id in saved_post_ids %}true{% else %}false{% endif %}" aria-label="Save post"><i class="bi {% if post.id in saved_post_ids %}bi-bookmark-fill{% else %}bi-bookmark{% endif %}" aria-hidden="true"></i><span class="save-label">{% if post.id in saved_post_ids %}Saved{% else %}Save{% endif %}</span></button>
+            </form>
+        </div>
+
+        <details class="feed-comments" id="comments-{{ card_prefix }}-{{ entry_id }}">
+            <summary>View comments <span class="feed-comment-total">(<span data-comment-count>{{ post.comments.count }}</span>)</span></summary>
+            <div class="comments-list feed-comment-list" data-comments-list>
+                {% for comment in post.comments.all %}
+                    <div class="feed-comment"><strong>{{ comment.user.get_full_name|default:comment.user.username }}</strong><p>{{ comment.text }}</p><time datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|date:'M j, Y, H:i' }}</time></div>
+                {% empty %}<p class="feed-empty-copy" data-no-comments>No comments yet. Start the conversation.</p>{% endfor %}
+            </div>
+            <form method="post" action="{% url 'add_comment' post.id %}" class="comment-form feed-comment-form" data-kind="post" data-post-id="{{ post.id }}" data-url="{% url 'add_comment' post.id %}">
+                {% csrf_token %}
+                <label for="comment-input-{{ card_prefix }}-{{ entry_id }}" class="visually-hidden">Add a comment to {{ post.author.get_full_name|default:post.author.username }}'s post</label>
+                <input type="text" id="comment-input-{{ card_prefix }}-{{ entry_id }}" name="text" placeholder="Add a comment…" required>
+                <button type="submit">Post<span class="visually-hidden"> comment</span></button>
+            </form>
+        </details>
+        <p class="feed-action-feedback" aria-live="polite" data-feed-feedback hidden></p>
+    </div>
+
+    <div class="modal fade feed-share-modal" id="share-{{ card_prefix }}-{{ entry_id }}" tabindex="-1" aria-labelledby="share-title-{{ card_prefix }}-{{ entry_id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+            <div class="modal-header"><h2 class="modal-title" id="share-title-{{ card_prefix }}-{{ entry_id }}">Share with your network</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close share dialog"></button></div>
+            <form method="post" action="{% url 'share_post' post.id %}" class="share-form" data-post-id="{{ post.id }}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <label for="share-caption-{{ card_prefix }}-{{ entry_id }}" class="form-label">Add a thought <span class="text-muted">(optional)</span></label>
+                    <textarea id="share-caption-{{ card_prefix }}-{{ entry_id }}" name="caption" class="form-control" rows="3" placeholder="What stands out to you?"></textarea>
+                    <div class="feed-share-preview"><strong>{% if post.organization %}{{ post.organization.name }}{% else %}{{ post.author.get_full_name|default:post.author.username }}{% endif %}</strong>{% if post.caption %}<p>{{ post.caption|truncatewords:30 }}</p>{% endif %}{% if post.image %}<img src="{{ post.image.url }}" alt="Post preview" loading="lazy">{% endif %}</div>
+                    <p class="feed-action-feedback" aria-live="polite" data-feed-feedback hidden></p>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary"><i class="bi bi-send me-2" aria-hidden="true"></i>Share post</button></div>
+            </form>
+        </div></div>
+    </div>
+</article>

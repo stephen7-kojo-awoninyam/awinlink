@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from invitations import views as invitation_views
 from others.views import other_profile_setup as other_talent_profile_setup
 
 
@@ -113,14 +114,14 @@ urlpatterns = [
     
     path(
     "invitations/<int:invitation_id>/accept/",
-    views.accept_invitation,
+    invitation_views.accept_invitation,
     name="accept_invitation"
      ),
 
 
     path(
         "invitations/<int:invitation_id>/decline/",
-        views.decline_invitation,
+        invitation_views.decline_invitation,
         name="decline_invitation"
     ),
     

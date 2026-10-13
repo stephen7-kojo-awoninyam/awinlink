@@ -1,3 +1,4 @@
+from organizations.permissions import require_active_organization
 from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -451,6 +452,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
         read_only_fields = [
             "id",
+            "status",
             "category_name",
             "domain_name",
             "followers_count",
@@ -481,7 +483,7 @@ class OrganizationListAPIView(APIView):
             .prefetch_related(
                 "followers",
             )
-            .all()
+            .filter(status="ACTIVE")
         )
 
         serializer = OrganizationSerializer(
@@ -730,9 +732,6 @@ class ApplicationCreateSerializer(
             "message",
         ]
 
-        read_only_fields = [
-            "opportunity",
-        ]               
         
         
 # =====================================================
@@ -789,7 +788,7 @@ class ApplicationListAPIView(APIView):
 
             try:
 
-                organization = request.user.organization_profile
+                organization = require_active_organization(request.user.organization_profile)
 
             except Organization.DoesNotExist:
 
@@ -1019,6 +1018,9 @@ class ApplicationDetailAPIView(APIView):
             and application.opportunity.organization.user_id
             == request.user.id
         )
+
+        if is_organization and not is_talent:
+            require_active_organization(application.opportunity.organization)
 
         if not (is_talent or is_organization):
 

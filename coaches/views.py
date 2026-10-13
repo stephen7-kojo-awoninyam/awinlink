@@ -1,3 +1,4 @@
+from django.views.decorators.http import require_POST
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -988,6 +989,7 @@ def coach_analytics(request):
 # =========================================================
 
 @login_required
+@require_POST
 def save_talent(request, talent_id):
 
     # -----------------------------------------------------
@@ -1284,6 +1286,7 @@ def toggle_talent_follow(
 # =====================================================
 
 @login_required
+@require_POST
 def follow_talent(request, talent_id):
 
     # -------------------------------------------------
@@ -1340,6 +1343,7 @@ def follow_talent(request, talent_id):
 # =====================================================
 
 @login_required
+@require_POST
 def unfollow_talent(request, talent_id):
 
     # -------------------------------------------------

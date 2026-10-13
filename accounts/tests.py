@@ -104,6 +104,16 @@ class UsernameAvailabilityTests(TestCase):
         self.assertFalse(response.json()["available"])
 
 
+@override_settings(
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+)
 class RegistrationProfileTests(TestCase):
     @staticmethod
     def registration_data(username, role):
@@ -118,6 +128,79 @@ class RegistrationProfileTests(TestCase):
             "password1": "StrongPass123!",
             "password2": "StrongPass123!",
         }
+
+    def test_public_registration_choices_exclude_admin(self):
+        response = self.client.get(reverse("register"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {value for value, _ in response.context["form"].fields["role"].choices},
+            {"ATHLETE", "ORGANIZATION", "SCOUT", "COACH"},
+        )
+        self.assertNotContains(response, 'value="ADMIN"')
+
+    def test_registration_form_rejects_admin(self):
+        form = UserRegistrationForm(
+            data=self.registration_data("forged_admin", "ADMIN")
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("role", form.errors)
+        self.assertFalse(User.objects.filter(username="forged_admin").exists())
+
+    def test_web_registration_rejects_forged_admin_without_logging_in(self):
+        response = self.client.post(
+            reverse("register"),
+            self.registration_data("forged_admin", "ADMIN"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("role", response.context["form"].errors)
+        self.assertEqual(User.objects.count(), 0)
+        self.assertEqual(Organization.objects.count(), 0)
+        self.assertEqual(TalentProfile.objects.count(), 0)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_authenticated_web_registration_cannot_create_admin(self):
+        user = User.objects.create_user(username="existing_talent", role="ATHLETE")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("register"),
+            self.registration_data("forged_admin", "ADMIN"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("role", response.context["form"].errors)
+        self.assertEqual(User.objects.count(), 1)
+        self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
+
+    def test_existing_admin_can_still_log_in_and_access_dashboard(self):
+        admin = User.objects.create_user(
+            username="existing_admin", password="StrongPass123!", role="ADMIN"
+        )
+
+        response = self.client.post(
+            reverse("login"),
+            {"username": admin.username, "password": "StrongPass123!"},
+        )
+
+        self.assertRedirects(response, reverse("dashboard"))
+        dashboard_response = self.client.get(reverse("dashboard"))
+        self.assertTemplateUsed(dashboard_response, "dashboard/admin_dashboard.html")
+        admin.refresh_from_db()
+        self.assertEqual(admin.role, "ADMIN")
+        self.assertTrue(admin.is_active)
+
+    def test_api_registration_still_rejects_admin(self):
+        response = self.client.post(
+            "/api/auth/register/",
+            self.registration_data("forged_api_admin", "ADMIN"),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("role", response.json())
+        self.assertEqual(User.objects.count(), 0)
 
     def test_athlete_registration_creates_talent_profile(self):
         response = self.client.post(

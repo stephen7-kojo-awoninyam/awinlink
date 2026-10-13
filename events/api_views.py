@@ -1,3 +1,5 @@
+from organizations.models import Organization
+from organizations.permissions import OrganizationCapability, get_request_organization, require_active_organization, require_user_organization_active
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from .services import CertificateGenerator
@@ -51,6 +53,7 @@ class EventListAPIView(generics.ListAPIView):
     def get_queryset(self):
 
         return Event.objects.filter(
+            organizer__status="ACTIVE",
             status="PUBLISHED"
         ).select_related(
             "organizer",
@@ -90,23 +93,21 @@ class EventCreateAPIView(APIView):
 
     def post(self, request):
 
-        if request.user.role != "ORGANIZATION":
 
-            return Response(
-                {
-                    "detail": (
-                        "Only organization accounts "
-                        "can create events."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
+        try:
+            organization = get_request_organization(
+                request, OrganizationCapability.MANAGE_EVENTS,
             )
-
-        organization = getattr(
-            request.user,
-            "organization_profile",
-            None
-        )
+        except Organization.DoesNotExist:
+            if request.user.role != "ORGANIZATION":
+                return Response(
+                    {"detail": "Only organization accounts can create events."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            return Response(
+                {"detail": "Organization profile not found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if organization is None:
 
@@ -155,23 +156,8 @@ class EventUpdateAPIView(APIView):
             id=event_id
         )
 
-        if request.user.role != "ORGANIZATION":
 
-            return Response(
-                {
-                    "detail": (
-                        "Only organization accounts "
-                        "can update events."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        organization = getattr(
-            request.user,
-            "organization_profile",
-            None
-        )
+        organization = get_request_organization(request, OrganizationCapability.MANAGE_EVENTS, organization=event.organizer)
 
         if organization != event.organizer:
 
@@ -220,23 +206,8 @@ class EventDeleteAPIView(APIView):
             id=event_id
         )
 
-        if request.user.role != "ORGANIZATION":
 
-            return Response(
-                {
-                    "detail": (
-                        "Only organization accounts "
-                        "can delete events."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        organization = getattr(
-            request.user,
-            "organization_profile",
-            None
-        )
+        organization = get_request_organization(request, OrganizationCapability.MANAGE_EVENTS, organization=event.organizer)
 
         if organization != event.organizer:
 
@@ -403,6 +374,7 @@ class EventRegisterAPIView(APIView):
             Event,
             id=event_id,
         )
+        require_active_organization(event.organizer)
 
         # ==========================================
         # EVENT MUST BE PUBLISHED
@@ -569,28 +541,21 @@ class EventRegistrationListAPIView(APIView):
         # ONLY ORGANIZATIONS CAN VIEW REGISTRATIONS
         # ==========================================
 
-        if request.user.role != "ORGANIZATION":
-            return Response(
-                {
-                    "detail": (
-                        "Only ORGANIZATION users can view "
-                        "event registrations."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
 
         # ==========================================
         # GET ORGANIZATION PROFILE
         # ==========================================
 
         try:
-            organization = request.user.organization_profile
-        except Exception:
+            organization = get_request_organization(request, OrganizationCapability.VIEW_EVENTS)
+        except Organization.DoesNotExist:
+            if request.user.role != "ORGANIZATION":
+                return Response(
+                    {"detail": "Only ORGANIZATION users can view event registrations."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             return Response(
-                {
-                    "detail": "Organization profile not found."
-                },
+                {"detail": "Organization profile not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -635,28 +600,21 @@ class EventRegistrationStatusAPIView(APIView):
         # ONLY ORGANIZATIONS CAN MANAGE REGISTRATIONS
         # ==========================================
 
-        if request.user.role != "ORGANIZATION":
-            return Response(
-                {
-                    "detail": (
-                        "Only ORGANIZATION users can update "
-                        "registration status."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
 
         # ==========================================
         # GET ORGANIZATION PROFILE
         # ==========================================
 
         try:
-            organization = request.user.organization_profile
-        except Exception:
+            organization = get_request_organization(request, OrganizationCapability.MANAGE_EVENTS)
+        except Organization.DoesNotExist:
+            if request.user.role != "ORGANIZATION":
+                return Response(
+                    {"detail": "Only ORGANIZATION users can update registration status."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             return Response(
-                {
-                    "detail": "Organization profile not found."
-                },
+                {"detail": "Organization profile not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -733,25 +691,21 @@ class EventAttendanceAPIView(APIView):
         # ONLY ORGANIZATIONS CAN MARK ATTENDANCE
         # ==========================================
 
-        if request.user.role != "ORGANIZATION":
-            return Response(
-                {
-                    "detail": "Only ORGANIZATION users can mark event attendance."
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
 
         # ==========================================
         # GET ORGANIZATION PROFILE
         # ==========================================
 
         try:
-            organization = request.user.organization_profile
-        except Exception:
+            organization = get_request_organization(request, OrganizationCapability.MANAGE_EVENTS)
+        except Organization.DoesNotExist:
+            if request.user.role != "ORGANIZATION":
+                return Response(
+                    {"detail": "Only ORGANIZATION users can mark event attendance."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             return Response(
-                {
-                    "detail": "Organization profile not found."
-                },
+                {"detail": "Organization profile not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -995,23 +949,18 @@ class EventMediaCreateAPIView(APIView):
 
     def post(self, request, event_id):
 
-        if request.user.role != "ORGANIZATION":
 
-            return Response(
-                {
-                    "detail": (
-                        "Only organization accounts "
-                        "can upload event media."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
+        try:
+            organization = get_request_organization(
+                request, OrganizationCapability.MANAGE_EVENTS,
             )
-
-        organization = getattr(
-            request.user,
-            "organization_profile",
-            None
-        )
+        except Organization.DoesNotExist:
+            if request.user.role != "ORGANIZATION":
+                return Response(
+                    {"detail": "Only organization accounts can upload event media."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            organization = None
 
         event = get_object_or_404(
             Event,
@@ -1041,3 +990,26 @@ class EventMediaCreateAPIView(APIView):
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class MyOrganizationEventsAPIView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        try:
+            organization = get_request_organization(
+                request, OrganizationCapability.VIEW_EVENTS,
+            )
+        except Organization.DoesNotExist:
+            if request.user.role != "ORGANIZATION":
+                return Response(
+                    {"detail": "Only organizations can view managed events."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            return Response([])
+        events = Event.objects.filter(
+            organizer=organization
+        ).select_related("organizer", "category").order_by("-created_at")
+        return Response(EventSerializer(events, many=True).data)

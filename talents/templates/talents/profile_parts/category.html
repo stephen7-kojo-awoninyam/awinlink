@@ -1,0 +1,33 @@
+<section class="talent-panel" aria-labelledby="talent-category-title">
+    <div class="talent-panel-heading"><h2 id="talent-category-title">{% if talent.talent_category == 'SPORTS' %}{% if talent.user.role == 'SCOUT' %}Scouting profile{% else %}Sports profile{% endif %}{% elif talent.talent_category == 'SCIENCE_TECHNOLOGY' %}Science &amp; technology{% elif talent.talent_category == 'ARTS' %}Creative profile{% else %}Professional profile{% endif %}</h2><span class="talent-category-pill">{{ talent.get_talent_category_display|default:'Talent' }}</span></div>
+    {% if talent.talent_category == 'SPORTS' and sports_profile %}
+        <dl class="talent-details"><div><dt>Sport</dt><dd>{{ sports_profile.sport|default:'Not provided' }}</dd></div><div><dt>Sport category</dt><dd>{{ sports_profile.sport_category|default:'Not provided' }}</dd></div><div><dt>Position</dt><dd>{{ sports_profile.position|default:'Not provided' }}</dd></div><div><dt>Height</dt><dd>{% if sports_profile.height %}{{ sports_profile.height }} cm{% else %}Not provided{% endif %}</dd></div><div><dt>Weight</dt><dd>{% if sports_profile.weight %}{{ sports_profile.weight }} kg{% else %}Not provided{% endif %}</dd></div></dl>
+        {% include 'talents/profile_parts/text_section.html' with heading='Background' text=sports_profile.bio %}
+    {% elif talent.talent_category == 'SCIENCE_TECHNOLOGY' and science_technology_profile %}
+        <dl class="talent-details"><div><dt>Specialization</dt><dd>{{ science_technology_profile.specialization|default:'Not provided' }}</dd></div><div><dt>Institution</dt><dd>{{ science_technology_profile.institution|default:'Not provided' }}</dd></div><div><dt>Years of experience</dt><dd>{{ science_technology_profile.years_of_experience }}</dd></div></dl>
+        {% include 'talents/profile_parts/text_section.html' with heading='About' text=science_technology_profile.description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Education & training' text=science_technology_profile.education %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Technical & scientific skills' text=science_technology_profile.skills_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Projects & work' text=science_technology_profile.projects_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Research interests' text=science_technology_profile.research_interests %}
+        {% include 'talents/profile_parts/links.html' with specialty=science_technology_profile %}
+    {% elif talent.talent_category == 'ARTS' and arts_profile %}
+        <dl class="talent-details"><div><dt>Specialization</dt><dd>{{ arts_profile.specialization|default:'Not provided' }}</dd></div><div><dt>Artistic discipline</dt><dd>{{ arts_profile.discipline|default:'Not provided' }}</dd></div><div><dt>Years of experience</dt><dd>{{ arts_profile.years_of_experience }}</dd></div></dl>
+        {% include 'talents/profile_parts/text_section.html' with heading='About' text=arts_profile.description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Experience & background' text=arts_profile.experience_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Skills & expertise' text=arts_profile.skills_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Creative portfolio' text=arts_profile.portfolio_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Achievements' text=arts_profile.achievements_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Creative interests' text=arts_profile.creative_interests %}
+        {% include 'talents/profile_parts/links.html' with specialty=arts_profile %}
+    {% elif talent.talent_category == 'OTHERS' and other_profile %}
+        <dl class="talent-details"><div><dt>Specialization</dt><dd>{{ other_profile.specialization|default:'Not provided' }}</dd></div><div><dt>Field / area</dt><dd>{{ other_profile.field|default:'Not provided' }}</dd></div><div><dt>Years of experience</dt><dd>{{ other_profile.years_of_experience }}</dd></div></dl>
+        {% include 'talents/profile_parts/text_section.html' with heading='About' text=other_profile.description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Experience & background' text=other_profile.experience_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Skills & expertise' text=other_profile.skills_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Projects & work' text=other_profile.projects_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Achievements' text=other_profile.achievements_description %}
+        {% include 'talents/profile_parts/text_section.html' with heading='Interests & ambitions' text=other_profile.interests %}
+        {% include 'talents/profile_parts/links.html' with specialty=other_profile %}
+    {% else %}<p class="talent-empty-copy">Category-specific information has not been added yet.</p>{% endif %}
+</section>

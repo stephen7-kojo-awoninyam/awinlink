@@ -592,30 +592,38 @@ img {
     letter-spacing: 1.2px;
 }
 
+
 .sidebar-link {
     position: relative;
-
     display: flex;
     align-items: center;
-
     gap: 12px;
-
     width: 100%;
-
-    padding: 11px 13px;
-
-    margin-bottom: 3px;
-
-    border-radius: 9px;
-
+    padding: 12px 14px;
+    margin-bottom: 4px;
+    border-radius: 10px;
     color: #d1d5db;
-
     font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
 
-    transition:
-        background 0.2s ease,
-        color 0.2s ease,
-        transform 0.2s ease;
+.sidebar-link i {
+    width: 22px;
+    flex-shrink: 0;
+    font-size: 1.15rem;
+    text-align: center;
+}
+
+.sidebar-link:hover {
+    background-color: rgba(255, 255, 255, 0.09);
+    color: #ffffff;
+}
+
+.sidebar-link:focus-visible {
+    outline: 2px solid #86b7fe;
+    outline-offset: 2px;
 }
 
 .sidebar-link i {
@@ -820,12 +828,40 @@ img {
 
 /* HEADER ACTIONS */
 
+
 .header-actions {
     display: flex;
     align-items: center;
-
-    gap: 14px;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-shrink: 0;
 }
+
+.header-actions > a.header-icon,
+.account-options-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: #374151;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.header-actions > a.header-icon {
+    position: relative;
+    font-size: 1.2rem;
+}
+
+.header-actions > a.header-icon:hover,
+.account-options-btn:hover {
+    background-color: #f0f2f5;
+    color: #0866ff;
+}
+
 
 .header-icon {
     position: relative;
@@ -1049,15 +1085,16 @@ img {
     }
 }
 
+
 .awinlink-content {
     width: 100%;
-
-    max-width: 1400px;
-
+    max-width: 1500px;
     margin: 0 auto;
-
-    padding: 30px;
+    padding: 28px 32px;
+    flex: 1;
+    min-width: 0;
 }
+
 
 .seasonal-greeting {
     display: flex;
@@ -2007,3 +2044,109 @@ img {
 .section-heading > i {
     color: var(--awinlink-season-accent);
 }
+
+/* Awinlink three-dot account menu */
+.account-options {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.account-options-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.account-options-btn:hover,
+.account-options-btn:focus-visible {
+    background-color: rgba(128, 128, 128, 0.15);
+    outline: none;
+}
+
+.account-options-menu {
+    min-width: 180px;
+    padding: 6px;
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 1100;
+}
+
+.account-options-menu .dropdown-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.account-options-menu form {
+    margin: 0;
+}
+
+.account-options-menu form button {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.header-actions > a.header-icon,
+.account-options-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: #374151;
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.header-actions > a.header-icon {
+    position: relative;
+    font-size: 1.2rem;
+}
+
+.header-actions > a.header-icon:hover,
+.account-options-btn:hover {
+    background-color: #f0f2f5;
+    color: #0866ff;
+}
+
+
+.account-options {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+/* POST controls retain the appearance of the links they replace. */
+button.workspace-text-link,
+button.discovery-save-link,
+button.feed-text-link {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-family: inherit;
+    cursor: pointer;
+}
+.d-grid > form.d-inline > button.btn { width: 100%; }

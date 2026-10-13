@@ -43,7 +43,7 @@ class HomeFeedTests(TestCase):
 		response = self.client.get(reverse("home_feed"))
 
 		self.assertEqual(response.status_code, 200)
-		self.assertContains(response, f'href="{reverse("logout")}"')
+		self.assertContains(response, f'action="{reverse("logout")}"')
 		self.assertContains(response, "Log out")
 
 	def test_authenticated_home_visit_shows_loader_before_feed(self):

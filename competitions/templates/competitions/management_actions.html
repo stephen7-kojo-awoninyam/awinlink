@@ -1,0 +1,17 @@
+{% load competition_ui %}
+{% competition_access user competition.organization as can_manage %}
+{% competition_admin user as platform_admin %}
+<div class="cp-actions">
+{% if can_manage %}
+{% if competition.status == "DRAFT" or competition.status == "REJECTED" %}<a class="cp-button cp-button-secondary" href="{% url 'competition_edit' competition.id %}?organization_id={{ competition.organization.id }}">Edit details</a>{% include "competitions/action_form.html" with action="submit" label="Submit for approval" %}{% endif %}
+{% if competition.status == "APPROVED" %}{% include "competitions/action_form.html" with action="publish" label="Publish competition" %}{% endif %}
+{% if competition.status == "PUBLISHED" %}{% include "competitions/action_form.html" with action="close_registration" label="Close registration" secondary=True %}{% include "competitions/action_form.html" with action="start" label="Start competition" %}{% endif %}
+{% if competition.status == "REGISTRATION_CLOSED" %}{% include "competitions/action_form.html" with action="start" label="Start competition" %}{% endif %}
+{% if competition.status == "ONGOING" or competition.status == "JUDGING" %}<a class="cp-button cp-button-secondary" href="{% url 'competition_participants' competition.id %}">Participants</a>
+<a class="cp-button cp-button-secondary" href="{% url 'competition_assign_judge' competition.id %}?organization_id={{ competition.organization.id }}">Assign coaches</a>{% endif %}
+{% if competition.status == "ONGOING" %}{% include "competitions/action_form.html" with action="start_judging" label="Start judging" %}{% endif %}
+{% if competition.status == "JUDGING" %}<a class="cp-button cp-button-secondary" href="{% url 'competition_results' competition.id %}">Enter results</a>{% include "competitions/action_form.html" with action="publish_results" label="Publish results" %}{% endif %}
+{% if competition.status == "RESULTS" %}<a class="cp-button cp-button-secondary" href="{% url 'competition_results' competition.id %}">Results</a>{% include "competitions/action_form.html" with action="complete" label="Complete competition" secondary=True %}{% endif %}
+{% endif %}
+{% if can_manage or platform_admin %}{% if competition.status != "COMPLETED" and competition.status != "CANCELLED" %}{% include "competitions/action_form.html" with action="cancel" label="Cancel" %}{% endif %}{% endif %}
+</div>

@@ -1,0 +1,13 @@
+<div class="cp-poster cp-poster--{{ competition.category|lower }}" aria-hidden="true">
+    <div class="cp-poster-pattern">
+</div>
+    <span class="cp-poster-kicker">Awinlink competitions</span>
+    <span class="cp-poster-icon">{% if competition.category == "SPORTS" %}<i class="bi bi-trophy">
+</i>{% elif competition.category == "SCIENCE_TECHNOLOGY" %}<i class="bi bi-cpu">
+</i>{% elif competition.category == "ARTS" %}<i class="bi bi-palette">
+</i>{% else %}<i class="bi bi-stars">
+</i>{% endif %}</span>
+    <span class="cp-poster-category">{% if competition.category == "SCIENCE_TECHNOLOGY" %}Science &amp;<br>technology{% else %}{{ competition.get_category_display }}{% endif %}</span>
+    <span class="cp-poster-discipline">{{ competition.discipline|default:"Show the world what you can do" }}</span>
+    <span class="cp-poster-date">{{ competition.competition_start|date:"M j" }} &mdash; {{ competition.competition_end|date:"M j" }}</span>
+</div>

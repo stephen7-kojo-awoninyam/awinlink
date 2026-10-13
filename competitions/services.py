@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from organizations.permissions import require_active_organization
 from django.db import transaction
 from django.utils import timezone
 
@@ -33,6 +34,8 @@ def transition_competition(competition, target_status, actor, review_note=""):
     competition = Competition.objects.select_for_update().get(
         pk=competition.pk
     )
+    if not is_platform_admin(actor):
+        require_active_organization(competition.organization)
     if target_status not in ALLOWED_TRANSITIONS.get(competition.status, set()):
         raise ValidationError(
             f"A competition cannot move from {competition.get_status_display()} "

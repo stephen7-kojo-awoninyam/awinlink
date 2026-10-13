@@ -44,6 +44,20 @@ class RecommendationEngine:
 
 
     @staticmethod
+    def recommend_sub_ecosystems(user, limit=6, minimum_members=2):
+        """Rank focused communities within the user's existing ecosystem."""
+        from recommendations.ecosystems import recommend_sub_ecosystems
+
+        return recommend_sub_ecosystems(
+            user,
+            limit=limit,
+            minimum_members=minimum_members,
+        )
+
+
+
+
+    @staticmethod
     def _coerce_numeric_value(value, default=0):
         """
         Normalize varied score payloads into a float.
@@ -134,9 +148,9 @@ class RecommendationEngine:
 
 
 
+
     @staticmethod
     def get_candidates(opportunity):
-
         talents = TalentProfile.objects.select_related(
             "user"
         ).prefetch_related(
@@ -147,67 +161,30 @@ class RecommendationEngine:
             "achievements",
             "event_certificates",
         ).filter(
-            profile_visibility__in=("PUBLIC", "ORGANIZATIONS")
-        )
-
-        # =================================
-        # DOMAIN FILTER
-        # =================================
-
-        if opportunity.domain:
-
-            talents = talents.filter(
-                domains=opportunity.domain
-            )
-
-        # =================================
-        # AVAILABILITY FILTER
-        # =================================
-
-        talents = talents.filter(
-            availability_status="AVAILABLE"
+            profile_visibility__in=("PUBLIC", "ORGANIZATIONS"),
+            availability_status="AVAILABLE",
         )
 
         return talents.distinct()
 
 
 
-
-
     @staticmethod
     def calculate_score(talent, opportunity):
-
-
         score = 0
 
-
-
-        # =================================
         # DOMAIN MATCH (40)
-        # =================================
-
+        domain_match = False
 
         if opportunity.domain:
-
-
-            if talent.domains.filter(
-
+            domain_match = talent.domains.filter(
                 id=opportunity.domain.id
+            ).exists()
 
-            ).exists():
-
-
+            if domain_match:
                 score += 40
 
-
-
-
-
-        # =================================
         # SKILLS MATCH (30)
-        # =================================
-
-
         skill_weights = {
             skill_id: 1
             for skill_id in opportunity.skills.values_list(
@@ -222,6 +199,8 @@ class RecommendationEngine:
                 skill_weights.get(requirement.skill_id, 1),
             )
 
+        matched_skill_ids = set()
+
         if skill_weights:
             matched_skill_ids = set(
                 talent.skills.filter(
@@ -231,25 +210,25 @@ class RecommendationEngine:
                     flat=True,
                 )
             )
+
             matched_weight = sum(
                 weight
                 for skill_id, weight in skill_weights.items()
                 if skill_id in matched_skill_ids
             )
-            score += (matched_weight / sum(skill_weights.values())) * 30
 
+            score += (
+                matched_weight / sum(skill_weights.values())
+            ) * 30
 
+        # DOMAIN RELEVANCE BONUS
+        # Reward profiles that match both the opportunity domain
+        # and its required skills.
+        if domain_match and matched_skill_ids:
+            score += 5
 
-
-
-        # =================================
         # EXPERIENCE (10)
-        # =================================
-
-
         experience_count = talent.experiences.count()
-
-
         score += min(experience_count * 1.2, 6)
 
         experience_levels = {
@@ -257,103 +236,47 @@ class RecommendationEngine:
             "INTERMEDIATE": 1,
             "EXPERT": 2,
         }
-        talent_level = experience_levels.get(talent.experience_level)
+
+        talent_level = experience_levels.get(
+            talent.experience_level
+        )
         opportunity_level = experience_levels.get(
             opportunity.experience_level
         )
+
         if talent_level is not None and opportunity_level is not None:
-            level_distance = abs(talent_level - opportunity_level)
+            level_distance = abs(
+                talent_level - opportunity_level
+            )
             score += max(4 - level_distance * 2, 0)
 
-
-
-
-        # =================================
         # PORTFOLIO (5)
-        # =================================
-
-
         if talent.portfolio_items.exists():
-
-
             score += 5
 
-
-
-
-
-        # =================================
         # VERIFICATION (5)
-        # =================================
-
-
         if talent.verified:
-
-
             score += 5
 
-
-
-
-
-        # =================================
         # PROFILE STRENGTH (5)
-        # =================================
-
-
         strength = ProfileStrengthService.calculate_strength(
-
             talent
-
         )
+        score += (strength / 100) * 5
 
-
-        score += (
-
-            strength / 100
-
-        ) * 5
-
-
-
-
-
-        # =================================
         # ACHIEVEMENTS (3)
-        # =================================
-
-
         achievement_count = talent.achievements.count()
+        score += min(achievement_count, 3)
 
-
-        score += min(
-
-            achievement_count,
-
-            3
-
-        )
-
-
-
-
-
-        # =================================
         # CERTIFICATIONS (2)
-        # =================================
-
-
         certificate_count = talent.event_certificates.count()
+        score += min(certificate_count, 2)
 
-
-        score += min(
-            certificate_count,
-            2
-        )
-
+        # WORK TYPE
         if talent.preferred_work_type == opportunity.work_type:
             score += 3
 
+        # LOCATION
         if opportunity.location:
             location_text = opportunity.location.strip().casefold()
             city = (talent.city or "").strip().casefold()
@@ -364,16 +287,22 @@ class RecommendationEngine:
             elif country and country in location_text:
                 score += 2
 
+        return round(min(score, 100), 2)
 
 
+    @staticmethod
+    def calculate_opportunity_score(talent, opportunity):
+        """
+        Score how suitable an opportunity is for a talent.
 
-        return round(
-
-            min(score,100),
-
-            2
-
+        Reuses the existing opportunity-matching score so that
+        both recommendation views use consistent logic.
+        """
+        return RecommendationEngine.calculate_score(
+            talent,
+            opportunity
         )
+
 
     @staticmethod
     def score_post_for_user(user, post):
@@ -3303,6 +3232,7 @@ class RecommendationEngine:
 
         now = timezone.now()
         events = Event.objects.filter(
+            organizer__status="ACTIVE",
             status="PUBLISHED",
             registration_deadline__gt=now,
             end_date__gt=now,
@@ -4677,6 +4607,7 @@ class RecommendationEngine:
             Q(deadline__isnull=True)
             | Q(deadline__gte=timezone.localdate()),
             active=True,
+            organization__status="ACTIVE",
         ).exclude(
             applications__talent__user=user
         ).select_related(
@@ -4952,6 +4883,7 @@ class RecommendationEngine:
         today = timezone.localdate()
         competitions = (
             Competition.objects.filter(
+                organization__status="ACTIVE",
                 status="PUBLISHED",
                 registration_start__lte=today,
                 registration_end__gte=today,

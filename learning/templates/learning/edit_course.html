@@ -1,56 +1,25 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container py-5">
-
-    <div class="row justify-content-center">
-
-        <div class="col-lg-8">
-
-            <div class="card border-0 shadow-sm">
-
-                <div class="card-body p-4">
-
-                    <h2 class="fw-bold mb-4">
-                        Edit Course
-                    </h2>
-
-                    <form method="POST"
-                          enctype="multipart/form-data">
-
-                        {% csrf_token %}
-
-                        {{ form.as_p }}
-
-                        <div class="d-flex gap-2 mt-4">
-
-                            <button type="submit"
-                                    class="btn btn-primary">
-
-                                Save Changes
-
-                            </button>
-
-                            <a href="{% url 'course_detail' course.slug %}"
-                               class="btn btn-outline-secondary">
-
-                                Cancel
-
-                            </a>
-
-                        </div>
-
-                    </form>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
+{% extends "learning/ui_base.html" %}
+{% load learning_ui %}
+{% block title %}Edit course | Awinlink learning{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="studio" %}{% endblock %}
+{% block learning_content %}
+{% learning_url 'my_courses' as return_url %}{% url 'my_courses' as legacy_return_url %}
+{% url 'manage_course' course.id as back_url %}
+<a class="lc-back" href="{{ back_url }}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Back to course</a>
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">Edit course</span>
+<h1>Refine your learning experience</h1>
+<p>Update your course details before submitting for review.</p>
 </div>
-
+</header>
+<div class="lc-form-layout">
+<div>{% include "learning/form_panel.html" with save_label="Save changes" uploads=True %}</div>
+<aside class="lc-card">
+<h2>Make it clear. Make it useful.</h2>
+<p class="lc-prose">Update your course details before submitting for review.</p>
+<div class="lc-notice">Fields marked * are required. Your changes will be saved when you submit the form.</div>{% if course %}<p class="lc-muted">{{ course.title }}</p>{% endif %}</aside>
+</div>
 {% endblock %}

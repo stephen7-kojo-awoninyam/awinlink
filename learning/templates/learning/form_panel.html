@@ -1,0 +1,6 @@
+<form class="lc-card" method="POST" {% if uploads %}enctype="multipart/form-data"{% endif %} {% if return_url %}data-learning-return="{{ return_url }}" data-learning-legacy-return="{{ legacy_return_url }}"{% endif %}>
+    {% csrf_token %}{% if form.non_field_errors %}<div class="lc-notice lc-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="lc-form-grid">{% for field in form %}{% include "learning/form_field.html" %}{% endfor %}</div>
+    <div class="lc-actions lc-card-footer">
+<button class="lc-button" type="submit">{{ save_label }}</button>{% if back_url %}<a class="lc-button lc-button-secondary" href="{{ back_url }}">Cancel</a>{% endif %}</div>
+</form>

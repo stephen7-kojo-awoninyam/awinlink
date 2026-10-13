@@ -22,6 +22,7 @@ from .api_views import (
     MyQuizAttemptsAPIView,
     CourseApproveAPIView,
     CourseRejectAPIView,
+    PendingCoursesAPIView,
 )
 
 
@@ -58,6 +59,11 @@ urlpatterns = [
         "courses/me/",
         MyCoursesAPIView.as_view(),
         name="my_courses"
+    ),
+    path(
+        "courses/pending/",
+        PendingCoursesAPIView.as_view(),
+        name="pending_courses"
     ),
     
     path(

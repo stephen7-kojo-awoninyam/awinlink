@@ -1,3 +1,4 @@
+from organizations.permissions import require_active_organization
 from rest_framework import serializers
 
 from .models import (
@@ -101,6 +102,12 @@ class PostSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def validate(self, attrs):
+        if self.instance is not None:
+            require_active_organization(self.instance.organization)
+        require_active_organization(attrs.get("organization"))
+        return attrs
 
     # --------------------------------------------------------
     # AUTHOR

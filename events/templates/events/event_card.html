@@ -1,0 +1,61 @@
+<article class="ev-card ev-event-card" data-event-card data-search="{{ event.title }} {{ event.organizer.name }} {{ event.location }} {{ event.description }}" data-type="{{ event.event_type }}" data-category="{{ event.category|default_if_none:'' }}" data-format="{% if event.online %}online{% else %}in-person{% endif %}" data-start="{{ event.start_date|date:'c' }}">
+    <a href="{% url 'event_detail' event.id %}" class="ev-cover ev-cover--{{ event.event_type|lower }}" aria-label="View {{ event.title }}">
+        {% if event.image %}<img src="{{ event.image.url }}" alt="" loading="lazy">{% else %}<div class="ev-cover-art" aria-hidden="true">
+<i class="bi bi-calendar-event">
+</i>
+<span>{{ event.get_event_type_display }}</span>
+</div>{% endif %}
+        <span class="ev-date-tile">
+<strong>{{ event.start_date|date:"d" }}</strong>
+<span>{{ event.start_date|date:"M" }}</span>
+</span>
+        <span class="ev-cover-label">{% if event.online %}Online{% else %}In person{% endif %}</span>
+    </a>
+    <div class="ev-event-body">
+        <div class="ev-tags">
+<span>{{ event.get_event_type_display }}</span>{% if event.category %}<span>{{ event.category }}</span>{% endif %}</div>
+        <h3>
+<a href="{% url 'event_detail' event.id %}">{{ event.title }}</a>
+</h3>
+        <p class="ev-organizer">{{ event.organizer.name }} {% if event.organizer.verified %}<i class="bi bi-patch-check-fill" aria-label="Verified organization">
+</i>{% endif %}</p>
+        <p class="ev-muted ev-card-description">{{ event.description|truncatewords:20 }}</p>
+        <div class="ev-meta">
+<span>
+<i class="bi bi-clock" aria-hidden="true">
+</i>{{ event.start_date|date:"M j, Y · g:i A" }}</span>
+<span>
+<i class="bi bi-geo-alt" aria-hidden="true">
+</i>{% if event.online %}Online event{% else %}{{ event.location }}{% endif %}</span>
+</div>
+        {% if match_score != None %}<div class="ev-match">
+<label>Profile match <strong>{{ match_score|floatformat:0 }}%</strong>
+</label>
+<progress max="100" value="{{ match_score }}">{{ match_score }}%</progress>
+</div>{% endif %}
+        {% if management %}
+        <span class="ev-status ev-status--{{ event.status|lower }}">{{ event.get_status_display }}</span>
+        <dl class="ev-mini-stats">
+<div>
+<dt>Participants</dt>
+<dd>{{ event.participants }}</dd>
+</div>
+<div>
+<dt>Attended</dt>
+<dd>{{ event.attended }}</dd>
+</div>
+<div>
+<dt>Rating</dt>
+<dd>{{ event.rating|floatformat:1|default:"—" }}</dd>
+</div>
+</dl>
+        <div class="ev-actions ev-card-footer">
+<a class="ev-button" href="{% url 'event_participants' event.id %}?organization_id={{ event.organizer.id }}">Participants</a>
+<a class="ev-button ev-button-secondary" href="{% url 'event_dashboard' event.id %}?organization_id={{ event.organizer.id }}">Dashboard</a>
+<a class="ev-text-link" href="{% url 'event_gallery' event.id %}?organization_id={{ event.organizer.id }}">Gallery</a>
+</div>
+        {% else %}<a class="ev-button ev-button-secondary ev-card-link" href="{% url 'event_detail' event.id %}">Explore event <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</a>{% endif %}
+    </div>
+</article>

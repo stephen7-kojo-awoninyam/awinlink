@@ -19,6 +19,7 @@ from .api_views import (
     EventCertificateVerifyAPIView,
     EventMediaListAPIView,
     EventMediaCreateAPIView,
+    MyOrganizationEventsAPIView,
 )
 
 
@@ -52,6 +53,11 @@ urlpatterns = [
         "create/",
         EventCreateAPIView.as_view(),
         name="event_create",
+    ),
+    path(
+        "my/",
+        MyOrganizationEventsAPIView.as_view(),
+        name="my_organization_events",
     ),
 
     path(

@@ -1,4 +1,5 @@
 from rest_framework.permissions import BasePermission
+from organizations.permissions import has_active_organization
 
 
 class IsAthlete(BasePermission):
@@ -24,6 +25,7 @@ class IsOrganization(BasePermission):
             request.user
             and request.user.is_authenticated
             and request.user.role == "ORGANIZATION"
+            and has_active_organization(request.user)
         )
 
 
@@ -78,6 +80,7 @@ class IsTalentRecruiter(BasePermission):
         return (
             request.user
             and request.user.is_authenticated
+            and (request.user.role != "ORGANIZATION" or has_active_organization(request.user))
             and request.user.role in [
                 "ORGANIZATION",
                 "SCOUT",

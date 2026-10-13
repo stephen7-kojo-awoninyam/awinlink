@@ -1,169 +1,81 @@
-{% extends "base.html" %}
-
-
-{% block content %}
-
-
-<div class="container mt-5">
-
-
-<h2 class="mb-4">
-
-🔥 Discover Events
-
-</h2>
-
-
-
-<div class="row">
-
-
-
-{% for event in events %}
-
-
-
-<div class="col-md-4 mb-4">
-
-
-<div class="card shadow-sm h-100">
-
-
-
-{% if event.image %}
-
-
-<img src="{{ event.image.url }}"
-
-class="card-img-top"
-
-style="height:200px; object-fit:cover;">
-
-
-{% endif %}
-
-
-
-
-
-<div class="card-body">
-
-
-
-<h5 class="card-title">
-
-{{ event.title }}
-
-</h5>
-
-
-
-
-<span class="badge bg-primary">
-
-{{ event.get_event_type_display }}
-
-</span>
-
-
-
-<p class="mt-3">
-
-
-🏢
-
-<strong>
-
-{{ event.organizer.name }}
-
-</strong>
-
-
-</p>
-
-
-
-<p>
-
-
-📍
-
-{{ event.location }}
-
-
-</p>
-
-
-
-<p>
-
-
-📅
-
-{{ event.start_date }}
-
-
-</p>
-
-
-
-
-<p class="text-muted">
-
-
-{{ event.description|truncatewords:20 }}
-
-
-</p>
-
-
-
-
-<a href="{% url 'event_detail' event.id %}"
-
-class="btn btn-success">
-
-View Event
-
-</a>
-
-
-
+{% extends "events/ui_base.html" %}
+{% load events_ui %}
+{% block title %}Discover events | Awinlink{% endblock %}
+{% block event_content %}
+{% event_workspace as workspace %}
+{% event_access user workspace "manage_events" as can_manage %}
+<section class="ev-hero">
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Connect. Learn. Show up.</span>
+<h1>Discover your next experience</h1>
+<p>Workshops, trials, and gatherings that bring your talent closer to opportunity.</p>
 </div>
-
-
+<div class="ev-actions">{% if user.talent_profile %}<a class="ev-button ev-button-secondary" href="{% url 'my_events' %}">My events</a>{% endif %}{% if can_manage and user.role == "ORGANIZATION" %}<a class="ev-button" href="{% url 'create_event' %}?organization_id={{ workspace.id }}">
+<i class="bi bi-plus-lg" aria-hidden="true">
+</i> Create event</a>{% endif %}</div>
+</header>
+</section>
+<form class="ev-card ev-filters" method="GET" data-event-filters hidden aria-label="Filter events">
+<div class="ev-filter-grid">
+<div class="ev-search">
+<label for="event-search">Search events</label>
+<input type="search" id="event-search" name="search" placeholder="Event, organizer, location, or keyword">
 </div>
-
-
+<div>
+<label for="event-type">Event type</label>
+<select id="event-type" name="event_type">
+<option value="">All types</option>
+</select>
 </div>
-
-
-
-
-{% empty %}
-
-
-
-<div class="alert alert-info">
-
-
-No events available currently.
-
-
+<div>
+<label for="event-category">Category</label>
+<select id="event-category" name="category">
+<option value="">All categories</option>
+</select>
 </div>
-
-
-
-{% endfor %}
-
-
-
-
+<div>
+<label for="event-format">Format</label>
+<select id="event-format" name="format">
+<option value="">Any format</option>
+<option value="in-person">In person</option>
+<option value="online">Online</option>
+</select>
 </div>
-
-
-
+<div>
+<label for="event-when">When</label>
+<select id="event-when" name="when">
+<option value="">All dates</option>
+<option value="upcoming">Upcoming events</option>
+</select>
 </div>
-
-
+</div>
+<div class="ev-actions ev-filter-actions">
+<button class="ev-button" type="submit">
+<i class="bi bi-search" aria-hidden="true">
+</i> Find events</button>
+<button class="ev-button ev-button-secondary" type="reset">Reset filters</button>{% if user.talent_profile %}<a class="ev-text-link" href="{% url 'recommended_events' %}">Recommended for you <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</a>{% endif %}</div>
+</form>
+<noscript>
+<p class="ev-notice mt-4">Browse all events below. Enable JavaScript to use discovery filters.</p>
+</noscript>
+<div class="ev-results">
+<h2>Explore events</h2>
+<span data-event-count role="status" aria-live="polite">{{ events|length }} event{{ events|length|pluralize }}</span>
+</div>
+<div class="ev-grid">{% for event in events %}{% include "events/event_card.html" %}{% empty %}<section class="ev-card ev-empty">
+<i class="bi bi-calendar4" aria-hidden="true">
+</i>
+<h2>More experiences are on the way</h2>
+<p>No events are available currently. Check back soon for your next opportunity.</p>
+</section>{% endfor %}
+<section class="ev-card ev-empty" data-filter-empty hidden>
+<i class="bi bi-search" aria-hidden="true">
+</i>
+<h2>No matching events</h2>
+<p>Try another keyword or adjust your filters.</p>
+</section>
+</div>
 {% endblock %}

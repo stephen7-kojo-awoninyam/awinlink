@@ -1,3 +1,6 @@
+from organizations.permissions import (
+    OrganizationCapability, has_organization_capability, require_active_organization,
+)
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -34,7 +37,8 @@ from .services import is_platform_admin, transition_competition
 
 def competition_list(request):
     competitions = Competition.objects.filter(
-        status__in=Competition.PUBLIC_STATUSES
+        status__in=Competition.PUBLIC_STATUSES,
+        organization__status="ACTIVE",
     ).select_related("organization", "organization__category")
     query = request.GET.get("q", "").strip()
     category = request.GET.get("category", "").strip()
@@ -103,7 +107,7 @@ def competition_detail(request, competition_id):
 
 @login_required
 def competition_create(request):
-    organization = get_owned_organization(request.user)
+    organization = get_owned_organization(request)
     if organization is None:
         messages.error(request, "Only organizations can create competitions.")
         return redirect("competition_list")
@@ -123,7 +127,7 @@ def competition_create(request):
 
 @login_required
 def competition_edit(request, competition_id):
-    competition = get_managed_competition(request.user, competition_id)
+    competition = get_managed_competition(request, competition_id)
     if competition is None:
         return render(request, "analytics/access_denied.html", status=403)
     if competition.status not in {"DRAFT", "REJECTED"}:
@@ -146,7 +150,9 @@ def competition_edit(request, competition_id):
 
 @login_required
 def competition_dashboard(request):
-    organization = get_owned_organization(request.user)
+    organization = get_owned_organization(
+        request, OrganizationCapability.VIEW_COMPETITIONS,
+    )
     if organization is not None:
         competitions = Competition.objects.filter(organization=organization)
     elif is_platform_admin(request.user):
@@ -185,6 +191,7 @@ def my_competitions(request):
 @login_required
 def competition_register(request, competition_id):
     competition = get_object_or_404(Competition, pk=competition_id)
+    require_active_organization(competition.organization)
     if request.user.role != "ATHLETE":
         messages.error(request, "Only talents can register for competitions.")
         return redirect("competition_detail", competition_id=competition.pk)
@@ -250,7 +257,7 @@ def competition_submission(request, competition_id):
 @login_required
 @require_POST
 def competition_action(request, competition_id):
-    competition = get_managed_competition(request.user, competition_id)
+    competition = get_managed_competition(request, competition_id)
     if competition is None:
         return render(request, "analytics/access_denied.html", status=403)
     action_statuses = {
@@ -270,9 +277,8 @@ def competition_action(request, competition_id):
     if target_status is None:
         messages.error(request, "Unknown competition action.")
         return redirect("competition_dashboard")
-    owner = (
-        request.user.is_authenticated
-        and competition.organization.user_id == request.user.pk
+    owner = has_organization_capability(
+        request.user, competition.organization, OrganizationCapability.MANAGE_COMPETITIONS,
     )
     if target_status in {"APPROVED", "REJECTED"}:
         if not is_platform_admin(request.user):
@@ -323,15 +329,16 @@ def competition_participants(request, competition_id):
         Competition.objects.select_related("organization"),
         pk=competition_id,
     )
+    if not is_platform_admin(request.user):
+        require_active_organization(competition.organization)
     if not can_view_competition(request.user, competition):
         return render(request, "analytics/access_denied.html", status=403)
     is_scout = request.user.role == "SCOUT"
     if is_scout and competition.status not in Competition.PUBLIC_STATUSES:
         return render(request, "analytics/access_denied.html", status=403)
     is_admin = is_platform_admin(request.user)
-    is_owner = (
-        request.user.is_authenticated
-        and competition.organization.user_id == request.user.pk
+    is_owner = has_organization_capability(
+        request.user, competition.organization, OrganizationCapability.MANAGE_COMPETITIONS,
     )
     judge_assignment = competition.judges.filter(
         coach=request.user,
@@ -365,8 +372,10 @@ def competition_participants(request, competition_id):
 
 @login_required
 def competition_assign_judge(request, competition_id):
-    competition = get_managed_competition(request.user, competition_id)
-    if competition is None or competition.organization.user_id != request.user.pk:
+    competition = get_managed_competition(request, competition_id)
+    if competition is None or not has_organization_capability(
+        request.user, competition.organization, OrganizationCapability.MANAGE_COMPETITIONS,
+    ):
         return render(request, "analytics/access_denied.html", status=403)
     form = JudgeAssignmentForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -414,6 +423,8 @@ def competition_evaluate(request, competition_id, participant_id):
     if request.user.role != "COACH":
         return render(request, "analytics/access_denied.html", status=403)
     competition = get_object_or_404(Competition, pk=competition_id)
+    if not is_platform_admin(request.user):
+        require_active_organization(competition.organization)
     assignment = competition.judges.filter(coach=request.user).first()
     if assignment is None:
         return render(request, "analytics/access_denied.html", status=403)
@@ -476,9 +487,10 @@ def competition_results(request, competition_id):
     )
     if not can_view_competition(request.user, competition):
         return render(request, "analytics/access_denied.html", status=403)
-    can_manage = (
-        request.user.is_authenticated
-        and competition.organization.user_id == request.user.pk
+    can_manage = has_organization_capability(
+        request.user,
+        competition.organization,
+        OrganizationCapability.MANAGE_COMPETITIONS,
     )
     if (
         competition.status not in {"RESULTS", "COMPLETED"}
@@ -511,8 +523,10 @@ def competition_results(request, competition_id):
 @login_required
 @require_POST
 def competition_save_result(request, competition_id, participant_id):
-    competition = get_managed_competition(request.user, competition_id)
-    if competition is None or competition.organization.user_id != request.user.pk:
+    competition = get_managed_competition(request, competition_id)
+    if competition is None or not has_organization_capability(
+        request.user, competition.organization, OrganizationCapability.MANAGE_COMPETITIONS,
+    ):
         return render(request, "analytics/access_denied.html", status=403)
     if competition.status not in {"JUDGING", "RESULTS"}:
         messages.error(

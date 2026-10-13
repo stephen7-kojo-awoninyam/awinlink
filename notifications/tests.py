@@ -1,6 +1,6 @@
 import json
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -11,6 +11,7 @@ from rest_framework.test import APIClient
 from messaging.api_views import CALL_RING_TIMEOUT, expire_ringing_call
 from messaging.models import Call, CallParticipant, Conversation, ConversationParticipant
 from .models import Notification, PushSubscription
+from .models import MobilePushToken
 
 
 class NotificationViewTests(TestCase):
@@ -153,6 +154,150 @@ class NotificationAPITests(TestCase):
 
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual([item["id"] for item in response.data], [own.id])
+
+
+class MobilePushTokenApiTests(TestCase):
+	def setUp(self):
+		self.user = get_user_model().objects.create_user(username="mobile_push_owner")
+		self.other_user = get_user_model().objects.create_user(username="mobile_push_other")
+		self.client = APIClient()
+		self.client.force_authenticate(self.user)
+		self.token = "ExponentPushToken[mobile-device-token]"
+
+	def test_register_and_remove_native_push_token(self):
+		response = self.client.post(
+			"/api/notifications/mobile-push/",
+			{"token": self.token, "platform": "ios"},
+			format="json",
+		)
+		self.assertEqual(response.status_code, 201)
+		self.assertTrue(MobilePushToken.objects.filter(
+			user=self.user, token=self.token, platform="ios"
+		).exists())
+
+		deleted = self.client.delete(
+			"/api/notifications/mobile-push/",
+			{"token": self.token},
+			format="json",
+		)
+		self.assertEqual(deleted.status_code, 204)
+		self.assertFalse(MobilePushToken.objects.filter(token=self.token).exists())
+
+	def test_invalid_token_platform_and_unauthorized_requests_are_rejected(self):
+		bad_token = self.client.post(
+			"/api/notifications/mobile-push/",
+			{"token": "not-an-expo-token", "platform": "ios"},
+			format="json",
+		)
+		bad_platform = self.client.post(
+			"/api/notifications/mobile-push/",
+			{"token": self.token, "platform": "web"},
+			format="json",
+		)
+		self.assertEqual(bad_token.status_code, 400)
+		self.assertEqual(bad_platform.status_code, 400)
+
+		self.client.force_authenticate(None)
+		unauthorized = self.client.post(
+			"/api/notifications/mobile-push/",
+			{"token": self.token, "platform": "android"},
+			format="json",
+		)
+		self.assertEqual(unauthorized.status_code, 401)
+
+	def test_registered_token_is_rebound_to_the_authenticated_account(self):
+		self.client.post(
+			"/api/notifications/mobile-push/",
+			{"token": self.token, "platform": "ios"},
+			format="json",
+		)
+		self.client.force_authenticate(self.other_user)
+		response = self.client.post(
+			"/api/notifications/mobile-push/",
+			{"token": self.token, "platform": "android"},
+			format="json",
+		)
+		self.assertEqual(response.status_code, 201)
+		token = MobilePushToken.objects.get(token=self.token)
+		self.assertEqual(token.user, self.other_user)
+		self.assertEqual(token.platform, "android")
+
+
+class ExpoCallPushDeliveryTests(TestCase):
+	def setUp(self):
+		user_model = get_user_model()
+		self.caller = user_model.objects.create_user(
+			username="native_push_caller", first_name="Caller"
+		)
+		self.recipient = user_model.objects.create_user(username="native_push_recipient")
+		conversation = Conversation.objects.create(created_by=self.caller)
+		self.call = Call.objects.create(
+			conversation=conversation,
+			initiated_by=self.caller,
+			call_type="VIDEO",
+			status="RINGING",
+		)
+		CallParticipant.objects.create(
+			call=self.call, user=self.caller, status="JOINED"
+		)
+		CallParticipant.objects.create(
+			call=self.call, user=self.recipient, status="RINGING"
+		)
+		MobilePushToken.objects.create(
+			user=self.recipient,
+			token="ExponentPushToken[call-push-device]",
+			platform="ios",
+		)
+		self.notification = Notification.objects.create(
+			user=self.recipient,
+			sender=self.caller,
+			conversation=conversation,
+			notification_type="INCOMING_CALL",
+			message="Caller is calling you by video.",
+		)
+
+	@staticmethod
+	def fake_response(data):
+		response = Mock()
+		response.__enter__ = Mock(return_value=response)
+		response.__exit__ = Mock(return_value=False)
+		response.read.return_value = json.dumps({"data": data}).encode("utf-8")
+		return response
+
+	def test_push_contains_call_routing_data_and_short_expiry(self):
+		from .push import send_expo_call_push
+
+		with patch("notifications.push.urlopen", return_value=self.fake_response([{"status": "ok"}])) as send:
+			send_expo_call_push(self.notification)
+
+		request = send.call_args.args[0]
+		payload = json.loads(request.data)[0]
+		self.assertEqual(payload["data"]["type"], "incoming_call")
+		self.assertEqual(payload["data"]["call_id"], self.call.id)
+		self.assertEqual(payload["data"]["conversation_id"], self.call.conversation_id)
+		self.assertEqual(payload["data"]["call_type"], "VIDEO")
+		self.assertEqual(payload["ttl"], 30)
+		self.assertEqual(payload["channelId"], "incoming-calls")
+		self.assertEqual(payload["categoryId"], "incoming-call")
+
+	def test_stale_call_notification_is_not_pushed_and_invalid_device_token_is_removed(self):
+		from .push import send_expo_call_push
+
+		self.call.status = "ENDED"
+		self.call.save(update_fields=["status"])
+		with patch("notifications.push.urlopen") as send:
+			send_expo_call_push(self.notification)
+		send.assert_not_called()
+
+		self.call.status = "RINGING"
+		self.call.save(update_fields=["status"])
+		response = self.fake_response([{
+			"status": "error",
+			"details": {"error": "DeviceNotRegistered"},
+		}])
+		with patch("notifications.push.urlopen", return_value=response):
+			send_expo_call_push(self.notification)
+		self.assertFalse(MobilePushToken.objects.exists())
 
 
 class MissedCallNotificationTests(TestCase):

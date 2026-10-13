@@ -1,13 +1,15 @@
-from django.urls import path
+from django.urls import include, path
 
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
+from notifications.api_views import MobilePushTokenAPIView
 
 from .views import (
     CourseRecommendationAPIView,
     EventRecommendationAPIView,
     LoginAPIView,
+    RegisterAPIView,
     MeAPIView,
     RoleModelRecommendationAPIView,
     TalentListAPIView,
@@ -21,7 +23,9 @@ from .views import (
     OpportunityDetailAPIView,
     OpportunityCreateAPIView,
     ApplicationListAPIView,
+    MyApplicationsAPIView,
     ApplicationDetailAPIView,
+    ApplicationStatusUpdateAPIView,
     ApplicationCreateAPIView,
     ShortlistListAPIView,
     ShortlistDetailAPIView,
@@ -114,6 +118,12 @@ urlpatterns = [
     ),
 
     path(
+        "auth/register/",
+        RegisterAPIView.as_view(),
+        name="api_register"
+    ),
+
+    path(
         "auth/refresh/",
         TokenRefreshView.as_view(),
         name="api_token_refresh"
@@ -176,6 +186,12 @@ urlpatterns = [
     ),
     
     # =====================================================
+    # ORGANIZATION TEAM
+    # =====================================================
+
+    path("organizations/", include("organizations.api_urls")),
+
+    # =====================================================
     # OPPORTUNITIES
     # =====================================================
 
@@ -207,6 +223,12 @@ urlpatterns = [
     ),
 
     path(
+        "applications/me/",
+        MyApplicationsAPIView.as_view(),
+        name="my_applications"
+    ),
+
+    path(
         "applications/create/",
         ApplicationCreateAPIView.as_view(),
         name="application_create"
@@ -216,6 +238,11 @@ urlpatterns = [
         "applications/<int:application_id>/",
         ApplicationDetailAPIView.as_view(),
         name="application_detail"
+    ),
+    path(
+        "applications/<int:application_id>/status/",
+        ApplicationStatusUpdateAPIView.as_view(),
+        name="application_status_update"
     ),
     # =====================================================
     # SHORTLISTS
@@ -459,6 +486,12 @@ urlpatterns = [
         "notifications/",
         NotificationListAPIView.as_view(),
         name="notification_list"
+    ),
+
+    path(
+        "notifications/mobile-push/",
+        MobilePushTokenAPIView.as_view(),
+        name="mobile_push_token",
     ),
 
     path(

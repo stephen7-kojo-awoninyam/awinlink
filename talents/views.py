@@ -1,4 +1,7 @@
+from django.views.decorators.http import require_POST
+from talents.visibility import visible_talent_profiles_for
 from django.db import models
+from organizations.permissions import has_active_organization
 from django.shortcuts import render,redirect,get_object_or_404
 from analytics.models import TalentProfileView
 from .models import TalentProfile
@@ -333,7 +336,7 @@ def request_verification(request):
 def talent_profile(request, talent_id):
 
     talent = get_object_or_404(
-        TalentProfile,
+        visible_talent_profiles_for(request.user),
         id=talent_id
     )
 
@@ -407,7 +410,7 @@ def talent_profile(request, talent_id):
     # RECORD TALENT PROFILE VIEW
     # =====================================================
 
-    if request.user.role == "ORGANIZATION":
+    if request.user.role == "ORGANIZATION" and has_active_organization(request.user):
 
         try:
 
@@ -464,7 +467,7 @@ def talent_profile(request, talent_id):
 def talent_search(request):
 
 
-    talents = TalentProfile.objects.all()
+    talents = visible_talent_profiles_for(request.user)
 
 
 
@@ -815,6 +818,7 @@ def add_experience(request):
     
     
 @login_required
+@require_POST
 def delete_experience(request, experience_id):
 
 
@@ -995,6 +999,7 @@ def add_certification(request):
     
     
 @login_required
+@require_POST
 def delete_certification(request, certification_id):
 
 
@@ -1169,6 +1174,7 @@ def add_achievement(request):
     )   
     
 @login_required
+@require_POST
 def delete_achievement(request, achievement_id):
 
 
@@ -1538,6 +1544,7 @@ def role_models(request):
 
     )
 @login_required
+@require_POST
 def follow_talent(request, talent_id):
 
 
@@ -1565,6 +1572,7 @@ def follow_talent(request, talent_id):
     
     
 @login_required
+@require_POST
 def unfollow_talent(request, talent_id):
 
 

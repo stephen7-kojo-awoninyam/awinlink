@@ -1,3 +1,7 @@
+from organizations.permissions import (
+    OrganizationCapability, require_request_organization, has_organization_capability,
+)
+from organizations.permissions import require_active_organization
 from django.shortcuts import render, redirect, get_object_or_404
 
 from django.contrib.auth.decorators import login_required
@@ -32,10 +36,7 @@ from django.db.models import Q
 def create_opportunity(request):
 
 
-    organization = get_object_or_404(
-        Organization,
-        user=request.user
-    )
+    organization = require_request_organization(request, OrganizationCapability.MANAGE_OPPORTUNITIES)
 
 
     if request.method == "POST":
@@ -96,16 +97,21 @@ def create_opportunity(request):
 # LIST / SEARCH OPPORTUNITIES
 # =====================================
 
+
 def opportunity_list(request):
 
     opportunities = Opportunity.objects.filter(
+        organization__status="ACTIVE",
         active=True
     ).select_related(
         "organization",
         "domain"
     ).prefetch_related(
         "skills"
+    ).order_by(
+        "-created_at"
     )
+
 
     # =====================================
     # SEARCH
@@ -322,6 +328,7 @@ def apply_opportunity(request, opportunity_id):
         Opportunity,
         id=opportunity_id
     )
+    require_active_organization(opportunity.organization)
 
     # Check opportunity availability
     if not opportunity.active:
@@ -401,12 +408,9 @@ def apply_opportunity(request, opportunity_id):
 def opportunity_recommendations(request, opportunity_id):
 
 
-    organization = get_object_or_404(
-
-        Organization,
-
-        user=request.user
-
+    organization = require_request_organization(
+        request, OrganizationCapability.VIEW_RECRUITMENT,
+        organization=get_object_or_404(Opportunity, pk=opportunity_id).organization,
     )
 
 
@@ -472,6 +476,7 @@ def recommended_opportunities(request):
 
 
     opportunities = Opportunity.objects.filter(
+        organization__status="ACTIVE",
 
         active=True
 

@@ -1,0 +1,12 @@
+{% load learning_ui %}
+<div class="lc-actions lc-card-footer">
+    <a class="lc-button lc-button-secondary" href="{% url 'manage_course' course.id %}">Manage course</a>
+    {% if course.status == "DRAFT" or course.status == "REJECTED" %}<a class="lc-text-link" href="{% url 'edit_course' course.id %}">Edit details</a>{% if course.lessons.exists %}<form method="POST" data-learning-return="{% learning_url 'my_courses' %}" data-learning-legacy-return="{% url 'my_courses' %}" action="{% url 'submit_course' course.id %}" onsubmit="return confirm('Submit this course for admin approval?');">{% csrf_token %}<button class="lc-button" type="submit">{% if course.status == "REJECTED" %}Resubmit for approval{% else %}Submit for approval{% endif %}</button>
+</form>{% else %}<p class="lc-help">Add at least one lesson before submitting.</p>{% endif %}
+    {% elif course.status == "PENDING" %}<p class="lc-help">Waiting for administrator approval.</p>
+    {% elif course.status == "APPROVED" %}<a class="lc-text-link" href="{% url 'course_detail' course.slug %}">View published course</a>{% endif %}
+</div>
+{% if course.status == "REJECTED" and course.rejection_reason %}<div class="lc-notice mt-3">
+<strong>Changes requested</strong>
+<div>{{ course.rejection_reason|linebreaks }}</div>
+</div>{% endif %}

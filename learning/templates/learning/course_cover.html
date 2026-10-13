@@ -1,0 +1,10 @@
+<div class="lc-cover lc-cover--{{ course.level|lower }}">
+    {% if course.thumbnail %}<img src="{{ course.thumbnail.url }}" alt="" loading="lazy">{% else %}<div class="lc-cover-art" aria-hidden="true">
+<span class="lc-cover-kicker">Awinlink learning</span>
+<i class="bi bi-play-circle">
+</i>
+<strong>{{ course.category.name }}</strong>
+<span>Learn something. Become more.</span>
+</div>{% endif %}
+    <span class="lc-cover-pill">{{ course.get_level_display }}</span>
+</div>

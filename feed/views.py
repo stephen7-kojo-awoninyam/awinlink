@@ -1,3 +1,5 @@
+from django.views.decorators.http import require_POST
+from organizations.permissions import require_active_organization
 from django.shortcuts import render
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -59,7 +61,7 @@ def create_post(request):
                 "organization_profile"
             ):
 
-                post.organization = request.user.organization_profile
+                post.organization = require_active_organization(request.user.organization_profile)
 
 
             post.save()
@@ -98,6 +100,7 @@ def create_post(request):
 
 
 @login_required
+@require_POST
 def like_post(request, post_id):
 
     post = get_object_or_404(
@@ -228,6 +231,7 @@ def add_comment(request, post_id):
 # ==========================================
 
 @login_required
+@require_POST
 def save_post(request, post_id):
 
     post = get_object_or_404(

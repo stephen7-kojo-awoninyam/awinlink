@@ -251,3 +251,98 @@ class OtherTalentProfileApiTests(APITestCase):
 		self.assertFalse(
 			OtherTalentProfile.objects.filter(talent=self.talent).exists()
 		)
+
+
+class ApplicationStatusUpdatePermissionTests(APITestCase):
+	def setUp(self):
+		self.applicant = User.objects.create_user(
+			username="status_applicant",
+			password="TestPass123!",
+			role="ATHLETE",
+		)
+		self.organization_user = User.objects.create_user(
+			username="status_owner",
+			password="TestPass123!",
+			role="ORGANIZATION",
+		)
+		self.other_organization_user = User.objects.create_user(
+			username="status_other_owner",
+			password="TestPass123!",
+			role="ORGANIZATION",
+		)
+		self.talent = TalentProfile.objects.create(user=self.applicant)
+		self.organization = Organization.objects.create(
+			user=self.organization_user,
+			name="Status Hiring Organization",
+			country="Nigeria",
+		)
+		self.other_organization = Organization.objects.create(
+			user=self.other_organization_user,
+			name="Other Hiring Organization",
+			country="Ghana",
+		)
+		domain = TalentDomain.objects.create(name="Status Test Domain")
+		opportunity = Opportunity.objects.create(
+			organization=self.organization,
+			domain=domain,
+			title="Status Test Opportunity",
+			description="Role for status API tests",
+		)
+		self.application = Application.objects.create(
+			talent=self.talent,
+			opportunity=opportunity,
+		)
+		self.url = f"/api/applications/{self.application.id}/status/"
+
+	def test_opportunity_owner_can_review_and_accept_application(self):
+		self.client.force_authenticate(user=self.organization_user)
+		review_response = self.client.patch(
+			self.url, {"status": "REVIEWING"}, format="json"
+		)
+		self.assertEqual(review_response.status_code, 200)
+		self.assertEqual(review_response.data["status"], "REVIEWING")
+
+		accept_response = self.client.patch(
+			self.url, {"status": "ACCEPTED"}, format="json"
+		)
+		self.assertEqual(accept_response.status_code, 200)
+		self.application.refresh_from_db()
+		self.assertEqual(self.application.status, "ACCEPTED")
+
+	def test_non_organization_cannot_update_application_status(self):
+		self.client.force_authenticate(user=self.applicant)
+		response = self.client.patch(
+			self.url, {"status": "ACCEPTED"}, format="json"
+		)
+		self.assertEqual(response.status_code, 403)
+		self.application.refresh_from_db()
+		self.assertEqual(self.application.status, "PENDING")
+
+	def test_other_organization_cannot_update_application_status(self):
+		self.client.force_authenticate(user=self.other_organization_user)
+		response = self.client.patch(
+			self.url, {"status": "REJECTED"}, format="json"
+		)
+		self.assertEqual(response.status_code, 404)
+		self.application.refresh_from_db()
+		self.assertEqual(self.application.status, "PENDING")
+
+	def test_invalid_status_values_are_rejected(self):
+		self.client.force_authenticate(user=self.organization_user)
+		for invalid_status in ("UNKNOWN", "PENDING", ["ACCEPTED"]):
+			with self.subTest(status=invalid_status):
+				response = self.client.patch(
+					self.url, {"status": invalid_status}, format="json"
+				)
+				self.assertEqual(response.status_code, 400)
+		self.application.refresh_from_db()
+		self.assertEqual(self.application.status, "PENDING")
+
+	def test_terminal_application_status_cannot_be_changed(self):
+		self.application.status = "REJECTED"
+		self.application.save(update_fields=["status"])
+		self.client.force_authenticate(user=self.organization_user)
+		response = self.client.patch(
+			self.url, {"status": "ACCEPTED"}, format="json"
+		)
+		self.assertEqual(response.status_code, 400)

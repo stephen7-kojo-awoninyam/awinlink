@@ -1,21 +1,28 @@
-{% extends "base.html" %}
-
+{% extends "competitions/ui_base.html" %}
 {% block title %}Submit work | {{ competition.title }}{% endblock %}
-
-{% block content %}
-<div class="container py-4">
-    <h1 class="h2">Submit your work</h1>
-    <p class="text-muted">{{ competition.title }}</p>
-    <form method="post" class="card card-body shadow-sm">
-        {% csrf_token %}
-        {% for field in form %}
-            <div class="mb-3">
-                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-            </div>
-        {% endfor %}
-        <button class="btn btn-primary align-self-start" type="submit">Save submission</button>
-    </form>
+{% block competition_content %}
+<a class="cp-back" href="{% url 'competition_detail' competition.id %}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Back to competition</a>
+<header class="cp-heading">
+<div>
+<span class="cp-eyebrow">Let your work speak</span>
+<h1>Submit your work</h1>
+<p>{{ competition.title }}</p>
+</div>
+</header>
+<div class="cp-form-layout">
+<form method="post" class="cp-card">{% csrf_token %}{% if form.non_field_errors %}<div class="cp-notice cp-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}<div class="cp-form-grid">{% for field in form %}{% include "competitions/form_field.html" %}{% endfor %}</div>
+<div class="cp-actions cp-card-footer">
+<button class="cp-button" type="submit">Save submission</button>
+<a class="cp-button cp-button-secondary" href="{% url 'competition_detail' competition.id %}">Back to competition</a>
+</div>
+</form>
+<aside class="cp-card">
+<span class="cp-eyebrow">Ready for review</span>
+<h2 class="mt-2">Show your best work</h2>
+<p class="cp-prose">Describe your entry and include a link if your work lives elsewhere. Make sure the link is accessible to the coaches reviewing it.</p>
+<div class="cp-notice">You can update your submission while submissions are being accepted.</div>
+</aside>
 </div>
 {% endblock %}

@@ -204,3 +204,138 @@ def get_ecosystem_user_ids(user):
     )
 
     return matching_user_ids
+
+
+def _ecosystem_profiles(user_ids, viewer_id):
+    """Load public, active profiles in the existing ecosystem with their focus tags."""
+    profiles = []
+
+    talents = TalentProfile.objects.filter(
+        user_id__in=user_ids,
+        user__is_active=True,
+    ).filter(
+        Q(user_id=viewer_id) | Q(profile_visibility="PUBLIC")
+    ).select_related(
+        "user",
+        "sports_profile__sport",
+        "science_technology_profile",
+        "arts_profile",
+        "other_profile",
+    ).prefetch_related("domains", "skills")
+    for profile in talents:
+        focus_tags = _talent_details(profile) | {
+            _normalize(skill.name) for skill in profile.skills.all() if skill.name
+        }
+        profiles.append((profile.user, profile, focus_tags, "Talent"))
+
+    coaches = CoachProfile.objects.filter(
+        user_id__in=user_ids,
+        user__is_active=True,
+    ).select_related("user", "sport")
+    for profile in coaches:
+        profiles.append((profile.user, profile, _coach_details(profile), "Coach"))
+
+    scouts = ScoutProfile.objects.filter(
+        user_id__in=user_ids,
+        user__is_active=True,
+    ).select_related("user")
+    for profile in scouts:
+        profiles.append((profile.user, profile, _scout_details(profile), "Scout"))
+
+    organizations = Organization.objects.filter(
+        user_id__in=user_ids,
+        user__is_active=True,
+        status="ACTIVE",
+    ).select_related(
+        "user",
+        "category",
+        "domain",
+        "sports_profile__sport",
+    )
+    for profile in organizations:
+        profiles.append((
+            profile.user,
+            profile,
+            _organization_details(profile),
+            "Organization",
+        ))
+
+    return profiles
+
+
+def recommend_sub_ecosystems(user, limit=6, minimum_members=2):
+    """Build ranked, overlapping specialty groups inside the user's ecosystem.
+
+    A user can belong to several sub-ecosystems when their profile spans several
+    disciplines. Groups are computed from current profiles, so updates to an
+    existing ecosystem are reflected without a separate synchronization job.
+    """
+    if (
+        not user
+        or not getattr(user, "is_authenticated", False)
+        or limit <= 0
+        or minimum_members < 2
+    ):
+        return []
+
+    ecosystem_user_ids = get_ecosystem_user_ids(user)
+    if not ecosystem_user_ids:
+        return []
+
+    focus_groups = {}
+    for member, profile, details, member_type in _ecosystem_profiles(
+        ecosystem_user_ids,
+        user.pk,
+    ):
+        for detail in details:
+            group = focus_groups.setdefault(detail, {})
+            group[member.pk] = {
+                "user": member,
+                "profile": profile,
+                "type": member_type,
+            }
+
+    _, viewer_details = get_ecosystem_details(user)
+    recommendations = []
+    for focus, members_by_id in focus_groups.items():
+        if len(members_by_id) < minimum_members:
+            continue
+
+        member_types = sorted({
+            item["type"] for item in members_by_id.values()
+        })
+        viewer_is_member = user.pk in members_by_id
+        score = min(
+            100,
+            30
+            + min(len(members_by_id), 10) * 5
+            + min(len(member_types) - 1, 3) * 7
+            + (12 if focus in viewer_details else 0),
+        )
+        recommendations.append({
+            "name": focus.title(),
+            "focus": focus,
+            "member_count": len(members_by_id),
+            "member_types": member_types,
+            "score": score,
+            "viewer_is_member": viewer_is_member,
+            "reason": (
+                f"{len(members_by_id)} active members share this focus"
+                + (
+                    " across " + ", ".join(member_types)
+                    if len(member_types) > 1
+                    else ""
+                )
+                + "."
+            ),
+        })
+
+    recommendations.sort(
+        key=lambda item: (
+            item["score"],
+            item["member_count"],
+            item["focus"],
+        ),
+        reverse=True,
+    )
+    return recommendations[:limit]

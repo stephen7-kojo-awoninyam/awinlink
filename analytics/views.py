@@ -1,3 +1,5 @@
+from organizations.permissions import OrganizationCapability, require_request_organization
+from organizations.permissions import require_active_organization
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg
@@ -312,45 +314,7 @@ def talent_analytics(request):
 @login_required
 def organization_analytics(request):
 
-    # =====================================================
-    # ACCESS CONTROL
-    # =====================================================
-
-    if request.user.role != "ORGANIZATION":
-
-        return render(
-            request,
-            "analytics/access_denied.html"
-        )
-
-    # =====================================================
-    # GET ORGANIZATION
-    # =====================================================
-
-    organization = getattr(
-        request.user,
-        "organization_profile",
-        None
-    )
-
-    # =====================================================
-    # ORGANIZATION DOES NOT EXIST
-    # =====================================================
-
-    if not organization:
-
-        return render(
-            request,
-            "analytics/organization_analytics.html",
-            {
-                "organization": None,
-                "analytics": {},
-            }
-        )
-
-    # =====================================================
-    # DATE RANGE
-    # =====================================================
+    organization = require_request_organization(request, OrganizationCapability.VIEW_ANALYTICS)
 
     thirty_days_ago = (
         timezone.now()

@@ -1,46 +1,17 @@
-{% extends "base.html" %}
-
-
-{% block content %}
-
-
-<div class="container mt-5">
-
-
-<div class="card shadow p-4">
-
-
-<h3>
-
-Feedback for {{event.title}}
-
-</h3>
-
-
-
-<form method="POST">
-
-{% csrf_token %}
-
-
-{{form.as_p}}
-
-
-
-<button class="btn btn-success">
-
-Submit Feedback
-
-</button>
-
-
+{% extends "events/ui_base.html" %}
+{% block title %}Event feedback | Awinlink{% endblock %}
+{% block event_content %}
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Your voice matters</span>
+<h1>How was your experience?</h1>
+<p>{{ event.title }}</p>
+</div>
+</header>
+<form class="ev-card" method="POST">{% csrf_token %}{% if form.non_field_errors %}<div class="ev-notice ev-field-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}<div class="ev-form-grid">{% for field in form %}{% include "events/form_field.html" %}{% endfor %}</div>
+<div class="ev-actions ev-card-footer">
+<button class="ev-button" type="submit">Submit feedback</button>
+<a class="ev-button ev-button-secondary" href="{% url 'event_detail' event.id %}">Back to event</a>
+</div>
 </form>
-
-
-</div>
-
-
-</div>
-
-
 {% endblock %}

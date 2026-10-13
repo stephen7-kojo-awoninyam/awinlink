@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Edit portfolio item · Awinlink{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/talent-profile.css' %}">{% endblock %}
+{% block content %}{% url 'portfolio_list' as cancel_url %}{% include 'portfolio/form_panel.html' with heading='Edit portfolio item' %}{% endblock %}

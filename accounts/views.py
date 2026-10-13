@@ -7,7 +7,7 @@ from django.contrib.auth import login, logout
 from organizations.models import Organization
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
-
+from django.views.decorators.http import require_POST
 from .models import User
 
 
@@ -24,18 +24,13 @@ def register(request):
     if request.method == "POST":
 
         form = UserRegistrationForm(request.POST)
-        print("FORM DATA:")
-        print(request.POST)
 
 
         if form.is_valid():
             
-            print("FORM IS VALID")
 
 
             user = form.save()
-            print("USER CREATED:", user.username)
-            print("ROLE:", user.role)
 
             # Automatically create an organization profile
             if user.role == "ORGANIZATION":
@@ -84,12 +79,6 @@ def register(request):
 
 
         
-        else:
-
-            print("FORM ERRORS:")
-            print(form.errors)
-        
-
     else:
 
         form = UserRegistrationForm()
@@ -132,10 +121,9 @@ def user_login(request):
     return render(request, "accounts/login.html", {"form": form})
 
 
+@require_POST
 def user_logout(request):
-
     logout(request)
-
     return redirect("home")
 
 

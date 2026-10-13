@@ -1,402 +1,63 @@
-{% extends "base.html" %}
-
-
-{% block content %}
-
-
-<div class="container mt-5">
-
-
-<div class="d-flex justify-content-between mb-4">
-
-
-<h2>
-My Created Events
-</h2>
-
-<div class="row mb-4">
-
-
-<div class="col-md-3">
-
-<div class="card shadow p-3">
-
-<h5>
-Total Events
-</h5>
-
-<h2>
-{{total_events}}
-</h2>
-
+{% extends "events/ui_base.html" %}
+{% load static events_ui %}
+{% block title %}Organizer workspace | Awinlink{% endblock %}
+{% block event_content %}
+{% event_workspace as workspace %}
+{% event_access user workspace "manage_events" as can_manage %}
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Organizer workspace</span>
+<h1>Your events, beautifully managed</h1>
+<p>Bring people together. Keep every experience running smoothly.</p>
 </div>
-
+<div class="ev-actions">{% if can_manage and user.role == "ORGANIZATION" %}<a class="ev-button" href="{% url 'create_event' %}?organization_id={{ workspace.id }}">
+<i class="bi bi-plus-lg" aria-hidden="true">
+</i> Create event</a>{% endif %}<a class="ev-button ev-button-secondary" href="{% url 'event_analytics' %}{% if workspace %}?organization_id={{ workspace.id }}{% endif %}">Analytics</a>
 </div>
-
-
-
-<div class="col-md-3">
-
-<div class="card shadow p-3">
-
-<h5>
-Participants
-</h5>
-
-<h2>
-{{total_participants}}
-</h2>
-
+</header>
+<div class="ev-stats">
+<div class="ev-card ev-stat">
+<i class="bi bi-calendar-event" aria-hidden="true">
+</i>
+<strong>{{ total_events }}</strong>
+<span>Total events</span>
 </div>
-
+<div class="ev-card ev-stat">
+<i class="bi bi-people" aria-hidden="true">
+</i>
+<strong>{{ total_participants }}</strong>
+<span>Participants</span>
 </div>
-
-
-
-
-<div class="col-md-3">
-
-<div class="card shadow p-3">
-
-<h5>
-Attendance
-</h5>
-
-<h2>
-{{total_attendance}}
-</h2>
-
+<div class="ev-card ev-stat">
+<i class="bi bi-check2-circle" aria-hidden="true">
+</i>
+<strong>{{ total_attendance }}</strong>
+<span>Attended</span>
 </div>
-
+<div class="ev-card ev-stat">
+<i class="bi bi-award" aria-hidden="true">
+</i>
+<strong>{{ total_certificates }}</strong>
+<span>Certificates</span>
 </div>
-
-
-
-
-<div class="col-md-3">
-
-<div class="card shadow p-3">
-
-<h5>
-Certificates
-</h5>
-
-<h2>
-{{total_certificates}}
-</h2>
-
 </div>
-
+<div class="ev-results">
+<h2>Your created events</h2>
+<span>{{ total_approved }} approved participants</span>
 </div>
-
-
+<div class="ev-grid ev-management-grid">{% for event in events %}{% include "events/event_card.html" with management=True %}{% empty %}<section class="ev-card ev-empty">
+<i class="bi bi-calendar-plus" aria-hidden="true">
+</i>
+<h2>No events created yet</h2>
+<p>Your organization’s events will appear here.</p>{% if can_manage and user.role == "ORGANIZATION" %}<a class="ev-button" href="{% url 'create_event' %}?organization_id={{ workspace.id }}">Create your first event</a>{% endif %}</section>{% endfor %}</div>
+<section class="ev-card mt-4">
+<h2>Registration growth</h2>{% if registration_chart %}<div class="ev-chart">
+<canvas data-event-chart aria-label="Monthly event registrations" role="img">
+</canvas>
 </div>
-
-
-<a href="{% url 'create_event' %}"
-class="btn btn-success">
-
-+ Create Event
-
-</a>
-
-<a href="{% url 'event_analytics' %}"
-
-class="btn btn-dark">
-
-Analytics
-
-</a>
-</div>
-
-
-
-<div class="row">
-
-
-{% for event in events %}
-
-
-
-<div class="col-md-6 mb-4">
-
-
-<div class="card shadow-sm">
-
-
-
-{% if event.image %}
-
-<img src="{{event.image.url}}"
-class="card-img-top"
-style="height:220px;object-fit:cover;">
-
-{% endif %}
-
-
-
-<div class="card-body">
-
-
-
-<h4>
-
-{{event.title}}
-
-</h4>
-
-
-
-<span class="badge bg-primary">
-
-{{event.get_status_display}}
-
-</span>
-
-
-
-
-<p class="mt-3">
-
-📅
-
-{{event.start_date}}
-
-</p>
-
-
-
-
-<p>
-
-🎯
-
-{{event.get_event_type_display}}
-
-</p>
-
-
-
-<hr>
-
-
-
-<h5>
-Event Statistics
-</h5>
-
-
-
-<p>
-
-👥 Participants:
-
-<strong>
-
-{{event.participants}}
-
-</strong>
-<a href="{% url 'event_gallery' event.id %}"
-
-   class="btn btn-outline-dark">
-
-    Gallery
-
-</a>
-</p>
-
-
-
-<p>
-
-✅ Attended:
-
-<strong>
-
-{{event.attended}}
-
-</strong>
-<a href="{% url 'event_gallery' event.id %}"
-
-   class="btn btn-outline-dark">
-
-    Gallery
-
-</a>
-</p>
-
-
-
-<p>
-
-⭐ Rating:
-
-{% if event.rating %}
-
-{{event.rating|floatformat:1}}
-
-{% else %}
-
-No rating yet
-
-{% endif %}
-<a href="{% url 'event_gallery' event.id %}"
-
-   class="btn btn-outline-dark">
-
-    Gallery
-
-</a>
-
-</p>
-
-
-
-<div class="mt-3">
-
-
-<a href="{% url 'event_detail' event.id %}"
-
-class="btn btn-outline-primary btn-sm">
-
-View
-
-</a>
-
-
-
-<a href="{% url 'event_participants' event.id %}"
-
-class="btn btn-primary btn-sm">
-
-Manage Participants
-
-</a>
-
-
-
-<a href="{% url 'event_dashboard' event.id %}"
-
-class="btn btn-dark btn-sm">
-
-Dashboard
-
-</a>
-
-
-
-</div>
-
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-
-{% empty %}
-
-
-<div class="alert alert-info">
-
-You have not created any events yet.
-
-</div>
-
-
-{% endfor %}
-
-
-
-</div>
-
-<div class="card shadow p-4 mt-4">
-
-
-<h4>
-Registration Growth
-</h4>
-
-
-<canvas id="registrationChart"></canvas>
-
-
-</div>
-
-</div>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
-<script>
-
-
-const labels = [
-
-{% for item in registration_chart %}
-
-"{{item.month|date:'M Y'}}",
-
-{% endfor %}
-
-];
-
-
-const data = [
-
-{% for item in registration_chart %}
-
-{{item.total}},
-
-{% endfor %}
-
-];
-
-
-
-new Chart(
-
-document.getElementById(
-"registrationChart"
-),
-
-{
-
-type:"line",
-
-
-data:{
-
-
-labels:labels,
-
-
-datasets:[{
-
-label:"Registrations",
-
-
-data:data,
-
-
-borderWidth:2
-
-}]
-
-
-}
-
-
-}
-
-);
-
-
-</script>
-
+<div class="ev-chart-summary">{% for item in registration_chart %}<span>{{ item.month|date:"M Y" }}: {{ item.total }}</span>{% endfor %}</div>{{ registration_chart|json_script:"event-registration-data" }}{% else %}<p class="ev-muted">Registration trends will appear when participants start joining your events.</p>{% endif %}</section>
 {% endblock %}
+{% block extra_js %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer>
+</script>
+<script src="{% static 'js/events.js' %}" defer>
+</script>{% endblock %}

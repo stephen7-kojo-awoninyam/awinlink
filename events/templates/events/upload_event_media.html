@@ -1,51 +1,17 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container mt-5">
-
-    <div class="card shadow">
-
-        <div class="card-header bg-primary text-white">
-
-            <h3>
-                Upload Event Media
-            </h3>
-
-            <p class="mb-0">
-                {{ event.title }}
-            </p>
-
-        </div>
-
-        <div class="card-body">
-
-            <form method="POST"
-                  enctype="multipart/form-data">
-
-                {% csrf_token %}
-
-                {{ form.as_p }}
-
-                <button class="btn btn-success">
-
-                    Upload
-
-                </button>
-
-                <a href="{% url 'event_gallery' event.id %}"
-                   class="btn btn-secondary">
-
-                    Cancel
-
-                </a>
-
-            </form>
-
-        </div>
-
-    </div>
-
+{% extends "events/ui_base.html" %}
+{% block title %}Upload event media | Awinlink{% endblock %}
+{% block event_content %}
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Share the experience</span>
+<h1>Upload event media</h1>
+<p>{{ event.title }}</p>
 </div>
-
+</header>
+<form class="ev-card" method="POST" enctype="multipart/form-data">{% csrf_token %}{% if form.non_field_errors %}<div class="ev-notice ev-field-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}<div class="ev-form-grid">{% for field in form %}{% include "events/form_field.html" %}{% endfor %}</div>
+<div class="ev-actions ev-card-footer">
+<button class="ev-button" type="submit">Upload</button>
+<a class="ev-button ev-button-secondary" href="{% url 'event_gallery' event.id %}?organization_id={{ event.organizer.id }}">Cancel</a>
+</div>
+</form>
 {% endblock %}

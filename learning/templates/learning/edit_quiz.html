@@ -1,84 +1,23 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container py-5">
-
-    <div class="row justify-content-center">
-
-        <div class="col-lg-8">
-
-            <div class="card border-0 shadow-sm">
-
-                <div class="card-body p-4">
-
-                    <div class="mb-4">
-
-                        <a
-                            href="{% url 'manage_quiz' quiz.id %}"
-                            class="text-decoration-none"
-                        >
-
-                            <i class="bi bi-arrow-left me-1"></i>
-
-                            Back to Quiz
-
-                        </a>
-
-                    </div>
-
-
-                    <h1 class="fw-bold mb-1">
-                        Edit Quiz
-                    </h1>
-
-                    <p class="text-muted">
-                        Update the quiz information below.
-                    </p>
-
-
-                    <form method="POST">
-
-                        {% csrf_token %}
-
-                        {{ form.as_p }}
-
-
-                        <div class="d-flex gap-2 mt-4">
-
-                            <button
-                                type="submit"
-                                class="btn btn-primary"
-                            >
-
-                                <i class="bi bi-check-circle me-1"></i>
-
-                                Save Changes
-
-                            </button>
-
-
-                            <a
-                                href="{% url 'manage_quiz' quiz.id %}"
-                                class="btn btn-outline-secondary"
-                            >
-
-                                Cancel
-
-                            </a>
-
-                        </div>
-
-                    </form>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
+{% extends "learning/ui_base.html" %}
+{% block title %}Edit quiz | Awinlink learning{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="studio" %}{% endblock %}
+{% block learning_content %}
+{% url 'manage_quiz' quiz.id as back_url %}
+<a class="lc-back" href="{{ back_url }}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Back to quiz</a>
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">Edit quiz</span>
+<h1>Shape the knowledge check</h1>
+<p>Update the quiz title and passing score.</p>
 </div>
-
+</header>
+<div class="lc-form-layout">
+<div>{% include "learning/form_panel.html" with save_label="Save quiz" uploads=False %}</div>
+<aside class="lc-card">
+<h2>Make it clear. Make it useful.</h2>
+<p class="lc-prose">Update the quiz title and passing score.</p>
+<div class="lc-notice">Fields marked * are required. Your changes will be saved when you submit the form.</div>{% if course %}<p class="lc-muted">{{ course.title }}</p>{% endif %}</aside>
+</div>
 {% endblock %}

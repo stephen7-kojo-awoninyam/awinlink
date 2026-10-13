@@ -1,0 +1,32 @@
+<div class="cp-form-layout">
+<form method="post" class="cp-card">{% csrf_token %}{% if form.non_field_errors %}<div class="cp-notice cp-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+<fieldset class="cp-form-section">
+<legend>1. The challenge</legend>
+<div class="cp-form-grid">{% include "competitions/form_field.html" with field=form.title %}{% include "competitions/form_field.html" with field=form.discipline %}{% include "competitions/form_field.html" with field=form.category %}{% include "competitions/form_field.html" with field=form.description %}</div>
+</fieldset>
+<fieldset class="cp-form-section">
+<legend>2. Dates &amp; format</legend>
+<div class="cp-form-grid">{% include "competitions/form_field.html" with field=form.registration_start %}{% include "competitions/form_field.html" with field=form.registration_end %}{% include "competitions/form_field.html" with field=form.competition_start %}{% include "competitions/form_field.html" with field=form.competition_end %}{% include "competitions/form_field.html" with field=form.location %}{% include "competitions/form_field.html" with field=form.online %}{% include "competitions/form_field.html" with field=form.max_participants %}</div>
+<p class="cp-help">Leave participant capacity empty for no limit.</p>
+</fieldset>
+<fieldset class="cp-form-section">
+<legend>3. Set everyone up for success</legend>
+<div class="cp-form-grid">{% include "competitions/form_field.html" with field=form.requirements %}{% include "competitions/form_field.html" with field=form.rules %}{% include "competitions/form_field.html" with field=form.prizes %}</div>
+</fieldset>
+<p class="cp-help mb-3">Fields marked * are required.</p>
+<div class="cp-actions">
+<button class="cp-button" type="submit">{{ save_label }}</button>
+<a class="cp-button cp-button-secondary" href="{% url 'competition_dashboard' %}{% if competition %}?organization_id={{ competition.organization.id }}{% elif request.GET.organization_id %}?organization_id={{ request.GET.organization_id|urlencode }}{% endif %}">Cancel</a>
+</div>
+</form>
+<aside class="cp-card">
+<span class="cp-eyebrow">Give talent a clear path</span>
+<h2 class="mt-2">Make the challenge inviting</h2>
+<p class="cp-prose">Describe what participants will do, how their work will be judged, and what they can achieve.</p>
+<div class="cp-notice">Choose Sports, Science &amp; Technology, Arts, or Others, then add a discipline to make your challenge easy to find.</div>
+<p class="cp-prose">Registration closes before the competition begins. Give participants time to prepare and share clear rules.</p>
+<div class="cp-card-footer">
+<p class="cp-muted">Saving keeps your competition as a draft. Submit it for approval from your organizer workspace when it is ready.</p>
+</div>
+</aside>
+</div>

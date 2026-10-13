@@ -1,0 +1,31 @@
+{% load learning_ui %}
+<article class="lc-card lc-course-card">
+    <div class="lc-identity">
+<span class="lc-avatar">{{ course.creator.username|slice:":1"|upper }}</span>
+<span>
+<strong>{{ course.creator.get_full_name|default:course.creator.username }}</strong>
+<small>{{ course.category.name }}</small>
+</span>
+</div>
+    <a class="lc-cover-link" href="{% if studio %}{% url 'manage_course' course.id %}{% else %}{% url 'course_detail' course.slug %}{% endif %}" aria-label="View {{ course.title }}">{% include "learning/course_cover.html" %}</a>
+    <div class="lc-course-body">
+<div class="lc-card-meta">
+<span>
+<i class="bi bi-clock" aria-hidden="true">
+</i> {{ course.duration }} min</span>{% if course.is_free %}<span class="lc-status lc-status--approved">Free</span>{% endif %}{% if studio %}<span class="lc-status lc-status--{{ course.status|lower }}">{{ course.get_status_display }}</span>{% endif %}</div>
+<h3>{{ course.title }}</h3>
+<p class="lc-muted lc-card-description">{{ course.description|truncatewords:22 }}</p>
+    {% if enrollment %}<div class="lc-progress">
+<label for="course-progress-{{ enrollment.id }}">Your progress <strong>{{ enrollment.progress_percentage }}%</strong>
+</label>
+<progress id="course-progress-{{ enrollment.id }}" value="{{ enrollment.progress_percentage }}" max="100">{{ enrollment.progress_percentage }}%</progress>
+</div>
+<div class="lc-actions lc-card-footer">
+<a class="lc-button" href="{% learning_url 'course_progress' course.id %}">{% if enrollment.completed %}View progress{% else %}Continue learning{% endif %}</a>
+<a class="lc-text-link" href="{% url 'course_detail' course.slug %}">Course details</a>{% if enrollment.completed and enrollment.certificate %}<a class="lc-text-link" href="{% url 'certificate_detail' enrollment.certificate.certificate_id %}">View certificate</a>{% endif %}</div>
+    {% elif studio %}{% include "learning/studio_actions.html" %}
+    {% else %}<a class="lc-button lc-button-secondary lc-card-link" href="{% url 'course_detail' course.slug %}">Explore course <i class="bi bi-arrow-up-right" aria-hidden="true">
+</i>
+</a>{% endif %}
+    </div>
+</article>

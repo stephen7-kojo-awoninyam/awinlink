@@ -1,72 +1,19 @@
-{% extends "base.html" %}
-
-
-{% block content %}
-
-<div class="container mt-5">
-
-
-<h2>
-Recommended Events For You
-</h2>
-
-
-{% for item in recommendations %}
-
-
-<div class="card p-3 mb-3">
-
-
-<h4>
-
-{{item.event.title}}
-
-</h4>
-
-
-<p>
-
-{{item.event.description}}
-
-</p>
-
-
-<p>
-
-Match Score:
-
-<strong>
-
-{{item.score}}%
-
-</strong>
-
-</p>
-
-
-<a href="{% url 'event_detail' item.event.id %}"
-class="btn btn-primary">
-
-View Event
-
-</a>
-
-
+{% extends "events/ui_base.html" %}
+{% block title %}Recommended events | Awinlink{% endblock %}
+{% block event_content %}
+<header class="ev-heading">
+<div>
+<span class="ev-eyebrow">Chosen for your talent</span>
+<h1>Recommended events</h1>
+<p>Experiences ranked by how closely they match your profile.</p>
 </div>
-
-
-{% empty %}
-
-
-<p>
-No recommended events available.
-</p>
-
-
-{% endfor %}
-
-
-</div>
-
-
+<a class="ev-button ev-button-secondary" href="{% url 'event_list' %}">All events</a>
+</header>
+<div class="ev-grid">{% for item in recommendations %}{% include "events/event_card.html" with event=item.event match_score=item.score %}{% empty %}<section class="ev-card ev-empty">
+<i class="bi bi-stars" aria-hidden="true">
+</i>
+<h2>No recommended events yet</h2>
+<p>Explore all events to find your next experience.</p>
+<a class="ev-button" href="{% url 'event_list' %}">Discover events</a>
+</section>{% endfor %}</div>
 {% endblock %}

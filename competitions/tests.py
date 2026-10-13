@@ -113,7 +113,10 @@ class CompetitionWorkflowTests(TestCase):
             reverse("competitions_api:my_created_competitions")
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual([item["id"] for item in response.data], [draft_id])
+        self.assertEqual(
+            {item["id"] for item in response.data},
+            {draft_id, self.competition.pk},
+        )
 
         self.api_client.force_authenticate(user=None)
         response = self.api_client.get(
@@ -417,3 +420,187 @@ class CompetitionWorkflowTests(TestCase):
             self.competition.review_note,
             "Please include judging criteria.",
         )
+
+
+class OrganizationMembershipCompetitionCapabilityTests(TestCase):
+    def setUp(self):
+        from organizations.models import OrganizationMembership
+
+        self.user_model = get_user_model()
+        self.owner = self.user_model.objects.create_user(
+            username="member_comp_owner", role="ORGANIZATION",
+        )
+        self.other_owner = self.user_model.objects.create_user(
+            username="member_comp_other_owner", role="ORGANIZATION",
+        )
+        self.organization = Organization.objects.create(
+            user=self.owner, name="Member Competition Org", country="GH",
+        )
+        self.other_organization = Organization.objects.create(
+            user=self.other_owner, name="Other Member Competition Org", country="GH",
+        )
+        self.manager = self.user_model.objects.create_user(
+            username="member_comp_manager", role="ATHLETE",
+        )
+        self.recruiter = self.user_model.objects.create_user(
+            username="member_comp_recruiter", role="SCOUT",
+        )
+        self.viewer = self.user_model.objects.create_user(
+            username="member_comp_viewer", role="COACH",
+        )
+        self.other_manager = self.user_model.objects.create_user(
+            username="member_comp_other_manager", role="ATHLETE",
+        )
+        for org, user, role in (
+            (self.organization, self.owner, "OWNER"),
+            (self.organization, self.manager, "MANAGER"),
+            (self.organization, self.recruiter, "RECRUITER"),
+            (self.organization, self.viewer, "VIEWER"),
+            (self.other_organization, self.other_manager, "MANAGER"),
+        ):
+            OrganizationMembership.objects.create(
+                organization=org, user=user, role=role,
+            )
+        today = timezone.localdate()
+        self.draft = Competition.objects.create(
+            organization=self.organization,
+            title="Member managed draft",
+            description="An internal competition.",
+            category="SPORTS",
+            discipline="Football",
+            status="DRAFT",
+            registration_start=today,
+            registration_end=today + timedelta(days=5),
+            competition_start=today + timedelta(days=6),
+            competition_end=today + timedelta(days=8),
+        )
+        self.published = Competition.objects.create(
+            organization=self.organization,
+            title="Member public competition",
+            description="A published competition.",
+            category="SPORTS",
+            discipline="Football",
+            status="PUBLISHED",
+            registration_start=today - timedelta(days=1),
+            registration_end=today + timedelta(days=5),
+            competition_start=today + timedelta(days=6),
+            competition_end=today + timedelta(days=8),
+        )
+        self.api = APIClient()
+        self.comp_data = {
+            "title": "Created by membership",
+            "description": "A new club competition.",
+            "category": "SPORTS",
+            "discipline": "Football",
+            "registration_start": today.isoformat(),
+            "registration_end": (today + timedelta(days=5)).isoformat(),
+            "competition_start": (today + timedelta(days=6)).isoformat(),
+            "competition_end": (today + timedelta(days=8)).isoformat(),
+        }
+
+    def test_membership_capabilities_scope_competition_create_edit_and_lists(self):
+        self.api.force_authenticate(self.manager)
+        response = self.api.post(
+            "/api/competitions/create/", self.comp_data, format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["organization"], self.organization.pk)
+        created_id = response.data["id"]
+        response = self.api.patch(
+            f"/api/competitions/{created_id}/",
+            {"title": "Updated by manager"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["title"], "Updated by manager")
+
+        self.api.force_authenticate(self.viewer)
+        response = self.api.get("/api/competitions/my/created/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {item["id"] for item in response.data},
+            {self.draft.pk, self.published.pk, created_id},
+        )
+        self.assertEqual(
+            self.api.patch(
+                f"/api/competitions/{self.draft.pk}/",
+                {"title": "Viewer edit"},
+                format="json",
+            ).status_code,
+            403,
+        )
+
+        self.assertEqual(
+            self.api.post(
+                "/api/competitions/create/", self.comp_data, format="json",
+            ).status_code,
+            403,
+        )
+
+        self.api.force_authenticate(self.recruiter)
+        self.assertEqual(
+            self.api.post(
+                "/api/competitions/create/", self.comp_data, format="json",
+            ).status_code,
+            403,
+        )
+        self.api.force_authenticate(self.other_manager)
+        self.assertEqual(
+            self.api.patch(
+                f"/api/competitions/{self.draft.pk}/",
+                {"title": "Cross organization edit"},
+                format="json",
+            ).status_code,
+            403,
+        )
+
+    def test_web_management_uses_membership_and_suspension_blocks_members(self):
+        self.client.force_login(self.manager)
+        self.assertEqual(self.client.get("/competitions/create/").status_code, 200)
+        self.assertEqual(self.client.get("/competitions/dashboard/").status_code, 200)
+        Organization.objects.filter(pk=self.organization.pk).update(status="INACTIVE")
+        self.assertEqual(self.client.get("/competitions/dashboard/").status_code, 403)
+        self.api.force_authenticate(self.manager)
+        self.assertEqual(self.api.get("/api/competitions/my/created/").status_code, 403)
+        self.assertEqual(self.api.post(
+            "/api/competitions/create/", self.comp_data, format="json",
+        ).status_code, 403)
+
+    def test_admin_moderation_remains_available_when_organization_is_suspended(self):
+        Competition.objects.filter(pk=self.draft.pk).update(status="SUBMITTED")
+        api_competition = Competition.objects.create(
+            organization=self.organization,
+            title="API moderation while suspended",
+            description="Submitted for platform review.",
+            category="SPORTS",
+            discipline="Football",
+            status="SUBMITTED",
+            registration_start=self.draft.registration_start,
+            registration_end=self.draft.registration_end,
+            competition_start=self.draft.competition_start,
+            competition_end=self.draft.competition_end,
+        )
+        Organization.objects.filter(pk=self.organization.pk).update(status="INACTIVE")
+        admin = self.user_model.objects.create_user(
+            username="member_comp_admin", role="ADMIN", is_staff=True,
+        )
+        self.client.force_login(admin)
+        self.assertEqual(self.client.get("/competitions/moderation/").status_code, 200)
+        response = self.client.post(
+            reverse("competition_action", args=(self.draft.pk,)),
+            {"action": "approve"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.draft.refresh_from_db()
+        self.assertEqual(self.draft.status, "APPROVED")
+        self.api.force_authenticate(admin)
+        self.assertEqual(self.api.get("/api/competitions/moderation/").status_code, 200)
+        response = self.api.post(
+            f"/api/competitions/moderation/{api_competition.pk}/",
+            {"action": "approve"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        api_competition.refresh_from_db()
+        self.assertEqual(api_competition.status, "APPROVED")

@@ -30,6 +30,7 @@ User = get_user_model()
 # =========================================================
 
 @login_required
+@require_POST
 def follow_user(request, user_id):
 
     user_to_follow = get_object_or_404(
@@ -72,6 +73,7 @@ def follow_user(request, user_id):
 # =========================================================
 
 @login_required
+@require_POST
 def unfollow_user(request, user_id):
 
     user_to_unfollow = get_object_or_404(
@@ -97,6 +99,7 @@ def unfollow_user(request, user_id):
 # =========================================================
 
 @login_required
+@require_POST
 def follow_organization(request, organization_id):
 
     organization = get_object_or_404(
@@ -139,6 +142,7 @@ def follow_organization(request, organization_id):
 # =========================================================
 
 @login_required
+@require_POST
 def unfollow_organization(request, organization_id):
 
     organization = get_object_or_404(
@@ -320,6 +324,7 @@ def send_connection_request(request, user_id):
 # =========================================================
 
 @login_required
+@require_POST
 def accept_connection_request(request, connection_id):
 
     connection = get_object_or_404(
@@ -362,6 +367,7 @@ def accept_connection_request(request, connection_id):
 # =========================================================
 
 @login_required
+@require_POST
 def reject_connection_request(request, connection_id):
 
     connection = get_object_or_404(
@@ -390,6 +396,7 @@ def reject_connection_request(request, connection_id):
 # =========================================================
 
 @login_required
+@require_POST
 def cancel_connection_request(request, connection_id):
 
     connection = get_object_or_404(
@@ -600,6 +607,7 @@ def notification_list(request):
 # =========================================================
 
 @login_required
+@require_POST
 def remove_connection(request, connection_id):
 
     connection = get_object_or_404(

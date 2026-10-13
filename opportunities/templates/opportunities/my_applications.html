@@ -1,327 +1,49 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container mt-5">
-
-    <!-- ========================================= -->
-    <!-- HEADER -->
-    <!-- ========================================= -->
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-
-            <h2>
-                📄 My Applications
-            </h2>
-
-            <p class="text-muted mb-0">
-                Track the opportunities you have applied for.
-            </p>
-
-        </div>
-
-        <a
-            href="{% url 'opportunity_list' %}"
-            class="btn btn-primary"
-        >
-            🔎 Discover Opportunities
-        </a>
-
-    </div>
-
-    {% if no_talent_profile %}
-
-    <div class="alert alert-warning shadow-sm">
-
-        <h5>
-            👤 Talent Profile Required
-        </h5>
-
-        <p class="mb-0">
-            Your account does not have a Talent Profile yet.
-            Create your Talent Profile before applying for opportunities.
-        </p>
-
-    </div>
-
-{% else %}
-
-    {% for application in applications %}
-
-        <!-- YOUR EXISTING APPLICATION CARD -->
-
-    {% empty %}
-
-        <div class="card shadow-sm">
-
-            <div class="card-body text-center p-5">
-
-                <h4>
-                    No Applications Yet
-                </h4>
-
-                <p class="text-muted">
-                    You haven't applied for any opportunities yet.
-                </p>
-
-                <a
-                    href="{% url 'opportunity_list' %}"
-                    class="btn btn-primary"
-                >
-                    🔎 Discover Opportunities
-                </a>
-
-            </div>
-
-        </div>
-
-    {% endfor %}
-
-{% endif %}
-
-
-    <!-- ========================================= -->
-    <!-- APPLICATIONS -->
-    <!-- ========================================= -->
-
-    {% for application in applications %}
-
-        <div class="card shadow-sm mb-4">
-
-            <div class="card-body">
-
-                <div class="row">
-
-                    <!-- ================================= -->
-                    <!-- OPPORTUNITY INFORMATION -->
-                    <!-- ================================= -->
-
-                    <div class="col-md-8">
-
-                        <h4 class="mb-2">
-
-                            {{ application.opportunity.title }}
-
-                        </h4>
-
-
-                        <h6 class="text-muted">
-
-                            🏢
-                            {{ application.opportunity.organization.name }}
-
-                            {% if application.opportunity.organization.verified %}
-
-                                <span class="badge bg-success">
-                                    ✓ Verified
-                                </span>
-
-                            {% endif %}
-
-                        </h6>
-
-
-                        <p class="mt-3">
-
-                            {{ application.opportunity.description|truncatewords:30 }}
-
-                        </p>
-
-
-                        {% if application.opportunity.domain %}
-
-                            <span class="badge bg-secondary">
-
-                                {{ application.opportunity.domain.name }}
-
-                            </span>
-
-                        {% endif %}
-
-
-                        <span class="badge bg-primary">
-
-                            {{ application.opportunity.get_opportunity_type_display }}
-
-                        </span>
-
-                    </div>
-
-
-                    <!-- ================================= -->
-                    <!-- STATUS -->
-                    <!-- ================================= -->
-
-                    <div class="col-md-4 text-md-end">
-
-                        <p class="text-muted mb-2">
-
-                            Applied:
-
-                            {{ application.created_at|date:"M d, Y" }}
-
-                        </p>
-
-
-                        {% if application.status == "PENDING" %}
-
-                            <span class="badge bg-warning text-dark fs-6">
-
-                                🟡 Pending
-
-                            </span>
-
-
-                        {% elif application.status == "REVIEWING" %}
-
-                            <span class="badge bg-primary fs-6">
-
-                                🔵 Reviewing
-
-                            </span>
-
-
-                        {% elif application.status == "ACCEPTED" %}
-
-                            <span class="badge bg-success fs-6">
-
-                                🟢 Accepted
-
-                            </span>
-
-
-                        {% elif application.status == "REJECTED" %}
-
-                            <span class="badge bg-danger fs-6">
-
-                                🔴 Rejected
-
-                            </span>
-
-                        {% endif %}
-
-                    </div>
-
-                </div>
-
-
-                <hr>
-
-
-                <!-- ================================= -->
-                <!-- APPLICATION MESSAGE -->
-                <!-- ================================= -->
-
-                {% if application.message %}
-
-                    <div class="mb-3">
-
-                        <strong>
-                            Your application message:
-                        </strong>
-
-                        <p class="text-muted mt-1">
-
-                            {{ application.message }}
-
-                        </p>
-
-                    </div>
-
-                {% endif %}
-
-
-                <!-- ================================= -->
-                <!-- DEADLINE -->
-                <!-- ================================= -->
-
-                {% if application.opportunity.deadline %}
-
-                    <p class="text-muted">
-
-                        📅 Deadline:
-
-                        {{ application.opportunity.deadline }}
-
-                    </p>
-
-                {% endif %}
-
-
-                <!-- ================================= -->
-                <!-- ACTIONS -->
-                <!-- ================================= -->
-
-                <div class="mt-3">
-
-                    <a
-                        href="{% url 'opportunity_detail' application.opportunity.id %}"
-                        class="btn btn-outline-primary btn-sm"
-                    >
-
-                        View Opportunity
-
-                    </a>
-
-
-                    {% if application.status == "ACCEPTED" %}
-
-                        <a
-                            href="{% url 'messaging:start_conversation_with_opportunity' application.opportunity.organization.user.id application.opportunity.id %}"
-                            class="btn btn-success btn-sm"
-                        >
-
-                            💬 Message Organization
-
-                        </a>
-
-                    {% endif %}
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-    {% empty %}
-
-        <!-- ================================= -->
-        <!-- NO APPLICATIONS -->
-        <!-- ================================= -->
-
-        <div class="card shadow-sm">
-
-            <div class="card-body text-center p-5">
-
-                <h4>
-                    No Applications Yet
-                </h4>
-
-                <p class="text-muted">
-
-                    You haven't applied for any opportunities yet.
-
-                </p>
-
-                <a
-                    href="{% url 'opportunity_list' %}"
-                    class="btn btn-primary"
-                >
-
-                    🔎 Discover Opportunities
-
-                </a>
-
-            </div>
-
-        </div>
-
-    {% endfor %}
-
+{% extends "opportunities/ui_base.html" %}
+{% block title %}My applications | Awinlink{% endblock %}
+{% block opportunity_content %}
+<header class="op-heading">
+<div>
+<span class="op-eyebrow">Your progress</span>
+<h1>My applications</h1>
+<p>Keep track of your next opportunity, from submission to decision.</p>
 </div>
-
+<a class="op-button" href="{% url 'opportunity_list' %}">Discover opportunities <i class="bi bi-arrow-right" aria-hidden="true">
+</i>
+</a>
+</header>
+{% if no_talent_profile %}<section class="op-card op-empty">
+<i class="bi bi-person" aria-hidden="true">
+</i>
+<h2>Talent profile required</h2>
+<p>Create your talent profile before applying for opportunities.</p>
+</section>{% else %}
+<div class="op-results">
+<h2>Application history</h2>
+<span>{{ applications|length }} application{{ applications|length|pluralize }}</span>
+</div>
+{% for application in applications %}<article class="op-card">
+<div class="op-application-head">
+<div>
+<p class="op-organization">{{ application.opportunity.organization.name }} {% if application.opportunity.organization.verified %}<span class="op-verified">Verified</span>{% endif %}</p>
+<h2>{{ application.opportunity.title }}</h2>
+<div class="op-tags">{% if application.opportunity.domain %}<span>{{ application.opportunity.domain.name }}</span>{% endif %}<span>{{ application.opportunity.get_opportunity_type_display }}</span>
+</div>
+</div>
+<div>{% include "opportunities/status_badge.html" %}<p class="op-application-date">Applied {{ application.created_at|date:"M j, Y" }}</p>
+</div>
+</div>
+<p class="op-description">{{ application.opportunity.description|truncatewords:30 }}</p>{% if application.message %}<div class="op-message">
+<strong>Your application message</strong>{{ application.message|linebreaks }}</div>{% endif %}{% if application.opportunity.deadline %}<p class="op-muted">Deadline: {{ application.opportunity.deadline|date:"M j, Y" }}</p>{% endif %}
+<div class="op-actions op-card-footer">
+<a class="op-button op-button-secondary" href="{% url 'opportunity_detail' application.opportunity.id %}">View opportunity</a>{% if application.status == "ACCEPTED" %}<form method="post" action="{% url 'messaging:start_conversation_with_opportunity' application.opportunity.organization.user.id application.opportunity.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="op-button">
+<i class="bi bi-chat-dots" aria-hidden="true">
+</i> Message organization</button></form>{% endif %}</div>
+</article>
+{% empty %}<section class="op-card op-empty">
+<i class="bi bi-inbox" aria-hidden="true">
+</i>
+<h2>No applications yet</h2>
+<p>Find an opportunity that fits your talent and take the first step.</p>
+<a class="op-button" href="{% url 'opportunity_list' %}">Discover opportunities</a>
+</section>{% endfor %}{% endif %}
 {% endblock %}
-

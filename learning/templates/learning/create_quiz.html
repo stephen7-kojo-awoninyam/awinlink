@@ -1,157 +1,31 @@
-{% extends "base.html" %}
-
-{% block content %}
-
-<div class="container py-5">
-
-    <div class="row justify-content-center">
-
-        <div class="col-lg-7">
-
-            <div class="mb-4">
-
-                <a
-                    href="{% url 'manage_course' course.id %}"
-                    class="text-decoration-none"
-                >
-
-                    <i class="bi bi-arrow-left me-1"></i>
-
-                    Back to Course
-
-                </a>
-
-            </div>
-
-
-            <div class="card border-0 shadow-sm">
-
-                <div class="card-body p-4">
-
-                    <h2 class="fw-bold mb-1">
-                        Create Quiz
-                    </h2>
-
-                    <p class="text-muted mb-4">
-
-                        Create a quiz for:
-
-                        <strong>
-                            {{ lesson.title }}
-                        </strong>
-
-                    </p>
-
-
-                    <form method="POST">
-
-                        {% csrf_token %}
-
-
-                        <!-- QUIZ TITLE -->
-
-                        <div class="mb-3">
-
-                            <label
-                                for="title"
-                                class="form-label fw-semibold"
-                            >
-
-                                Quiz Title
-
-                            </label>
-
-                            <input
-                                type="text"
-                                name="title"
-                                id="title"
-                                class="form-control"
-                                placeholder="Enter quiz title"
-                                required
-                            >
-
-                        </div>
-
-
-                        <!-- PASSING SCORE -->
-
-                        <div class="mb-4">
-
-                            <label
-                                for="passing_score"
-                                class="form-label fw-semibold"
-                            >
-
-                                Passing Score
-
-                            </label>
-
-                            <div class="input-group">
-
-                                <input
-                                    type="number"
-                                    name="passing_score"
-                                    id="passing_score"
-                                    class="form-control"
-                                    value="70"
-                                    min="1"
-                                    max="100"
-                                    required
-                                >
-
-                                <span class="input-group-text">
-                                    %
-                                </span>
-
-                            </div>
-
-                            <small class="text-muted">
-
-                                Learners must achieve this percentage
-                                to pass the quiz.
-
-                            </small>
-
-                        </div>
-
-
-                        <!-- ACTIONS -->
-
-                        <div class="d-flex gap-2">
-
-                            <a
-                                href="{% url 'manage_course' course.id %}"
-                                class="btn btn-outline-secondary"
-                            >
-
-                                Cancel
-
-                            </a>
-
-
-                            <button
-                                type="submit"
-                                class="btn btn-primary"
-                            >
-
-                                <i class="bi bi-plus-circle me-1"></i>
-
-                                Create Quiz
-
-                            </button>
-
-                        </div>
-
-                    </form>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
+{% extends "learning/ui_base.html" %}
+{% block title %}Create quiz | Awinlink learning{% endblock %}
+{% block learning_nav %}{% include "learning/nav.html" with active="studio" %}{% endblock %}
+{% block learning_content %}
+<a class="lc-back" href="{% url 'manage_course' course.id %}">
+<i class="bi bi-arrow-left" aria-hidden="true">
+</i> Back to course</a>
+<header class="lc-heading">
+<div>
+<span class="lc-eyebrow">Give the lesson a knowledge check</span>
+<h1>Create a lesson quiz</h1>
+<p>{{ lesson.title }}</p>
 </div>
-
+</header>
+<form class="lc-card" method="POST">{% csrf_token %}<div class="lc-form-grid">
+<div>
+<label for="quiz-title">Quiz title *</label>
+<input id="quiz-title" name="title" value="{{ request.POST.title|default:'' }}" required maxlength="200" placeholder="Give your quiz a clear title">
+</div>
+<div>
+<label for="quiz-passing-score">Passing score *</label>
+<input id="quiz-passing-score" type="number" name="passing_score" min="1" max="100" value="{{ request.POST.passing_score|default:'70' }}" required>
+<p class="lc-help">A percentage from 1 to 100.</p>
+</div>
+</div>
+<div class="lc-actions lc-card-footer">
+<button class="lc-button" type="submit">Create quiz</button>
+<a class="lc-button lc-button-secondary" href="{% url 'manage_course' course.id %}">Cancel</a>
+</div>
+</form>
 {% endblock %}

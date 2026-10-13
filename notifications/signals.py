@@ -25,10 +25,15 @@ def publish_notification(notification_id):
         notification = Notification.objects.select_related("user").get(
             pk=notification_id,
         )
-        from .push import notification_payload, send_push_notification
+        from .push import (
+            notification_payload,
+            send_expo_call_push,
+            send_push_notification,
+        )
 
         payload = notification_payload(notification)
         send_push_notification(notification)
+        send_expo_call_push(notification)
 
         channel_layer = get_channel_layer()
         if channel_layer is not None:

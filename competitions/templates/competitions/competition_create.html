@@ -1,26 +1,12 @@
-{% extends "base.html" %}
-
+{% extends "competitions/ui_base.html" %}
 {% block title %}Create competition | Awinlink{% endblock %}
-
-{% block content %}
-<div class="container py-4">
-    <h1 class="h2">Create a competition</h1>
-    <p class="text-muted">Save a draft, then submit it for Awinlink approval.</p>
-    <form method="post" class="card card-body shadow-sm">
-        {% csrf_token %}
-        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
-        {% for field in form %}
-            <div class="mb-3">
-                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {% if field.field.widget.input_type == "checkbox" %}
-                    <div class="form-check">{{ field }} <span class="form-check-label">Online competition</span></div>
-                {% else %}
-                    {{ field }}
-                {% endif %}
-                {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-            </div>
-        {% endfor %}
-        <button class="btn btn-primary align-self-start" type="submit">Save draft</button>
-    </form>
+{% block competition_content %}
+<header class="cp-heading">
+<div>
+<span class="cp-eyebrow">Create a stage for talent</span>
+<h1>Start something worth competing for</h1>
+<p>Save a draft, then submit it for Awinlink approval.</p>
 </div>
+</header>
+{% include "competitions/form_panel.html" with save_label="Save draft" %}
 {% endblock %}
