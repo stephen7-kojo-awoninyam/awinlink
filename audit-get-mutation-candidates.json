@@ -1,0 +1,134 @@
+[
+  {
+    "file": "coaches\\views.py",
+    "line": 44,
+    "function": "coach_profile",
+    "writes": [
+      "get_or_create"
+    ]
+  },
+  {
+    "file": "coaches\\views.py",
+    "line": 431,
+    "function": "coach_view_talent",
+    "writes": [
+      "create"
+    ]
+  },
+  {
+    "file": "coaches\\views.py",
+    "line": 1139,
+    "function": "remove_saved_talent",
+    "writes": [
+      "delete"
+    ]
+  },
+  {
+    "file": "coaches\\views.py",
+    "line": 1197,
+    "function": "toggle_talent_follow",
+    "writes": [
+      "create",
+      "delete"
+    ]
+  },
+  {
+    "file": "connections\\views.py",
+    "line": 577,
+    "function": "notification_list",
+    "writes": [
+      "update"
+    ]
+  },
+  {
+    "file": "learning\\views.py",
+    "line": 392,
+    "function": "lesson_detail",
+    "writes": [
+      "get_or_create"
+    ]
+  },
+  {
+    "file": "notifications\\views.py",
+    "line": 45,
+    "function": "notification_detail",
+    "writes": [
+      "save"
+    ]
+  },
+  {
+    "file": "organizations\\views.py",
+    "line": 60,
+    "function": "organization_dashboard",
+    "writes": [
+      "get_or_create"
+    ]
+  },
+  {
+    "file": "scouts\\views.py",
+    "line": 26,
+    "function": "scout_dashboard",
+    "writes": [
+      "get_or_create"
+    ]
+  },
+  {
+    "file": "scouts\\views.py",
+    "line": 97,
+    "function": "scout_talent_detail",
+    "writes": [
+      "create",
+      "get_or_create"
+    ]
+  },
+  {
+    "file": "scouts\\views.py",
+    "line": 344,
+    "function": "scout_talent_list",
+    "writes": [
+      "get_or_create"
+    ]
+  },
+  {
+    "file": "scouts\\views.py",
+    "line": 428,
+    "function": "scout_bookmarked_talents",
+    "writes": [
+      "get_or_create"
+    ]
+  },
+  {
+    "file": "scouts\\views.py",
+    "line": 472,
+    "function": "scout_followed_talents",
+    "writes": [
+      "get_or_create"
+    ]
+  },
+  {
+    "file": "talents\\views.py",
+    "line": 336,
+    "function": "talent_profile",
+    "writes": [
+      "create"
+    ]
+  },
+  {
+    "file": "talents\\views.py",
+    "line": 1323,
+    "function": "accept_invitation",
+    "writes": [
+      "create",
+      "get_or_create",
+      "save"
+    ]
+  },
+  {
+    "file": "talents\\views.py",
+    "line": 1388,
+    "function": "decline_invitation",
+    "writes": [
+      "save"
+    ]
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "users": {
+    "ATHLETE": "audit_athlete",
+    "ORGANIZATION": "audit_organization",
+    "SCOUT": "audit_scout",
+    "COACH": "audit_coach",
+    "ADMIN": "audit_admin"
+  },
+  "routes": {
+    "event": "/events/1/",
+    "event_register": "/events/1/register/",
+    "competition": "/competitions/1/",
+    "competition_register": "/competitions/1/register/",
+    "course": "/learning/course/audit-creative-practice/",
+    "enroll": "/learning/course/1/enroll/",
+    "opportunity": "/opportunities/1/",
+    "apply": "/opportunities/apply/1/"
+  },
+  "ids": {
+    "event": 1,
+    "competition": 1,
+    "course": 1,
+    "lesson": 1,
+    "quiz": 1
+  }
+}

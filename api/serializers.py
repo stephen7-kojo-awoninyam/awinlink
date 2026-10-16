@@ -219,6 +219,19 @@ class TalentProfileSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    followers_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
+
+    def get_followers_count(self, obj):
+        if hasattr(obj, "actual_followers_count"):
+            return obj.actual_followers_count
+        return obj.user.followers.count()
+
+    def get_following_count(self, obj):
+        if hasattr(obj, "actual_following_count"):
+            return obj.actual_following_count
+        return obj.user.following.count()
+
     class Meta:
 
         model = TalentProfile
@@ -264,6 +277,7 @@ class TalentProfileSerializer(serializers.ModelSerializer):
 
             # Social
             "followers_count",
+            "following_count",
 
             # Related information
             "achievements",
@@ -388,10 +402,12 @@ class OrganizationSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
-    followers_count = serializers.IntegerField(
-        source="followers.count",
-        read_only=True
-    )
+    followers_count = serializers.SerializerMethodField()
+
+    def get_followers_count(self, obj):
+        if hasattr(obj, "actual_followers_count"):
+            return obj.actual_followers_count
+        return obj.organization_followers.count()
 
     sports_profile = SportsOrganizationProfileSerializer(
         read_only=True
@@ -480,9 +496,7 @@ class OrganizationListAPIView(APIView):
                 "sports_profile",
                 "sports_profile__sport",
             )
-            .prefetch_related(
-                "followers",
-            )
+            .prefetch_related("organization_followers")
             .filter(status="ACTIVE")
         )
 
@@ -1563,6 +1577,8 @@ class ConnectionSerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
 
+    metadata = serializers.JSONField(read_only=True)
+
     sender_id = serializers.IntegerField(
         source="sender.id",
         read_only=True
@@ -1614,6 +1630,7 @@ class NotificationSerializer(serializers.ModelSerializer):
             "notification_type",
             "notification_type_display",
             "message",
+            "metadata",
             "is_read",
 
             # Sender
@@ -2577,4 +2594,4 @@ class EventRecommendationSerializer(serializers.Serializer):
     score = serializers.FloatField()
     reasons = serializers.ListField(
         child=serializers.CharField()
-    )                                                                          
+    )

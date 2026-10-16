@@ -2586,7 +2586,7 @@ class RecommendationEngine:
         # ORGANIZATION FOLLOWERS
         # ============================================
 
-        follower_count = organization.followers.count()
+        follower_count = organization.organization_followers.count()
 
         score += min(
             follower_count,

@@ -219,6 +219,10 @@ class TalentListAPIView(APIView):
 
         talents = (
             visible_talent_profiles_for(request.user)
+            .annotate(
+                actual_followers_count=models.Count("user__followers", distinct=True),
+                actual_following_count=models.Count("user__following", distinct=True),
+            )
             .select_related("user")
             .select_related("other_profile")
             .prefetch_related(
@@ -255,6 +259,10 @@ class TalentDetailAPIView(APIView):
 
             talent = (
                     visible_talent_profiles_for(request.user)
+                .annotate(
+                    actual_followers_count=models.Count("user__followers", distinct=True),
+                    actual_following_count=models.Count("user__following", distinct=True),
+                )
                 .select_related("user")
                     .select_related("other_profile")
                     .prefetch_related(
@@ -516,9 +524,7 @@ class OrganizationListAPIView(APIView):
                 "sports_profile",
                 "sports_profile__sport",
             )
-            .prefetch_related(
-                "followers",
-            )
+            .prefetch_related("organization_followers")
             .filter(status="ACTIVE")
         )
 
@@ -553,9 +559,7 @@ class OrganizationDetailAPIView(APIView):
                     "sports_profile",
                     "sports_profile__sport",
                 )
-                .prefetch_related(
-                    "followers",
-                )
+                .prefetch_related("organization_followers")
                 .get(
                     id=organization_id
                 )
@@ -3381,23 +3385,7 @@ class FollowUserAPIView(APIView):
         # Check existing follow
         # ---------------------------------------------
 
-        if Follow.objects.filter(
-            follower=request.user,
-            following=target_user
-        ).exists():
-
-            return Response(
-                {
-                    "detail": "You are already following this user."
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # ---------------------------------------------
-        # Create follow
-        # ---------------------------------------------
-
-        follow = Follow.objects.create(
+        follow, created = Follow.objects.get_or_create(
             follower=request.user,
             following=target_user
         )
@@ -3405,10 +3393,15 @@ class FollowUserAPIView(APIView):
         serializer = FollowSerializer(
             follow
         )
+        payload = dict(serializer.data)
+        payload.update({
+            "followers_count": target_user.followers.count(),
+            "following_count": target_user.following.count(),
+        })
 
         return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED
+            payload,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
         
         
@@ -3422,27 +3415,17 @@ class UnfollowUserAPIView(APIView):
 
     def delete(self, request, user_id):
 
-        try:
-
-            follow = Follow.objects.get(
-                follower=request.user,
-                following_id=user_id
-            )
-
-        except Follow.DoesNotExist:
-
-            return Response(
-                {
-                    "detail": "You are not following this user."
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        follow.delete()
+        target_user = get_object_or_404(User, pk=user_id)
+        Follow.objects.filter(
+            follower=request.user,
+            following=target_user,
+        ).delete()
 
         return Response(
             {
-                "detail": "User unfollowed successfully."
+                "detail": "User unfollowed successfully.",
+                "followers_count": target_user.followers.count(),
+                "following_count": target_user.following.count(),
             },
             status=status.HTTP_200_OK
         )
@@ -3545,26 +3528,7 @@ class FollowOrganizationAPIView(APIView):
         # Check existing follow
         # ---------------------------------------------
 
-        if OrganizationFollow.objects.filter(
-            user=request.user,
-            organization=organization
-        ).exists():
-
-            return Response(
-                {
-                    "detail": (
-                        "You are already following "
-                        "this organization."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # ---------------------------------------------
-        # Create follow
-        # ---------------------------------------------
-
-        follow = OrganizationFollow.objects.create(
+        follow, created = OrganizationFollow.objects.get_or_create(
             user=request.user,
             organization=organization
         )
@@ -3572,10 +3536,12 @@ class FollowOrganizationAPIView(APIView):
         serializer = OrganizationFollowSerializer(
             follow
         )
+        payload = dict(serializer.data)
+        payload["followers_count"] = organization.organization_followers.count()
 
         return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED
+            payload,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
         
         
@@ -3589,32 +3555,16 @@ class UnfollowOrganizationAPIView(APIView):
 
     def delete(self, request, organization_id):
 
-        try:
-
-            follow = OrganizationFollow.objects.get(
-                user=request.user,
-                organization_id=organization_id
-            )
-
-        except OrganizationFollow.DoesNotExist:
-
-            return Response(
-                {
-                    "detail": (
-                        "You are not following "
-                        "this organization."
-                    )
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        follow.delete()
+        organization = get_object_or_404(Organization, pk=organization_id)
+        OrganizationFollow.objects.filter(
+            user=request.user,
+            organization=organization,
+        ).delete()
 
         return Response(
             {
-                "detail": (
-                    "Organization unfollowed successfully."
-                )
+                "detail": "Organization unfollowed successfully.",
+                "followers_count": organization.organization_followers.count(),
             },
             status=status.HTTP_200_OK
         )

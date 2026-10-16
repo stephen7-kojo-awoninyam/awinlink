@@ -38,6 +38,17 @@ TURN_SERVER_URLS = os.environ.get("TURN_SERVER_URLS", "")
 TURN_SHARED_SECRET = os.environ.get("TURN_SHARED_SECRET", "")
 EXPO_PUSH_ACCESS_TOKEN = os.environ.get("EXPO_PUSH_ACCESS_TOKEN", "").strip()
 
+# The new unified ranking pipeline remains opt-in until explicitly enabled.
+UNIFIED_RECOMMENDATIONS_ENABLED = os.environ.get(
+    "UNIFIED_RECOMMENDATIONS_ENABLED", "false"
+).strip().lower() in {"1", "true", "yes", "on"}
+RECOMMENDATION_INTEREST_LEARNING_ENABLED = os.environ.get(
+    "RECOMMENDATION_INTEREST_LEARNING_ENABLED", "false"
+).strip().lower() in {"1", "true", "yes", "on"}
+RECOMMENDATION_INTEREST_HALF_LIFE_DAYS = int(
+    os.environ.get("RECOMMENDATION_INTEREST_HALF_LIFE_DAYS", "60")
+)
+
 DEBUG = os.environ.get(
     "DEBUG",
     "False" if os.environ.get("RAILWAY_ENVIRONMENT_NAME") or os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER") else "True"
@@ -313,6 +324,17 @@ CLOUDINARY_STORAGE = {
 
 import cloudinary
 
+if os.environ.get("CLOUDINARY_URL") and not all((CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)):
+    cloudinary_environment = cloudinary.Config()
+    CLOUDINARY_CLOUD_NAME = cloudinary_environment.cloud_name
+    CLOUDINARY_API_KEY = cloudinary_environment.api_key
+    CLOUDINARY_API_SECRET = cloudinary_environment.api_secret
+    CLOUDINARY_STORAGE.update({
+        "CLOUD_NAME": CLOUDINARY_CLOUD_NAME,
+        "API_KEY": CLOUDINARY_API_KEY,
+        "API_SECRET": CLOUDINARY_API_SECRET,
+    })
+
 cloudinary.config(
     cloud_name=CLOUDINARY_CLOUD_NAME,
     api_key=CLOUDINARY_API_KEY,
@@ -324,7 +346,11 @@ cloudinary.config(
 # Django 6 storage configuration
 STORAGES = {
     "default": {
-        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        "BACKEND": (
+            "config.media_storage.PlaybackMediaStorage"
+            if all((CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET))
+            else "config.media_storage.LocalPlaybackStorage"
+        ),
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",

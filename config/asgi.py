@@ -30,6 +30,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 from messaging.routing import websocket_urlpatterns
+from learning.routing import websocket_urlpatterns as classroom_websocket_urlpatterns
 
 
 @database_sync_to_async
@@ -53,15 +54,32 @@ class JWTWebSocketMiddleware:
         headers = dict(scope.get("headers", []))
         authorization = headers.get(b"authorization", b"").decode("latin1")
         scheme, _, token = authorization.partition(" ")
-        if scheme.lower() == "bearer" and token:
-            user = await _user_from_jwt(token)
-            if user is not None:
-                scope = {**scope, "user": user, "jwt_authenticated": True}
+        if authorization:
+            identity = await _jwt_socket_identity(token) if scheme.lower() == "bearer" and token else None
+            if identity is not None:
+                user, claims = identity
+                scope = {**scope, "user": user, "jwt_authenticated": True,
+                         "jwt_claims": claims, "jwt_expires_at": claims["exp"]}
+            else:
+                # Existing consumers keep their session fallback. Classroom
+                # sockets explicitly reject an invalid supplied credential.
+                scope = {**scope, "jwt_invalid": True}
         return await self.inner(scope, receive, send)
 
 
 def JWTAuthMiddlewareStack(inner):
     return AuthMiddlewareStack(JWTWebSocketMiddleware(inner))
+
+
+@database_sync_to_async
+def _jwt_socket_identity(token):
+    try:
+        authentication = JWTAuthentication()
+        validated = authentication.get_validated_token(token)
+        user = authentication.get_user(validated)
+        return user, dict(validated.payload)
+    except (AuthenticationFailed, InvalidToken, TokenError, KeyError, TypeError, ValueError):
+        return None
 
 
 class WebSocketOriginMiddleware:
@@ -84,7 +102,7 @@ application = ProtocolTypeRouter(
 
         "websocket": JWTAuthMiddlewareStack(
             WebSocketOriginMiddleware(URLRouter(
-                websocket_urlpatterns
+                websocket_urlpatterns + classroom_websocket_urlpatterns
             ))
         ),
     }

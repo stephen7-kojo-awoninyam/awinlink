@@ -12,6 +12,10 @@ from connections.models import (
 from feed.models import Post, PostLike, SavedPost, SharedPost
 from opportunities.models import Opportunity
 from recommendations.services import RecommendationEngine
+from recommendations.unified import (
+    UnifiedRecommendationService,
+    unified_recommendations_enabled,
+)
 from recommendations.ecosystems import (
     get_ecosystem_details,
     get_ecosystem_user_ids,
@@ -329,40 +333,41 @@ def home_feed(request):
     # PERSONALIZED FEED RANKING
     # ==================================
 
-    for item in feed_items:
+    if unified_recommendations_enabled():
+        unified_feed = UnifiedRecommendationService().rank_feed_items(
+            request.user,
+            [
+                {**item, "shared_by_in_network": (
+                    item["type"] == "SHARE" and item["object"].user_id in feed_authors
+                )}
+                for item in feed_items
+            ],
+        )
+        feed_items = []
+        for recommendation in unified_feed:
+            item = recommendation["feed_entry"]
+            item["score"] = recommendation["score"]
+            item["matched_topics"] = recommendation["matched_topics"]
+            item["recommendation_explanation"] = recommendation["explanation"]
+            feed_items.append(item)
+    else:
+        for item in feed_items:
+            if item["type"] == "POST":
+                item["score"] = RecommendationEngine.score_post_for_user(
+                    request.user, item["object"]
+                )
+            elif item["type"] == "SHARE":
+                shared_post = item["object"]
+                item["score"] = RecommendationEngine.score_post_for_user(
+                    request.user, shared_post.post
+                )
+                if shared_post.user_id in feed_authors:
+                    item["score"] += 10
 
-        if item["type"] == "POST":
-
-            item["score"] = RecommendationEngine.score_post_for_user(
-                request.user,
-                item["object"]
-            )
-
-        elif item["type"] == "SHARE":
-
-            shared_post = item["object"]
-
-            # Score the original post
-            item["score"] = RecommendationEngine.score_post_for_user(
-                request.user,
-                shared_post.post
-            )
-
-            # Small bonus for the person who shared it
-            if shared_post.user_id in feed_authors:
-                item["score"] += 10
-
-    # ==================================
-    # SORT BY PERSONALIZED SCORE
-    # ==================================
-
-    feed_items.sort(
-        key=lambda item: (
-            item["score"],
-            item["created_at"]
-        ),
-        reverse=True
-    )
+        feed_items.sort(
+            key=lambda item: (item["score"], item["created_at"]),
+            reverse=True
+        )
 
     feed_items = insert_ads_into_feed(
         feed_items,

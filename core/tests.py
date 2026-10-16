@@ -45,6 +45,22 @@ class HomeFeedTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, f'action="{reverse("logout")}"')
 		self.assertContains(response, "Log out")
+		self.assertContains(response, 'id="globalSearch"', count=1)
+		self.assertContains(response, 'id="mobileGlobalSearch"', count=1)
+		self.assertContains(response, "data-feed-search", count=2)
+		self.assertContains(response, 'class="awinlink-sidebar"', count=1)
+		self.assertContains(response, 'class="mobile-bottom-nav d-lg-none"', count=1)
+
+	def test_global_search_is_absent_outside_feed_without_losing_navigation(self):
+		response = self.client.get(reverse("talent_search"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertNotContains(response, 'id="globalSearch"')
+		self.assertNotContains(response, 'id="mobileGlobalSearch"')
+		self.assertNotContains(response, "data-feed-search")
+		self.assertContains(response, 'class="awinlink-sidebar"', count=1)
+		self.assertContains(response, 'class="mobile-bottom-nav d-lg-none"', count=1)
+		self.assertContains(response, 'id="mobileSidebarToggle"', count=1)
 
 	def test_authenticated_home_visit_shows_loader_before_feed(self):
 		response = self.client.get(reverse("home"))

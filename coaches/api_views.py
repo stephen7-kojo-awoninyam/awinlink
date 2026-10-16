@@ -244,23 +244,11 @@ class CoachFollowTalentAPIView(APIView):
             talent=talent
         )
 
-        if not created:
-
-            return Response(
-                {
-                    "detail": (
-                        "You already follow "
-                        "this talent."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         return Response(
             CoachTalentFollowSerializer(
                 follow
             ).data,
-            status=status.HTTP_201_CREATED
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
 
 
@@ -291,13 +279,10 @@ class CoachUnfollowTalentAPIView(APIView):
             user=request.user
         )
 
-        follow = get_object_or_404(
-            CoachTalentFollow,
+        CoachTalentFollow.objects.filter(
             coach=coach,
-            talent_id=talent_id
-        )
-
-        follow.delete()
+            talent_id=talent_id,
+        ).delete()
 
         return Response(
             {

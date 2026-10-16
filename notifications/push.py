@@ -14,7 +14,7 @@ EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 
 
 def notification_payload(notification):
-    return {
+    payload = {
         "id": notification.pk,
         "title": notification.get_notification_type_display(),
         "body": notification.message[:180],
@@ -25,6 +25,19 @@ def notification_payload(notification):
         "notification_type": notification.notification_type,
         "tag": f"awinlink-notification-{notification.pk}",
     }
+    if notification.notification_type in {"CLASSROOM_INVITATION", "CLASSROOM_SESSION"}:
+        payload["data"] = classroom_push_data(notification)
+    return payload
+
+
+def classroom_push_data(notification):
+    """Allowlisted routing data, without private messages, identities or tokens."""
+    metadata = notification.metadata if isinstance(notification.metadata, dict) else {}
+    data = {"type": notification.notification_type.lower(), "notification_id": notification.pk}
+    for key in ["classroom_id", "session_id", "invitation_id", "event"]:
+        if key in metadata:
+            data[key] = metadata[key]
+    return data
 
 
 def send_push_notification(notification):
@@ -154,3 +167,32 @@ def send_expo_call_push(notification):
                 call.pk,
                 notification.user_id,
             )
+
+
+def send_expo_classroom_push(notification):
+    """Use the registered native devices and existing Expo transport for classrooms."""
+    if notification.notification_type not in {"CLASSROOM_INVITATION", "CLASSROOM_SESSION"}:
+        return
+    from learning.classroom_notifications import classroom_notification_is_current
+    if not classroom_notification_is_current(notification):
+        return
+    tokens = list(MobilePushToken.objects.filter(user_id=notification.user_id).values_list("token", flat=True))
+    messages = [{"to": token, "title": notification.get_notification_type_display(),
+                 "body": notification.message[:180], "data": classroom_push_data(notification),
+                 "sound": "default", "ttl": 3600, "collapseId": f"awinlink-notification-{notification.pk}"}
+                for token in tokens]
+    headers = {"Accept": "application/json", "Content-Type": "application/json"}
+    push_access_token = getattr(settings, "EXPO_PUSH_ACCESS_TOKEN", "").strip()
+    if push_access_token:
+        headers["Authorization"] = f"Bearer {push_access_token}"
+    for offset in range(0, len(messages), 100):
+        batch = messages[offset:offset + 100]
+        try:
+            request = Request(EXPO_PUSH_URL, data=json.dumps(batch).encode("utf-8"), headers=headers, method="POST")
+            with urlopen(request, timeout=5) as response:
+                result = json.loads(response.read().decode("utf-8"))
+            for index, ticket in enumerate(result.get("data", [])[:len(batch)]):
+                if ticket.get("status") == "error" and ticket.get("details", {}).get("error") == "DeviceNotRegistered":
+                    MobilePushToken.objects.filter(token=batch[index]["to"]).delete()
+        except (HTTPError, URLError, TimeoutError, ValueError, OSError, AttributeError):
+            logger.exception("Unable to send Expo classroom push for notification %s.", notification.pk)

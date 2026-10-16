@@ -1,0 +1,390 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Stack, useLocalSearchParams, router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  mediaDevices,
+  RTCPeerConnection,
+  RTCView,
+  type MediaStream,
+  type RTCPeerConnection as PeerConnection,
+} from 'react-native-webrtc';
+
+import { apiRequest, getAccessToken, getWebSocketUrl } from '@/src/api/client';
+import { useAuth } from '@/src/auth/AuthProvider';
+import { validatedIceServers, type CallIceServer } from '@/src/calls/iceServers';
+import { colors } from '@/src/theme';
+
+type CallParticipant = { user: { id: number }; status: string };
+type CallInfo = { id: number; participants: CallParticipant[] };
+type Signal = {
+  type?: string;
+  sender_id?: number;
+  to_user_id?: number;
+  description?: { type: 'offer' | 'answer'; sdp: string };
+  candidate?: RTCIceCandidateInit;
+  user_id?: number;
+};
+
+function socketWithToken(url: string, token: string) {
+  const Socket = WebSocket as unknown as new (
+    url: string,
+    protocols: string[],
+    options: { headers: Record<string, string> },
+  ) => WebSocket;
+  return new Socket(url, [], { headers: { Authorization: `Bearer ${token}` } });
+}
+
+export default function CallScreen() {
+  const params = useLocalSearchParams<{
+    id: string; mode?: string; callType?: string; conversationId?: string; title?: string;
+    participants?: string; autoAccept?: string;
+  }>();
+  const { user } = useAuth();
+  const callId = Number(params.id);
+  const incoming = params.mode === 'incoming';
+  const autoAccept = params.autoAccept === 'true';
+  const video = params.callType === 'VIDEO';
+  const title = params.title || 'Awinlink call';
+  const [status, setStatus] = useState(incoming ? 'Incoming call' : 'Calling…');
+  const [error, setError] = useState('');
+  const [accepted, setAccepted] = useState(!incoming);
+  const [muted, setMuted] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState(video);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStreams, setRemoteStreams] = useState<Record<number, MediaStream>>({});
+  const socketRef = useRef<WebSocket | null>(null);
+  const localRef = useRef<MediaStream | null>(null);
+  const peersRef = useRef(new Map<number, PeerConnection>());
+  const offerMakingRef = useRef(new Set<number>());
+  const pendingCandidates = useRef(new Map<number, RTCIceCandidateInit[]>());
+  const iceServersRef = useRef<CallIceServer[]>([]);
+  const leavingRef = useRef(false);
+  const autoAcceptHandled = useRef(false);
+  const acceptedRef = useRef(!incoming);
+  const connectedRef = useRef(false);
+
+  const closeLocal = useCallback(() => {
+    socketRef.current?.close();
+    socketRef.current = null;
+    peersRef.current.forEach((peer) => peer.close());
+    peersRef.current.clear();
+    localRef.current?.getTracks().forEach((track) => track.stop());
+    localRef.current = null;
+    setLocalStream(null);
+    setRemoteStreams({});
+  }, []);
+
+  const leaveCall = useCallback(async (reject = false) => {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    try {
+      if (reject && incoming && !acceptedRef.current) {
+        await apiRequest(`messaging/calls/${callId}/reject/`, { method: 'POST' });
+      } else {
+        await apiRequest(`messaging/calls/${callId}/end/`, {
+          method: 'POST', body: { end_for_everyone: true },
+        });
+      }
+    } catch { /* Close local media even when the server cannot be reached. */ }
+    closeLocal();
+    router.back();
+  }, [callId, closeLocal, incoming]);
+
+  const sendSignal = useCallback((payload: Record<string, unknown>) => {
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(payload));
+    }
+  }, []);
+
+  const makePeer = useCallback((remoteUserId: number) => {
+    const existing = peersRef.current.get(remoteUserId);
+    if (existing) return existing;
+    const local = localRef.current;
+    if (!local) throw new Error('The microphone or camera is not ready yet.');
+    const peer = new RTCPeerConnection({ iceServers: iceServersRef.current });
+    peersRef.current.set(remoteUserId, peer);
+    local.getTracks().forEach((track) => peer.addTrack(track, local));
+    peer.onicecandidate = (event: { candidate: { toJSON: () => RTCIceCandidateInit } | null }) => {
+      if (event.candidate) sendSignal({
+        type: 'ice_candidate', to_user_id: remoteUserId,
+        candidate: event.candidate.toJSON(),
+      });
+    };
+    peer.ontrack = (event: { streams: MediaStream[] }) => {
+      const stream = event.streams[0];
+      if (stream) setRemoteStreams((current) => ({ ...current, [remoteUserId]: stream }));
+    };
+    peer.onconnectionstatechange = () => {
+      if (peer.connectionState === 'connected') {
+        connectedRef.current = true;
+        setStatus('Connected');
+      } else if (peer.connectionState === 'failed') {
+        setError('The call could not connect. Check the network or TURN server and try again.');
+        setStatus('Connection failed');
+      } else if (peer.connectionState === 'disconnected') {
+        setStatus('Reconnecting…');
+      }
+    };
+    return peer;
+  }, [sendSignal]);
+
+  const createOffer = useCallback(async (remoteUserId: number) => {
+    const existing = peersRef.current.get(remoteUserId);
+    if (offerMakingRef.current.has(remoteUserId) || (existing && existing.signalingState !== 'stable')) return;
+    offerMakingRef.current.add(remoteUserId);
+    try {
+      const peer = makePeer(remoteUserId);
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      sendSignal({ type: 'offer', to_user_id: remoteUserId, description: offer });
+    } finally {
+      offerMakingRef.current.delete(remoteUserId);
+    }
+  }, [makePeer, sendSignal]);
+
+  const connectSignaling = useCallback(async (call: CallInfo) => {
+    const token = await getAccessToken();
+    if (!token) throw new Error('Your session expired. Sign in again to call.');
+    const socket = socketWithToken(getWebSocketUrl(`ws/calls/${callId}/`), token);
+    socketRef.current = socket;
+    socket.onopen = () => {
+      setStatus('Waiting for others…');
+      const activePeers = call.participants.filter(
+        (participant) => participant.status === 'JOINED' && participant.user.id !== user?.id,
+      );
+      activePeers.forEach((participant) => sendSignal({
+        type: 'ready', to_user_id: participant.user.id,
+      }));
+    };
+    socket.onerror = () => setError('Signaling connection failed. Check your network and try again.');
+    socket.onclose = (event) => {
+      if (!leavingRef.current && event.code !== 1000) {
+        setError('The signaling connection closed. Reconnect or hang up.');
+      }
+    };
+    socket.onmessage = (event) => {
+      void (async () => {
+        const message = JSON.parse(String(event.data)) as Signal & { call_id?: number };
+        const peerId = Number(message.sender_id ?? message.user_id);
+        if (message.type === 'call_ended') {
+          setStatus('Call ended');
+          closeLocal();
+          setTimeout(() => router.back(), 500);
+          return;
+        }
+        if (message.type === 'participant_rejected') {
+          setStatus('Call declined');
+          setError('A participant declined the call.');
+          return;
+        }
+        if (message.type === 'participant_left') {
+          peersRef.current.get(peerId)?.close();
+          peersRef.current.delete(peerId);
+          setRemoteStreams((current) => {
+            const next = { ...current };
+            delete next[peerId];
+            return next;
+          });
+          return;
+        }
+        if (message.type === 'participant_joined' && peerId && peerId !== user?.id) {
+          setStatus('Connecting…');
+          sendSignal({ type: 'ready', to_user_id: peerId });
+          if (Number(user?.id) < peerId) await createOffer(peerId);
+          return;
+        }
+        if (message.to_user_id && message.to_user_id !== user?.id) return;
+        if (!peerId || peerId === user?.id) return;
+        if (message.type === 'ready') {
+          if (Number(user?.id) < peerId) await createOffer(peerId);
+          return;
+        }
+        if (message.type === 'offer' && message.description) {
+          const peer = makePeer(peerId);
+          await peer.setRemoteDescription(message.description);
+          const candidates = pendingCandidates.current.get(peerId) ?? [];
+          pendingCandidates.current.delete(peerId);
+          for (const candidate of candidates) await peer.addIceCandidate(candidate);
+          const answer = await peer.createAnswer();
+          await peer.setLocalDescription(answer);
+          sendSignal({ type: 'answer', to_user_id: peerId, description: answer });
+        } else if (message.type === 'answer' && message.description) {
+          const peer = peersRef.current.get(peerId);
+          if (peer) await peer.setRemoteDescription(message.description);
+        } else if (message.type === 'ice_candidate' && message.candidate) {
+          const peer = peersRef.current.get(peerId);
+          if (peer?.remoteDescription) await peer.addIceCandidate(message.candidate);
+          else pendingCandidates.current.set(peerId, [
+            ...(pendingCandidates.current.get(peerId) ?? []), message.candidate,
+          ]);
+        }
+      })().catch((signalError: unknown) => {
+        setError(signalError instanceof Error ? signalError.message : 'WebRTC signaling failed.');
+      });
+    };
+  }, [callId, closeLocal, createOffer, makePeer, sendSignal, user?.id]);
+
+  const startMedia = useCallback(async (call: CallInfo) => {
+    try {
+      setError('');
+      const ice = await apiRequest<{ ice_servers?: unknown }>('messaging/calls/ice-servers/');
+      iceServersRef.current = validatedIceServers(ice.ice_servers);
+      const stream = await mediaDevices.getUserMedia({ audio: true, video: video ? {
+        facingMode: 'user', width: 1280, height: 720, frameRate: 24,
+      } : false });
+      localRef.current = stream;
+      setLocalStream(stream);
+      setAccepted(true);
+      acceptedRef.current = true;
+      setStatus('Connecting…');
+      await connectSignaling(call);
+    } catch (mediaError) {
+      const message = mediaError instanceof Error ? mediaError.message : 'Unable to access the microphone or camera.';
+      setError(message.includes('Permission') || message.includes('permission')
+        ? 'Microphone or camera access was denied. Enable the permission in device settings and retry.'
+        : message);
+      setStatus('Unable to start call');
+      void leaveCall();
+    }
+  }, [connectSignaling, incoming, leaveCall, video]);
+
+  useEffect(() => {
+    if (!Number.isInteger(callId) || callId < 1 || !user) {
+      setError('This call link is invalid or your session has expired.');
+      return;
+    }
+    if (incoming && !accepted) {
+      let active = true;
+      let expired = false;
+      const checkIncoming = async () => {
+        try {
+          const calls = await apiRequest<{ id: number }[]>('messaging/calls/incoming/');
+          if (active && !expired && !calls.some((call) => call.id === callId)) {
+            expired = true;
+            setStatus('Call expired');
+            setError('This call has ended or timed out.');
+          }
+        } catch { /* Keep the answer controls available during a temporary network outage. */ }
+      };
+      void checkIncoming();
+      const poll = setInterval(() => void checkIncoming(), 4000);
+      return () => { active = false; clearInterval(poll); };
+    }
+    if (incoming) return;
+    let active = true;
+    const outgoingCall: CallInfo = { id: callId, participants: (() => {
+      try { return JSON.parse(params.participants || '[]') as CallParticipant[]; }
+      catch { return []; }
+    })() };
+    void startMedia(outgoingCall)
+      .catch((callError: unknown) => setError(callError instanceof Error ? callError.message : 'Unable to start the call.'));
+    const timeout = setTimeout(() => {
+      if (!connectedRef.current && active) {
+        setError('No one answered. The call has ended.');
+        void leaveCall();
+      }
+    }, 35_000);
+    return () => { active = false; clearTimeout(timeout); closeLocal(); };
+  }, [accepted, callId, closeLocal, incoming, leaveCall, params.participants, startMedia, user]);
+
+  async function acceptCall() {
+    try {
+      const call = await apiRequest<CallInfo>(`messaging/calls/${callId}/accept/`, { method: 'POST' });
+      acceptedRef.current = true;
+      setAccepted(true);
+      await startMedia(call);
+    } catch (acceptError) {
+      setError(acceptError instanceof Error ? acceptError.message : 'Unable to accept the call.');
+    }
+  }
+
+  useEffect(() => {
+    if (incoming && autoAccept && !accepted && user && !autoAcceptHandled.current) {
+      autoAcceptHandled.current = true;
+      void acceptCall();
+    }
+  }, [accepted, autoAccept, incoming, user]);
+
+  function toggleMute() {
+    const next = !muted;
+    localRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next; });
+    setMuted(next);
+  }
+
+  function toggleCamera() {
+    const next = !cameraEnabled;
+    localRef.current?.getVideoTracks().forEach((track) => { track.enabled = next; });
+    setCameraEnabled(next);
+  }
+
+  function switchCamera() {
+    const track = localRef.current?.getVideoTracks()[0] as (MediaStreamTrack & { _switchCamera?: () => void }) | undefined;
+    if (track?._switchCamera) track._switchCamera();
+    else Alert.alert('Camera unavailable', 'Camera switching is not supported on this device.');
+  }
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.container}>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.status}>{status}</Text>
+        {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+        <View style={styles.videoArea}>
+          {Object.entries(remoteStreams).map(([participantId, stream], index, entries) => (
+            <RTCView key={participantId} streamURL={stream.toURL()} style={entries.length === 1 ? styles.remoteVideoFull : [styles.remoteVideoGrid, { left: `${(index % 2) * 50}%`, top: `${Math.floor(index / 2) * 50}%` }]} objectFit="cover" />
+          ))}
+          {video && localStream && <RTCView streamURL={localStream.toURL()} style={styles.localVideo} objectFit="cover" mirror />}
+          {(!video || Object.keys(remoteStreams).length === 0) && (
+            <View style={styles.audioPlaceholder}>
+              <View style={styles.avatar}><Text style={styles.avatarText}>{title.slice(0, 1).toUpperCase()}</Text></View>
+              {localStream ? null : <ActivityIndicator color="#fff" style={{ marginTop: 20 }} />}
+            </View>
+          )}
+        </View>
+        {incoming && !accepted ? (
+          <View style={styles.actions}>
+            <Control label="Decline" onPress={() => void leaveCall(true)} danger />
+            <Control label="Answer" onPress={() => void acceptCall()} primary />
+          </View>
+        ) : (
+          <View style={styles.actions}>
+            <Control label={muted ? 'Unmute' : 'Mute'} onPress={toggleMute} />
+            {video && <Control label={cameraEnabled ? 'Camera off' : 'Camera on'} onPress={toggleCamera} />}
+            {video && <Control label="Flip" onPress={switchCamera} />}
+            <Control label="Hang up" onPress={() => void leaveCall()} danger />
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function Control({ label, onPress, danger, primary }: {
+  label: string; onPress: () => void; danger?: boolean; primary?: boolean;
+}) {
+  return <Pressable accessibilityRole="button" onPress={onPress} style={[
+    styles.control, danger && styles.danger, primary && styles.primary,
+  ]}><Text style={styles.controlText}>{label}</Text></Pressable>;
+}
+
+const styles = StyleSheet.create({
+  safe: { backgroundColor: '#0b1020', flex: 1 },
+  container: { alignItems: 'center', flex: 1, justifyContent: 'space-between', padding: 22 },
+  title: { color: '#fff', fontSize: 24, fontWeight: '800', marginTop: 24 },
+  status: { color: '#c8d0e0', fontSize: 15, marginTop: -16 },
+  error: { color: '#ffb4ab', fontSize: 13, textAlign: 'center' },
+  videoArea: { alignItems: 'center', backgroundColor: '#151b2d', borderRadius: 24, flex: 1, justifyContent: 'center', marginVertical: 22, overflow: 'hidden', width: '100%' },
+  remoteVideoFull: { height: '100%', position: 'absolute', width: '100%' },
+  remoteVideoGrid: { height: '50%', position: 'absolute', width: '50%' },
+  localVideo: { borderColor: '#fff', borderRadius: 14, borderWidth: 1, height: 150, position: 'absolute', right: 14, top: 14, width: 104, zIndex: 2 },
+  audioPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  avatar: { alignItems: 'center', backgroundColor: colors.primary, borderRadius: 60, height: 112, justifyContent: 'center', width: 112 },
+  avatarText: { color: '#fff', fontSize: 44, fontWeight: '700' },
+  actions: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'center', marginBottom: 20 },
+  control: { alignItems: 'center', backgroundColor: '#273149', borderRadius: 24, justifyContent: 'center', minHeight: 48, minWidth: 88, paddingHorizontal: 16 },
+  primary: { backgroundColor: colors.success },
+  danger: { backgroundColor: '#b42318' },
+  controlText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+});

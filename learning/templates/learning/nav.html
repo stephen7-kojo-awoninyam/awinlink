@@ -1,6 +1,7 @@
 {% load learning_ui %}
 {% learning_creator user as can_create %}
 <nav class="lc-nav" aria-label="Learning navigation">
+    <a href="{% url 'learning_classrooms' %}"><i class="bi bi-people" aria-hidden="true"></i> Live classrooms</a>
     <a href="{% url 'courses' %}" {% if active == "discover" %}aria-current="page"{% endif %}>
 <i class="bi bi-compass" aria-hidden="true">
 </i> Discover</a>

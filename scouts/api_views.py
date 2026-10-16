@@ -236,20 +236,11 @@ class ScoutFollowTalentAPIView(APIView):
             talent=talent
         )
 
-        if not created:
-
-            return Response(
-                {
-                    "detail": "You already follow this talent."
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         return Response(
             ScoutTalentFollowSerializer(
                 follow
             ).data,
-            status=status.HTTP_201_CREATED
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
 
 
@@ -277,13 +268,10 @@ class ScoutUnfollowTalentAPIView(APIView):
             user=request.user
         )
 
-        follow = get_object_or_404(
-            ScoutTalentFollow,
+        ScoutTalentFollow.objects.filter(
             scout=scout,
-            talent_id=talent_id
-        )
-
-        follow.delete()
+            talent_id=talent_id,
+        ).delete()
 
         return Response(
             {

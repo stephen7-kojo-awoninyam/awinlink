@@ -1,0 +1,34 @@
+[
+  {
+    "action": "DOM login form submission",
+    "path": "/talents/dashboard/"
+  },
+  {
+    "action": "mobile drawer opens",
+    "passed": true
+  },
+  {
+    "action": "Escape closes drawer",
+    "passed": true
+  },
+  {
+    "action": "event discovery filter empty state",
+    "passed": true
+  },
+  {
+    "action": "event discovery reset",
+    "passed": true
+  },
+  {
+    "action": "competition refinements and reset",
+    "passed": true
+  },
+  {
+    "action": "DOM quiz submission",
+    "passed": true
+  },
+  {
+    "action": "lesson completion uses web destination",
+    "passed": true
+  }
+]

@@ -249,7 +249,8 @@
 
     </div>
 
-    <div class="header-search mobile-header-search">
+    {% if request.resolver_match and request.resolver_match.url_name == 'home_feed' %}
+    <div class="header-search mobile-header-search" data-feed-search>
         <i class="bi bi-search" aria-hidden="true"></i>
         <input
             type="search"
@@ -263,6 +264,7 @@
             autocomplete="off"
         >
     </div>
+    {% endif %}
 
 </div>
 
@@ -896,7 +898,8 @@
 
     <!-- GLOBAL SEARCH -->
 
-    <div class="header-search">
+    {% if request.resolver_match and request.resolver_match.url_name == 'home_feed' %}
+    <div class="header-search" data-feed-search>
 
         <i class="bi bi-search"></i>
 
@@ -914,6 +917,7 @@
         >
 
     </div>
+    {% endif %}
 
 
     <!-- HEADER ACTIONS -->

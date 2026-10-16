@@ -3,7 +3,7 @@
 {% block site_messages %}{% endblock %}
 {% block title %}{{ conversation_display_name }} · Messages · Awinlink{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/communications.css' %}">{% endblock %}
-{% block extra_js %}<script src="{% static 'js/communications.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/recording-format.js' %}"></script><script src="{% static 'js/communications.js' %}"></script>{% endblock %}
 
 {% block content %}
 
@@ -578,6 +578,8 @@
 
                                     <video
                                         controls
+                                        playsinline
+                                        preload="metadata"
                                         class="message-video"
                                     >
 
@@ -603,6 +605,7 @@
 
                                     <audio
                                         controls
+                                        preload="metadata"
                                         class="message-audio"
                                     >
 
@@ -726,6 +729,8 @@
 
                                     <video
                                         controls
+                                        playsinline
+                                        preload="metadata"
                                         class="message-video"
                                     >
 
@@ -751,6 +756,7 @@
 
                                     <audio
                                         controls
+                                        preload="metadata"
                                         class="message-audio"
                                     >
 
@@ -1621,6 +1627,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
             try {
 
+                if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
+                    throw new Error("Voice recording requires a supported browser and HTTPS (or localhost).");
+                }
                 console.log("Requesting microphone...");
 
                 recordingStream =
@@ -1646,39 +1655,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 * Select a browser-supported format.
                 */
 
-                let mimeType = "";
-
-                if (
-                    MediaRecorder.isTypeSupported(
-                        "audio/webm;codecs=opus"
-                    )
-                ) {
-
-                    mimeType =
-                        "audio/webm;codecs=opus";
-
-                }
-                else if (
-                    MediaRecorder.isTypeSupported(
-                        "audio/webm"
-                    )
-                ) {
-
-                    mimeType =
-                        "audio/webm";
-
-                }
-                else if (
-                    MediaRecorder.isTypeSupported(
-                        "audio/ogg;codecs=opus"
-                    )
-                ) {
-
-                    mimeType =
-                        "audio/ogg;codecs=opus";
-
-                }
-
+                const mimeType = recordingFormat.select(MediaRecorder);
 
                 console.log(
                     "Selected MIME type:",
@@ -1859,7 +1836,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         const finalMimeType =
                             mediaRecorder.mimeType ||
                             audioChunks[0].type ||
-                            "audio/webm";
+                            "application/octet-stream";
 
 
                         console.log(
@@ -2053,8 +2030,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 alert(
-                    "Microphone access was not granted. " +
-                    "Please allow microphone access and try again."
+                    error.message || "Unable to record. Please check microphone access and try again."
                 );
 
             }
@@ -2378,9 +2354,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const formData = new FormData(messageForm);
         if (hasAudio) {
-            const extension = audioBlob.type.includes("ogg")
-                ? "ogg"
-                : audioBlob.type.includes("mp4") ? "mp4" : "webm";
+            const extension = recordingFormat.extension(audioBlob.type);
             formData.set("audio", audioBlob, `voice_message.${extension}`);
             formData.set("message_type", "AUDIO");
         }

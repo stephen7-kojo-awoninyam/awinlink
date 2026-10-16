@@ -39,6 +39,10 @@ from .forms import (
   
     
 )
+from recommendations.unified import (
+    UnifiedRecommendationService,
+    unified_recommendations_enabled,
+)
 
 
 # =========================================================
@@ -118,6 +122,21 @@ def course_list(request):
         courses = courses.filter(
             title__icontains=search
         )
+
+    if unified_recommendations_enabled() and getattr(request.user, "talent_profile", None):
+        filtered_courses = list(courses)
+        unified_rows = UnifiedRecommendationService().recommend_learning(
+            request.user,
+            limit=len(filtered_courses),
+            candidates=filtered_courses,
+        )
+        courses = []
+        for row in unified_rows:
+            course = row["item"]
+            course.recommendation_score = row["score"]
+            course.matched_topics = row["matched_topics"]
+            course.recommendation_explanation = row["explanation"]
+            courses.append(course)
 
     return render(
         request,

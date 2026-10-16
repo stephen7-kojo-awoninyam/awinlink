@@ -1,857 +1,106 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}Connections · Awinlink{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/connections.css' %}">{% endblock %}
 
 {% block content %}
-
-<div class="container mt-5">
-
-    <!-- ================================================= -->
-    <!-- HEADER -->
-    <!-- ================================================= -->
-
-    <div class="mb-4">
-
-        <h2>
-            🤝 My Connections & Groups
-        </h2>
-
-        <p class="text-muted">
-            Manage your professional connections, groups and requests.
-        </p>
-
-    </div>
-
-
-    <!-- ================================================= -->
-    <!-- INCOMING REQUESTS -->
-    <!-- ================================================= -->
-
-    <div class="card shadow-sm mb-4">
-
-        <div class="card-header">
-
-            <h5 class="mb-0">
-                📥 Connection Requests
-            </h5>
-
+<main class="connections-page" data-connections-page>
+    <header class="connections-heading">
+        <div>
+            <span class="connections-eyebrow">YOUR COMMUNITY</span>
+            <h1>Connections</h1>
+            <p>Find your people and keep your network close.</p>
         </div>
+        <a class="connections-heading-action" href="{% url 'talent_search' %}"><i class="bi bi-person-plus" aria-hidden="true"></i> Discover people</a>
+    </header>
 
+    <nav class="connections-tabs" role="tablist" aria-label="Your connections">
+        <button class="connections-tab" id="tab-followers" type="button" role="tab" aria-controls="panel-followers" aria-selected="true">Followers <span>{{ followers|length }}</span></button>
+        <button class="connections-tab" id="tab-following" type="button" role="tab" aria-controls="panel-following" aria-selected="false" tabindex="-1">Following <span>{{ following|length }}</span></button>
+        <button class="connections-tab" id="tab-requests" type="button" role="tab" aria-controls="panel-requests" aria-selected="false" tabindex="-1">Requests <span>{{ incoming_requests|length }}</span></button>
+        <button class="connections-tab" id="tab-suggestions" type="button" role="tab" aria-controls="panel-suggestions" aria-selected="false" tabindex="-1">Suggestions</button>
+    </nav>
 
-        <div class="card-body">
+    <section class="connections-panel" id="panel-followers" role="tabpanel" aria-labelledby="tab-followers" tabindex="0">
+        <div class="connections-panel-heading"><div><h2>Your followers</h2><p>People who follow your updates.</p></div></div>
+        <div class="connections-grid">
+            {% for follow in followers %}
+                {% with person=follow.follower %}
+                <article class="person-card">
+                    {% if person.talent_profile %}<a class="person-avatar" href="{% url 'talent_profile' person.talent_profile.id %}" aria-label="View {{ person.get_full_name|default:person.username }} profile">{% else %}<span class="person-avatar" aria-hidden="true">{% endif %}
+                        {% if person.profile_picture %}<img src="{{ person.profile_picture.url }}" alt="">{% else %}<span aria-hidden="true">{{ person.username|first|upper }}</span>{% endif %}
+                    {% if person.talent_profile %}</a>{% else %}</span>{% endif %}
+                    <div class="person-details">{% if person.talent_profile %}<a class="person-name" href="{% url 'talent_profile' person.talent_profile.id %}">{{ person.get_full_name|default:person.username }}</a>{% else %}<span class="person-name">{{ person.get_full_name|default:person.username }}</span>{% endif %}<span class="person-handle">@{{ person.username }}</span><span class="person-role">{{ person.get_role_display }}</span></div>
+                    {% if person != request.user %}
+                    <form method="post" action="{% if person.id in following_user_ids %}{% url 'connections:unfollow_user' person.id %}{% else %}{% url 'connections:follow_user' person.id %}{% endif %}" class="person-action">{% csrf_token %}<button class="follow-button{% if person.id in following_user_ids %} is-following{% endif %}" type="submit" aria-label="{% if person.id in following_user_ids %}Unfollow{% else %}Follow{% endif %} {{ person.get_full_name|default:person.username }}">{% if person.id in following_user_ids %}Following{% else %}Follow{% endif %}</button></form>
+                    {% endif %}
+                </article>
+                {% endwith %}
+            {% empty %}<p class="connections-empty">You don’t have any followers yet.</p>{% endfor %}
+        </div>
+    </section>
 
+    <section class="connections-panel" id="panel-following" role="tabpanel" aria-labelledby="tab-following" tabindex="0" hidden>
+        <div class="connections-panel-heading"><div><h2>Following</h2><p>People whose updates you follow.</p></div></div>
+        <div class="connections-grid">
+            {% for follow in following %}
+                {% with person=follow.following %}
+                <article class="person-card">
+                    {% if person.talent_profile %}<a class="person-avatar" href="{% url 'talent_profile' person.talent_profile.id %}" aria-label="View {{ person.get_full_name|default:person.username }} profile">{% else %}<span class="person-avatar" aria-hidden="true">{% endif %}
+                        {% if person.profile_picture %}<img src="{{ person.profile_picture.url }}" alt="">{% else %}<span aria-hidden="true">{{ person.username|first|upper }}</span>{% endif %}
+                    {% if person.talent_profile %}</a>{% else %}</span>{% endif %}
+                    <div class="person-details">{% if person.talent_profile %}<a class="person-name" href="{% url 'talent_profile' person.talent_profile.id %}">{{ person.get_full_name|default:person.username }}</a>{% else %}<span class="person-name">{{ person.get_full_name|default:person.username }}</span>{% endif %}<span class="person-handle">@{{ person.username }}</span><span class="person-role">{{ person.get_role_display }}</span></div>
+                    <form method="post" action="{% url 'connections:unfollow_user' person.id %}" class="person-action">{% csrf_token %}<button class="follow-button is-following" type="submit" aria-label="Unfollow {{ person.get_full_name|default:person.username }}">Following</button></form>
+                </article>
+                {% endwith %}
+            {% empty %}<p class="connections-empty">You’re not following anyone yet.</p>{% endfor %}
+        </div>
+    </section>
+
+    <section class="connections-panel" id="panel-requests" role="tabpanel" aria-labelledby="tab-requests" tabindex="0" hidden>
+        <div class="connections-panel-heading"><div><h2>Connection requests</h2><p>Review people who would like to connect.</p></div></div>
+        <div class="connections-grid">
             {% for connection in incoming_requests %}
-
-                <div class="d-flex justify-content-between align-items-center border-bottom py-3">
-
-                    <div>
-
-                        <h6 class="mb-1">
-
-                            {{ connection.sender.get_full_name|default:connection.sender.username }}
-
-                        </h6>
-
-                        <small class="text-muted">
-
-                            Wants to connect with you.
-
-                        </small>
-
-                    </div>
-
-
-                    <div>
-
-                        <form method="post" action="{% url 'connections:accept_connection_request' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
-
-                            class="btn btn-success btn-sm"
-                        >
-                            ✓ Accept
-                        </button></form>
-
-                        <form method="post" action="{% url 'connections:reject_connection_request' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
-
-                            class="btn btn-outline-danger btn-sm"
-                        >
-                            ✕ Reject
-                        </button></form>
-
-                    </div>
-
-                </div>
-
-            {% empty %}
-
-                <p class="text-muted mb-0">
-                    No pending connection requests.
-                </p>
-
-            {% endfor %}
-
+                {% with person=connection.sender %}
+                <article class="person-card request-card">
+                    <span class="person-avatar" aria-hidden="true">{% if person.profile_picture %}<img src="{{ person.profile_picture.url }}" alt="">{% else %}<span>{{ person.username|first|upper }}</span>{% endif %}</span>
+                    <div class="person-details"><span class="person-name">{{ person.get_full_name|default:person.username }}</span><span class="person-handle">@{{ person.username }}</span><span class="person-role">Wants to connect with you</span></div>
+                    <div class="request-actions"><form method="post" action="{% url 'connections:accept_connection_request' connection.id %}">{% csrf_token %}<button type="submit" class="follow-button">Accept</button></form><form method="post" action="{% url 'connections:reject_connection_request' connection.id %}">{% csrf_token %}<button type="submit" class="follow-button secondary-button" aria-label="Decline request from {{ person.get_full_name|default:person.username }}">Decline</button></form></div>
+                </article>
+                {% endwith %}
+            {% empty %}<p class="connections-empty">You’re all caught up. No pending requests.</p>{% endfor %}
         </div>
+        {% if sent_requests %}<div class="sent-requests"><h3>Sent requests</h3><div class="connections-grid">{% for connection in sent_requests %}<article class="person-card"><div class="person-details"><span class="person-name">{{ connection.receiver.get_full_name|default:connection.receiver.username }}</span><span class="person-handle">@{{ connection.receiver.username }} · Pending</span></div><form method="post" action="{% url 'connections:cancel_connection_request' connection.id %}">{% csrf_token %}<button class="follow-button secondary-button" type="submit" aria-label="Cancel request to {{ connection.receiver.get_full_name|default:connection.receiver.username }}">Cancel</button></form></article>{% endfor %}</div></div>{% endif %}
+        <div class="sent-requests"><h3>Your connections</h3><div class="connections-grid">
+            {% for connection in sent_accepted %}<article class="person-card"><div class="person-avatar" aria-hidden="true">{% if connection.receiver.profile_picture %}<img src="{{ connection.receiver.profile_picture.url }}" alt="">{% else %}<span>{{ connection.receiver.username|first|upper }}</span>{% endif %}</div><div class="person-details"><span class="person-name">{{ connection.receiver.get_full_name|default:connection.receiver.username }}</span><span class="person-handle">@{{ connection.receiver.username }} · Connected</span></div>{% if connection.receiver.talent_profile %}<a class="follow-button secondary-button" href="{% url 'talent_profile' connection.receiver.talent_profile.id %}">Profile</a>{% endif %}<form method="post" action="{% url 'messaging:start_conversation' connection.receiver.id %}">{% csrf_token %}<button class="follow-button" type="submit">Message</button></form><form method="post" action="{% url 'connections:remove_connection' connection.id %}">{% csrf_token %}<button class="follow-button secondary-button" type="submit" aria-label="Remove connection {{ connection.receiver.username }}">Remove</button></form></article>{% endfor %}
+            {% for connection in received_accepted %}<article class="person-card"><div class="person-avatar" aria-hidden="true">{% if connection.sender.profile_picture %}<img src="{{ connection.sender.profile_picture.url }}" alt="">{% else %}<span>{{ connection.sender.username|first|upper }}</span>{% endif %}</div><div class="person-details"><span class="person-name">{{ connection.sender.get_full_name|default:connection.sender.username }}</span><span class="person-handle">@{{ connection.sender.username }} · Connected</span></div>{% if connection.sender.talent_profile %}<a class="follow-button secondary-button" href="{% url 'talent_profile' connection.sender.talent_profile.id %}">Profile</a>{% endif %}<form method="post" action="{% url 'messaging:start_conversation' connection.sender.id %}">{% csrf_token %}<button class="follow-button" type="submit">Message</button></form><form method="post" action="{% url 'connections:remove_connection' connection.id %}">{% csrf_token %}<button class="follow-button secondary-button" type="submit" aria-label="Remove connection {{ connection.sender.username }}">Remove</button></form></article>{% endfor %}
+            {% if not sent_accepted and not received_accepted %}<p class="connections-empty">You haven’t connected with anyone yet.</p>{% endif %}
+        </div></div>
+    </section>
 
-    </div>
-
-
-    <!-- ================================================= -->
-    <!-- ACCEPTED CONNECTIONS -->
-    <!-- ================================================= -->
-
-    <div class="card shadow-sm mb-4">
-
-        <div class="card-header">
-
-            <h5 class="mb-0">
-                🤝 Connected
-            </h5>
-
+    <section class="connections-panel" id="panel-suggestions" role="tabpanel" aria-labelledby="tab-suggestions" tabindex="0" hidden>
+        <div class="connections-panel-heading"><div><h2>People to follow</h2><p>Discover more people in the Awinlink community.</p></div></div>
+        <div class="connections-grid">
+            {% for person in suggested_users %}
+                <article class="person-card">
+                    {% if person.talent_profile %}<a class="person-avatar" href="{% url 'talent_profile' person.talent_profile.id %}" aria-label="View {{ person.get_full_name|default:person.username }} profile">{% else %}<span class="person-avatar" aria-hidden="true">{% endif %}
+                        {% if person.profile_picture %}<img src="{{ person.profile_picture.url }}" alt="">{% else %}<span aria-hidden="true">{{ person.username|first|upper }}</span>{% endif %}
+                    {% if person.talent_profile %}</a>{% else %}</span>{% endif %}
+                    <div class="person-details">{% if person.talent_profile %}<a class="person-name" href="{% url 'talent_profile' person.talent_profile.id %}">{{ person.get_full_name|default:person.username }}</a>{% else %}<span class="person-name">{{ person.get_full_name|default:person.username }}</span>{% endif %}<span class="person-handle">@{{ person.username }}</span><span class="person-role">{{ person.get_role_display }}</span></div>
+                    <form method="post" action="{% url 'connections:follow_user' person.id %}" class="person-action">{% csrf_token %}<button class="follow-button" type="submit" aria-label="Follow {{ person.get_full_name|default:person.username }}">Follow</button></form>
+                </article>
+            {% empty %}<p class="connections-empty">No suggestions available right now.</p>{% endfor %}
         </div>
+    </section>
 
-
-        <div class="card-body">
-
-            <!-- =========================================== -->
-            <!-- CONNECTIONS I SENT -->
-            <!-- =========================================== -->
-                {% for connection in sent_accepted %}
-
-                    <div class="d-flex justify-content-between align-items-center border-bottom py-3">
-
-                        <div>
-
-                            <h6 class="mb-1">
-
-                                {{ connection.receiver.get_full_name|default:connection.receiver.username }}
-
-                            </h6>
-
-                            <small class="text-success">
-
-                                ✓ Connected
-
-                            </small>
-
-                        </div>
-
-
-                        <div>
-
-                            {% if connection.receiver.talent_profile %}
-
-                                <a
-                                    href="{% url 'talent_profile' connection.receiver.talent_profile.id %}"
-                                    class="btn btn-outline-secondary btn-sm"
-                                >
-                                    👤 Profile
-                                </a>
-
-                            {% endif %}
-
-
-                            <form method="post" action="{% url 'messaging:start_conversation' connection.receiver.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-primary btn-sm">
-                                💬 Message
-                            </button></form>
-
-
-                            <form method="post" action="{% url 'connections:remove_connection' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
-
-                                class="btn btn-outline-danger btn-sm"
-                            >
-                                Remove
-                            </button></form>
-
-                        </div>
-
-                    </div>
-
-                {% endfor %}
-
-            
-
-
-            <!-- =========================================== -->
-            <!-- CONNECTIONS I RECEIVED -->
-            <!-- =========================================== -->
-
-            {% for connection in received_accepted %}
-
-                <div class="d-flex justify-content-between align-items-center border-bottom py-3">
-
-                    <div>
-
-                        <h6 class="mb-1">
-
-                            {{ connection.sender.get_full_name|default:connection.sender.username }}
-
-                        </h6>
-
-                        <small class="text-success">
-
-                            ✓ Connected
-
-                        </small>
-
-                    </div>
-
-
-                    <div>
-
-                        <a
-                            href="{% url 'talent_profile' connection.sender.talent_profile.id %}"
-                            class="btn btn-outline-secondary btn-sm"
-                        >
-                            👤 Profile
-                        </a>
-
-                        <form method="post" action="{% url 'messaging:start_conversation' connection.sender.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-primary btn-sm">
-                            💬 Message
-                        </button></form>
-
-                        <form method="post" action="{% url 'connections:remove_connection' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
-
-                            class="btn btn-outline-danger btn-sm"
-                        >
-                            Remove
-                        </button></form>
-
-                    </div>
-
-                </div>
-
-            {% endfor %}
-
-
-            {% if not sent_accepted and not received_accepted %}
-
-                <p class="text-muted mb-0">
-                    You don't have any connections yet.
-                </p>
-
-            {% endif %}
-
+    <details class="groups-section">
+        <summary><span><strong>Your groups</strong><small>Group chats and member management</small></span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+        <div class="groups-content">
+            <form method="post" action="{% url 'connections:create_group' %}" class="create-group-form">{% csrf_token %}<label for="group-name">Group name</label><div class="create-group-row"><input id="group-name" name="name" maxlength="100" required placeholder="e.g. Design community"><button class="follow-button" type="submit">Create group</button></div><fieldset><legend>Choose members from your connections</legend><div class="group-member-options">{% for connection in sent_accepted %}<label><input type="checkbox" name="user_ids" value="{{ connection.receiver.id }}"> {{ connection.receiver.get_full_name|default:connection.receiver.username }}</label>{% endfor %}{% for connection in received_accepted %}<label><input type="checkbox" name="user_ids" value="{{ connection.sender.id }}"> {{ connection.sender.get_full_name|default:connection.sender.username }}</label>{% endfor %}</div></fieldset></form>
+            <div class="group-list">{% for group in groups %}<article class="group-card"><div><strong>{{ group.name|default:"Unnamed Group" }}</strong><small>{{ group.participants.count }} member{{ group.participants.count|pluralize }}</small></div><div class="group-card-actions"><a class="follow-button" href="{% url 'messaging:conversation' group.id %}">Open chat</a>{% if group.created_by == request.user %}<button class="follow-button secondary-button" type="button" aria-expanded="false" aria-controls="group-members-{{ group.id }}" data-toggle-group-members>Manage members</button>{% endif %}</div>{% if group.created_by == request.user %}<div class="group-management" id="group-members-{{ group.id }}" hidden><ul>{% for participant in group.participants.all %}<li>{{ participant.user.get_full_name|default:participant.user.username }}{% if participant.user != group.created_by %}<button type="button" class="text-action" data-remove-member data-group="{{ group.id }}" data-user="{{ participant.user.id }}">Remove</button>{% else %}<small>Creator</small>{% endif %}</li>{% endfor %}</ul><label for="add-member-{{ group.id }}">Add a member</label><div class="create-group-row"><select id="add-member-{{ group.id }}" data-add-member-select><option value="">Select a user</option>{% for person in available_users %}<option value="{{ person.id }}">{{ person.get_full_name|default:person.username }}</option>{% endfor %}</select><button class="follow-button" type="button" data-add-member data-group="{{ group.id }}">Add</button></div></div>{% endif %}</article>{% empty %}<p class="connections-empty">You are not a member of any groups yet.</p>{% endfor %}</div>
         </div>
-
-    </div>
-
-    <!-- CREATE GROUP -->
-<div class="card shadow-sm mb-4">
-
-    <div class="card-body">
-
-        <h5 class="mb-3">
-            👥 Create Group
-        </h5>
-
-        <form method="POST" action="{% url 'connections:create_group' %}">
-
-            {% csrf_token %}
-
-            <div class="mb-3">
-
-                <label class="form-label">
-                    Group Name
-                </label>
-
-                <input
-                    type="text"
-                    name="name"
-                    class="form-control"
-                    placeholder="Enter group name"
-                    required
-                >
-
-            </div>
-
-            <div class="mb-3">
-
-                <label class="form-label">
-                    Select Members
-                </label>
-
-                {% for connection in sent_accepted %}
-
-                    <div class="form-check mb-2">
-
-                        <input
-                            class="form-check-input"
-                            type="checkbox"
-                            name="user_ids"
-                            value="{{ connection.receiver.id }}"
-                            id="group-user-{{ connection.receiver.id }}"
-                        >
-
-                        <label
-                            class="form-check-label"
-                            for="group-user-{{ connection.receiver.id }}"
-                        >
-                            {{ connection.receiver.get_full_name|default:connection.receiver.username }}
-                        </label>
-
-                    </div>
-
-                {% endfor %}
-
-
-                {% for connection in received_accepted %}
-
-                    <div class="form-check mb-2">
-
-                        <input
-                            class="form-check-input"
-                            type="checkbox"
-                            name="user_ids"
-                            value="{{ connection.sender.id }}"
-                            id="group-user-{{ connection.sender.id }}"
-                        >
-
-                        <label
-                            class="form-check-label"
-                            for="group-user-{{ connection.sender.id }}"
-                        >
-                            {{ connection.sender.get_full_name|default:connection.sender.username }}
-                        </label>
-
-                    </div>
-
-                {% endfor %}
-
-            </div>
-
-            <button
-                type="submit"
-                class="btn btn-primary"
-            >
-                Create Group
-            </button>
-
-        </form>
-
-    </div>
-
-</div>
-
-<!-- ================================================= -->
-<!-- GROUPS -->
-<!-- ================================================= -->
-
-<div class="card shadow-sm mb-4">
-
-    <div class="card-header">
-
-        <h5 class="mb-0">
-            👥 My Groups
-        </h5>
-
-    </div>
-
-    <div class="card-body">
-
-        {% for group in groups %}
-
-            <div class="border-bottom py-3">
-
-                <!-- GROUP HEADER -->
-
-                <div class="d-flex justify-content-between align-items-center">
-
-                    <div>
-
-                        <h6 class="mb-1">
-                            {{ group.name|default:"Unnamed Group" }}
-                        </h6>
-
-                        <small class="text-muted">
-                            👥 {{ group.participants.count }}
-                            member{{ group.participants.count|pluralize }}
-                        </small>
-
-                    </div>
-
-                    <div>
-
-                        <a
-                            href="{% url 'messaging:conversation' group.id %}"
-                            class="btn btn-primary btn-sm"
-                        >
-                            💬 Open Chat
-                        </a>
-
-                    </div>
-
-                </div>
-
-
-                <!-- MEMBERS -->
-
-                <div class="mt-3">
-
-                    <small class="text-muted d-block mb-2">
-                        Members
-                    </small>
-
-                    <div class="d-flex flex-wrap gap-2">
-
-                        {% for participant in group.participants.all %}
-
-                            <span class="badge bg-light text-dark border">
-
-                                {% if participant.user.get_full_name %}
-
-                                    {{ participant.user.get_full_name }}
-
-                                {% else %}
-
-                                    {{ participant.user.username }}
-
-                                {% endif %}
-
-                            </span>
-
-                        {% endfor %}
-
-                    </div>
-
-                </div>
-
-
-                <!-- GROUP CREATOR CONTROLS -->
-
-                {% if group.created_by == request.user %}
-
-                    <button
-                        type="button"
-                        class="btn btn-outline-secondary btn-sm"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#manageGroup{{ group.id }}"
-                    >
-                        ⚙️ Manage Members
-                    </button>
-
-                    <div
-                        class="collapse mt-3"
-                        id="manageGroup{{ group.id }}"
-                    >
-
-                        <!-- CURRENT MEMBERS -->
-
-                        <div class="mb-3">
-
-                            <strong>
-                                Current Members
-                            </strong>
-
-                            {% for participant in group.participants.all %}
-
-                                <div class="d-flex justify-content-between align-items-center border-bottom py-2">
-
-                                    <span>
-                                        {{ participant.user.get_full_name|default:participant.user.username }}
-                                    </span>
-
-                                    {% if participant.user != group.created_by %}
-
-                                        <button
-                                            type="button"
-                                            class="btn btn-outline-danger btn-sm"
-                                            onclick="removeGroupMember({{ group.id }}, {{ participant.user.id }})"
-                                        >
-                                            Remove
-                                        </button>
-
-                                    {% else %}
-
-                                        <small class="text-muted">
-                                            Creator
-                                        </small>
-
-                                    {% endif %}
-
-                                </div>
-
-                            {% endfor %}
-
-                        </div>
-
-
-                        <!-- ADD MEMBER -->
-
-                        <div>
-
-                            <strong>
-                                Add Member
-                            </strong>
-
-                            <div class="input-group mt-2">
-
-                                <select
-                                    class="form-select"
-                                    id="addMember{{ group.id }}"
-                                >
-
-                                    <option value="">
-                                        Select a user
-                                    </option>
-
-                                    {% for user in available_users %}
-
-                                        <option value="{{ user.id }}">
-                                            {{ user.get_full_name|default:user.username }}
-                                        </option>
-
-                                    {% endfor %}
-
-                                </select>
-
-                                <button
-                                    type="button"
-                                    class="btn btn-primary"
-                                    onclick="addGroupMember({{ group.id }})"
-                                >
-                                    Add
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                {% endif %}
-
-                
-
-            </div>
-
-        {% empty %}
-
-            <p class="text-muted mb-0">
-
-                You are not a member of any groups yet.
-
-            </p>
-
-        {% endfor %}
-
-    </div>
-
-</div>
-
-
-    <!-- ================================================= -->
-    <!-- SENT REQUESTS -->
-    <!-- ================================================= -->
-
-    <div class="card shadow-sm">
-
-        <div class="card-header">
-
-            <h5 class="mb-0">
-                📤 Sent Requests
-            </h5>
-
-        </div>
-
-
-        <div class="card-body">
-
-            {% for connection in sent_requests %}
-
-                <div class="d-flex justify-content-between align-items-center border-bottom py-3">
-
-                    <div>
-
-                        <h6 class="mb-1">
-
-                            {{ connection.receiver.get_full_name|default:connection.receiver.username }}
-
-                        </h6>
-
-                        <small class="text-warning">
-
-                            🟡 Pending
-
-                        </small>
-
-                    </div>
-
-
-                    <div>
-
-                        <form method="post" action="{% url 'connections:cancel_connection_request' connection.id %}" class="d-inline">{% csrf_token %}<button type="submit"
-
-                            class="btn btn-outline-danger btn-sm"
-                        >
-                            Cancel
-                        </button></form>
-
-                    </div>
-
-                </div>
-
-            {% empty %}
-
-                <p class="text-muted mb-0">
-
-                    You haven't sent any pending requests.
-
-                </p>
-
-            {% endfor %}
-
-        </div>
-
-    </div>
-
-</div>
-<script>
-
-
-function getCookie(name) {
-
-    let cookieValue = null;
-
-    if (document.cookie && document.cookie !== "") {
-
-        const cookies = document.cookie.split(";");
-
-        for (let i = 0; i < cookies.length; i++) {
-
-            const cookie = cookies[i].trim();
-
-            if (
-                cookie.substring(
-                    0,
-                    name.length + 1
-                ) === (name + "=")
-            ) {
-
-                cookieValue = decodeURIComponent(
-                    cookie.substring(
-                        name.length + 1
-                    )
-                );
-
-                break;
-            }
-        }
-    }
-
-    return cookieValue;
-}
-
-
-async function addGroupMember(groupId) {
-
-    const select = document.getElementById(
-        `addMember${groupId}`
-    );
-
-    const userId = select.value;
-
-    if (!userId) {
-        alert("Please select a user.");
-        return;
-    }
-
-    try {
-
-        const response = await fetch(
-            `/api/messaging/conversations/${groupId}/members/add/`,
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": getCookie("csrftoken")
-                },
-
-                body: JSON.stringify({
-                    user_id: userId
-                })
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-
-            alert(
-                data.detail ||
-                "Unable to add member."
-            );
-
-            return;
-        }
-
-        location.reload();
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "An error occurred while adding the member."
-        );
-    }
-}
-
-
-async function removeGroupMember(
-    groupId,
-    userId
-) {
-
-    if (
-        !confirm(
-            "Remove this member from the group?"
-        )
-    ) {
-        return;
-    }
-
-    try {
-
-        const response = await fetch(
-            `/api/messaging/conversations/${groupId}/members/${userId}/remove/`,
-            {
-                method: "DELETE",
-
-                headers: {
-                    "X-CSRFToken": getCookie("csrftoken")
-                }
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-
-            alert(
-                data.detail ||
-                "Unable to remove member."
-            );
-
-            return;
-        }
-
-        location.reload();
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "An error occurred while removing the member."
-        );
-    }
-}
- 
-
-async function addGroupMember(groupId) {
-
-    const select = document.getElementById(
-        `addMember${groupId}`
-    );
-
-    const userId = select.value;
-
-    if (!userId) {
-        alert("Please select a user.");
-        return;
-    }
-
-    try {
-
-        const response = await fetch(
-            `/api/messaging/conversations/${groupId}/members/add/`,
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": getCookie("csrftoken")
-                },
-
-                body: JSON.stringify({
-                    user_id: userId
-                })
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-
-            alert(
-                data.detail ||
-                "Unable to add member."
-            );
-
-            return;
-        }
-
-        location.reload();
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "An error occurred while adding the member."
-        );
-    }
-}
-
-
-async function removeGroupMember(
-    groupId,
-    userId
-) {
-
-    if (
-        !confirm(
-            "Remove this member from the group?"
-        )
-    ) {
-        return;
-    }
-
-    try {
-
-        const response = await fetch(
-            `/api/messaging/conversations/${groupId}/members/${userId}/remove/`,
-            {
-                method: "DELETE",
-
-                headers: {
-                    "X-CSRFToken": getCookie("csrftoken")
-                }
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-
-            alert(
-                data.detail ||
-                "Unable to remove member."
-            );
-
-            return;
-        }
-
-        location.reload();
-
-    } catch (error) {
-
-        console.error(error);
-
-        alert(
-            "An error occurred while removing the member."
-        );
-    }
-}
-
-</script>
-
+    </details>
+</main>
+<script src="{% static 'js/connections.js' %}"></script>
 {% endblock %}

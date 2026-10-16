@@ -653,7 +653,8 @@ class ConversationMessagesAPIView(APIView):
 
         serializer = MessageSerializer(
             messages,
-            many=True
+            many=True,
+            context={"request": request},
         )
 
         return Response(
@@ -863,7 +864,8 @@ class SendMessageAPIView(APIView):
         # ----------------------------------------------------
 
         response_serializer = MessageSerializer(
-            message
+            message,
+            context={"request": request},
         )
 
         return Response(
@@ -942,7 +944,8 @@ class MessageReadAPIView(APIView):
         )
 
         serializer = MessageSerializer(
-            message
+            message,
+            context={"request": request},
         )
 
         return Response(

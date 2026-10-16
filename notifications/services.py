@@ -9,6 +9,8 @@ def create_notification(
     post=None,
     opportunity=None,
     conversation=None,
+    metadata=None,
+    deduplication_key=None,
 ):
     """
     Central notification creation service.
@@ -18,12 +20,10 @@ def create_notification(
     if sender and user == sender:
         return None
 
-    return Notification.objects.create(
-        user=user,
-        sender=sender,
-        notification_type=notification_type,
-        message=message,
-        post=post,
-        opportunity=opportunity,
-        conversation=conversation,
-    )
+    values = dict(sender=sender, notification_type=notification_type, message=message,
+                  post=post, opportunity=opportunity, conversation=conversation, metadata=metadata or {})
+    if deduplication_key is not None:
+        notification, _ = Notification.objects.get_or_create(
+            user=user, deduplication_key=deduplication_key, defaults=values)
+        return notification
+    return Notification.objects.create(user=user, **values)

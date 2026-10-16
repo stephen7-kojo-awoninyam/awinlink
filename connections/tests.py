@@ -1,9 +1,51 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from notifications.models import Notification
-from .models import Connection
+from .models import Connection, Follow
+
+
+@override_settings(
+	STORAGES={
+		"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+		"staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+	}
+)
+class ConnectionsUITests(TestCase):
+	def setUp(self):
+		user_model = get_user_model()
+		self.viewer = user_model.objects.create_user(username="connections_viewer")
+		self.follower = user_model.objects.create_user(username="connections_follower")
+		self.following_user = user_model.objects.create_user(username="connections_followed")
+		self.suggestion = user_model.objects.create_user(username="connections_suggestion")
+		self.client.force_login(self.viewer)
+
+	def test_connections_page_renders_accessible_responsive_follow_tabs(self):
+		Follow.objects.create(follower=self.follower, following=self.viewer)
+		Follow.objects.create(follower=self.viewer, following=self.following_user)
+		Connection.objects.create(sender=self.follower, receiver=self.viewer, status="PENDING")
+
+		response = self.client.get(reverse("connections:connections_list"))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, 'role="tablist" aria-label="Your connections"')
+		for label in ("Followers", "Following", "Requests", "Suggestions"):
+			self.assertContains(response, label)
+		self.assertContains(response, 'role="tabpanel"')
+		self.assertContains(response, 'class="person-card"')
+		self.assertContains(response, f'@{self.follower.username}')
+		self.assertContains(response, f'@{self.following_user.username}')
+		self.assertContains(response, f'@{self.suggestion.username}')
+		self.assertContains(response, 'aria-label="Unfollow connections_followed"')
+		self.assertContains(response, 'aria-label="Decline request from connections_follower"')
+		self.assertContains(response, 'static/css/connections.css')
+		self.assertContains(response, 'static/js/connections.js')
+
+	def test_connections_page_requires_login(self):
+		self.client.logout()
+		response = self.client.get(reverse("connections:connections_list"))
+		self.assertEqual(response.status_code, 302)
 
 
 class SendConnectionRequestTests(TestCase):

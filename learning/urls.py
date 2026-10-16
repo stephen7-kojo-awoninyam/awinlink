@@ -1,9 +1,12 @@
 from django.urls import path
 
 from . import views
+from . import classroom_views
 
 
 urlpatterns = [
+    path("classrooms/", classroom_views.directory, name="learning_classrooms"),
+    path("sessions/<int:session_id>/classroom/", classroom_views.classroom, name="learning_classroom"),
 
     # =====================================================
     # COURSE DISCOVERY

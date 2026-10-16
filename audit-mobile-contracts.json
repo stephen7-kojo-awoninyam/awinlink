@@ -1,0 +1,828 @@
+{
+  "resolved": [
+    {
+      "file": "mobile\\app\\applications.tsx",
+      "line": 30,
+      "route": "/api/applications/1/",
+      "view": "api:application_detail"
+    },
+    {
+      "file": "mobile\\app\\applications.tsx",
+      "line": 37,
+      "route": "/api/applications/1/status/",
+      "view": "api:application_status_update"
+    },
+    {
+      "file": "mobile\\app\\competition-management.tsx",
+      "line": 33,
+      "route": "/api/competitions/my/created/",
+      "view": "competitions_api:my_created_competitions"
+    },
+    {
+      "file": "mobile\\app\\competition-management.tsx",
+      "line": 44,
+      "route": "/api/competitions/1/action/",
+      "view": "competitions_api:competition_action"
+    },
+    {
+      "file": "mobile\\app\\competition-workspace.tsx",
+      "line": 33,
+      "route": "/api/competitions/judging/",
+      "view": "competitions_api:my_judging"
+    },
+    {
+      "file": "mobile\\app\\competition-workspace.tsx",
+      "line": 34,
+      "route": "/api/competitions/moderation/",
+      "view": "competitions_api:moderation"
+    },
+    {
+      "file": "mobile\\app\\competition-workspace.tsx",
+      "line": 46,
+      "route": "/api/competitions/1/",
+      "view": "competitions_api:competition_detail"
+    },
+    {
+      "file": "mobile\\app\\competition-workspace.tsx",
+      "line": 47,
+      "route": "/api/competitions/1/participants/",
+      "view": "competitions_api:competition_participants"
+    },
+    {
+      "file": "mobile\\app\\competition-workspace.tsx",
+      "line": 58,
+      "route": "/api/competitions/1/participants/1/evaluate/",
+      "view": "competitions_api:competition_evaluation"
+    },
+    {
+      "file": "mobile\\app\\competition-workspace.tsx",
+      "line": 70,
+      "route": "/api/competitions/moderation/1/",
+      "view": "competitions_api:moderation_review"
+    },
+    {
+      "file": "mobile\\app\\connections.tsx",
+      "line": 25,
+      "route": "/api/connections/received/",
+      "view": "api:received_connections"
+    },
+    {
+      "file": "mobile\\app\\connections.tsx",
+      "line": 25,
+      "route": "/api/connections/sent/",
+      "view": "api:sent_connections"
+    },
+    {
+      "file": "mobile\\app\\connections.tsx",
+      "line": 25,
+      "route": "/api/connections/",
+      "view": "api:my_connections"
+    },
+    {
+      "file": "mobile\\app\\connections.tsx",
+      "line": 33,
+      "route": "/api/connections/1/respond/",
+      "view": "api:connection_respond"
+    },
+    {
+      "file": "mobile\\app\\connections.tsx",
+      "line": 39,
+      "route": "/api/connections/1/cancel/",
+      "view": "api:connection_cancel"
+    },
+    {
+      "file": "mobile\\app\\event-certificates.tsx",
+      "line": 22,
+      "route": "/api/events/my-certificates/",
+      "view": "events_api:my_event_certificates"
+    },
+    {
+      "file": "mobile\\app\\event-certificates.tsx",
+      "line": 33,
+      "route": "/api/events/certificates/1/verify/",
+      "view": "events_api:event_certificate_verify"
+    },
+    {
+      "file": "mobile\\app\\event-management.tsx",
+      "line": 40,
+      "route": "/api/organizations/me/",
+      "view": "api:my_organization"
+    },
+    {
+      "file": "mobile\\app\\event-management.tsx",
+      "line": 41,
+      "route": "/api/events/categories/",
+      "view": "events_api:event_categories"
+    },
+    {
+      "file": "mobile\\app\\event-management.tsx",
+      "line": 42,
+      "route": "/api/events/my/",
+      "view": "events_api:my_organization_events"
+    },
+    {
+      "file": "mobile\\app\\event-management.tsx",
+      "line": 43,
+      "route": "/api/events/registrations/",
+      "view": "events_api:event_registrations"
+    },
+    {
+      "file": "mobile\\app\\event-management.tsx",
+      "line": 81,
+      "route": "/api/events/create/",
+      "view": "events_api:event_create"
+    },
+    {
+      "file": "mobile\\app\\event-management.tsx",
+      "line": 92,
+      "route": "/api/events/1/update/",
+      "view": "events_api:event_update"
+    },
+    {
+      "file": "mobile\\app\\event-management.tsx",
+      "line": 102,
+      "route": "/api/events/registrations/1/status/",
+      "view": "events_api:event_registration_status"
+    },
+    {
+      "file": "mobile\\app\\event-management.tsx",
+      "line": 111,
+      "route": "/api/events/registrations/1/attendance/",
+      "view": "events_api:event_attendance"
+    },
+    {
+      "file": "mobile\\app\\learning.tsx",
+      "line": 24,
+      "route": "/api/learning/courses/",
+      "view": "course_list"
+    },
+    {
+      "file": "mobile\\app\\learning.tsx",
+      "line": 24,
+      "route": "/api/learning/my-enrollments/",
+      "view": "my_enrollments"
+    },
+    {
+      "file": "mobile\\app\\messages.tsx",
+      "line": 35,
+      "route": "/api/messaging/conversations/",
+      "view": "messaging_api:my_conversations"
+    },
+    {
+      "file": "mobile\\app\\messages.tsx",
+      "line": 54,
+      "route": "/api/connections/",
+      "view": "api:my_connections"
+    },
+    {
+      "file": "mobile\\app\\messages.tsx",
+      "line": 67,
+      "route": "/api/messaging/conversations/create/",
+      "view": "messaging_api:conversation_create"
+    },
+    {
+      "file": "mobile\\app\\onboarding.tsx",
+      "line": 64,
+      "route": "/api/talents/me/",
+      "view": "api:my_talent_profile"
+    },
+    {
+      "file": "mobile\\app\\onboarding.tsx",
+      "line": 95,
+      "route": "/api/organizations/me/",
+      "view": "api:my_organization"
+    },
+    {
+      "file": "mobile\\app\\organizations.tsx",
+      "line": 31,
+      "route": "/api/organizations/",
+      "view": "api:organization_list"
+    },
+    {
+      "file": "mobile\\app\\organizations.tsx",
+      "line": 32,
+      "route": "/api/organizations/following/",
+      "view": "api:followed_organizations_list"
+    },
+    {
+      "file": "mobile\\app\\organizations.tsx",
+      "line": 54,
+      "route": "/api/organizations/1/unfollow/",
+      "view": "api:organization_unfollow"
+    },
+    {
+      "file": "mobile\\app\\organizations.tsx",
+      "line": 54,
+      "route": "/api/organizations/1/follow/",
+      "view": "api:organization_follow"
+    },
+    {
+      "file": "mobile\\app\\portfolio.tsx",
+      "line": 24,
+      "route": "/api/portfolio/my/",
+      "view": "portfolio_api:my_portfolio"
+    },
+    {
+      "file": "mobile\\app\\recruitment.tsx",
+      "line": 33,
+      "route": "/api/recruitment/pipeline/",
+      "view": "api:recruitment_pipeline"
+    },
+    {
+      "file": "mobile\\app\\recruitment.tsx",
+      "line": 34,
+      "route": "/api/organizations/me/",
+      "view": "api:my_organization"
+    },
+    {
+      "file": "mobile\\app\\recruitment.tsx",
+      "line": 35,
+      "route": "/api/opportunities/",
+      "view": "api:opportunity_list"
+    },
+    {
+      "file": "mobile\\app\\recruitment.tsx",
+      "line": 49,
+      "route": "/api/recruitment/create/",
+      "view": "api:recruitment_create"
+    },
+    {
+      "file": "mobile\\app\\recruitment.tsx",
+      "line": 56,
+      "route": "/api/recruitment/1/update/",
+      "view": "api:recruitment_update"
+    },
+    {
+      "file": "mobile\\app\\recruitment.tsx",
+      "line": 62,
+      "route": "/api/recruitment/1/delete/",
+      "view": "api:recruitment_delete"
+    },
+    {
+      "file": "mobile\\app\\shortlists.tsx",
+      "line": 24,
+      "route": "/api/shortlists/me/",
+      "view": "api:my_shortlists"
+    },
+    {
+      "file": "mobile\\app\\shortlists.tsx",
+      "line": 34,
+      "route": "/api/shortlists/1/update/",
+      "view": "api:shortlist_update"
+    },
+    {
+      "file": "mobile\\app\\shortlists.tsx",
+      "line": 40,
+      "route": "/api/shortlists/1/delete/",
+      "view": "api:shortlist_delete"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 34,
+      "route": "/api/scouts/talents/",
+      "view": "scouts_api:scout_talent_list"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 34,
+      "route": "/api/coaches/talents/",
+      "view": "coaches_api:coach_talent_list"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 35,
+      "route": "/api/scouts/talents/bookmarks/",
+      "view": "scouts_api:my_bookmarks"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 35,
+      "route": "/api/coaches/talents/bookmarks/",
+      "view": "coaches_api:my_bookmarks"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 36,
+      "route": "/api/scouts/talents/following/",
+      "view": "scouts_api:followed_talents"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 36,
+      "route": "/api/coaches/talents/following/",
+      "view": "coaches_api:followed_talents"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 55,
+      "route": "/api/scouts/bookmarks/1/delete/",
+      "view": "scouts_api:bookmark_delete"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 55,
+      "route": "/api/coaches/bookmarks/1/delete/",
+      "view": "coaches_api:bookmark_delete"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 58,
+      "route": "/api/scouts/talents/1/bookmark/",
+      "view": "scouts_api:bookmark_talent"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 58,
+      "route": "/api/coaches/talents/1/bookmark/",
+      "view": "coaches_api:bookmark_talent"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 70,
+      "route": "/api/scouts/talents/1/unfollow/",
+      "view": "scouts_api:unfollow_talent"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 70,
+      "route": "/api/coaches/talents/1/unfollow/",
+      "view": "coaches_api:unfollow_talent"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 73,
+      "route": "/api/scouts/talents/1/follow/",
+      "view": "scouts_api:follow_talent"
+    },
+    {
+      "file": "mobile\\app\\specialist.tsx",
+      "line": 73,
+      "route": "/api/coaches/talents/1/follow/",
+      "view": "coaches_api:follow_talent"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\alerts.tsx",
+      "line": 22,
+      "route": "/api/notifications/",
+      "view": "api:notification_list"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\alerts.tsx",
+      "line": 37,
+      "route": "/api/notifications/1/read/",
+      "view": "api:notification_read"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\alerts.tsx",
+      "line": 50,
+      "route": "/api/notifications/read-all/",
+      "view": "api:notification_read_all"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\create.tsx",
+      "line": 191,
+      "route": "/api/domains/",
+      "view": "domains_api:domain_list"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\create.tsx",
+      "line": 219,
+      "route": "/api/feed/posts/create/",
+      "view": "feed_api:post_create"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\create.tsx",
+      "line": 238,
+      "route": "/api/portfolio/create/",
+      "view": "portfolio_api:portfolio_create"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\create.tsx",
+      "line": 258,
+      "route": "/api/opportunities/create/",
+      "view": "api:opportunity_create"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\create.tsx",
+      "line": 298,
+      "route": "/api/competitions/create/",
+      "view": "competitions_api:competition_create"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\create.tsx",
+      "line": 300,
+      "route": "/api/competitions/1/action/",
+      "view": "competitions_api:competition_action"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\discover.tsx",
+      "line": 33,
+      "route": "/api/talents/",
+      "view": "api:talent_list"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\index.tsx",
+      "line": 24,
+      "route": "/api/feed/posts/",
+      "view": "feed_api:post_list"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\index.tsx",
+      "line": 42,
+      "route": "/api/feed/posts/1/like/",
+      "view": "feed_api:post_like"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\index.tsx",
+      "line": 42,
+      "route": "/api/feed/posts/1/unlike/",
+      "view": "feed_api:post_unlike"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\opportunities.tsx",
+      "line": 44,
+      "route": "/api/opportunities/",
+      "view": "api:opportunity_list"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\opportunities.tsx",
+      "line": 47,
+      "route": "/api/applications/me/",
+      "view": "api:my_applications"
+    },
+    {
+      "file": "mobile\\app\\(tabs)\\opportunities.tsx",
+      "line": 74,
+      "route": "/api/applications/create/",
+      "view": "api:application_create"
+    },
+    {
+      "file": "mobile\\app\\call\\[id].tsx",
+      "line": 83,
+      "route": "/api/messaging/calls/1/reject/",
+      "view": "messaging_api:call_reject"
+    },
+    {
+      "file": "mobile\\app\\call\\[id].tsx",
+      "line": 85,
+      "route": "/api/messaging/calls/1/end/",
+      "view": "messaging_api:call_end"
+    },
+    {
+      "file": "mobile\\app\\call\\[id].tsx",
+      "line": 231,
+      "route": "/api/messaging/calls/ice-servers/",
+      "view": "messaging_api:call_ice_servers"
+    },
+    {
+      "file": "mobile\\app\\call\\[id].tsx",
+      "line": 262,
+      "route": "/api/messaging/calls/incoming/",
+      "view": "messaging_api:incoming_calls"
+    },
+    {
+      "file": "mobile\\app\\call\\[id].tsx",
+      "line": 293,
+      "route": "/api/messaging/calls/1/accept/",
+      "view": "messaging_api:call_accept"
+    },
+    {
+      "file": "mobile\\app\\conversation\\[id].tsx",
+      "line": 48,
+      "route": "/api/messaging/conversations/1/messages/",
+      "view": "messaging_api:conversation_messages"
+    },
+    {
+      "file": "mobile\\app\\conversation\\[id].tsx",
+      "line": 52,
+      "route": "/api/messaging/conversations/1/read-all/",
+      "view": "messaging_api:conversation_read_all"
+    },
+    {
+      "file": "mobile\\app\\conversation\\[id].tsx",
+      "line": 97,
+      "route": "/api/messaging/conversations/1/messages/create/",
+      "view": "messaging_api:send_message"
+    },
+    {
+      "file": "mobile\\app\\conversation\\[id].tsx",
+      "line": 124,
+      "route": "/api/messaging/conversations/1/messages/create/",
+      "view": "messaging_api:send_message"
+    },
+    {
+      "file": "mobile\\app\\learning\\results.tsx",
+      "line": 21,
+      "route": "/api/learning/my-certificates/",
+      "view": "my_certificates"
+    },
+    {
+      "file": "mobile\\app\\learning\\results.tsx",
+      "line": 21,
+      "route": "/api/learning/quiz-attempts/me/",
+      "view": "my_quiz_attempts"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 41,
+      "route": "/api/learning/categories/",
+      "view": "learning_categories"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 42,
+      "route": "/api/learning/courses/me/",
+      "view": "my_courses"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 43,
+      "route": "/api/learning/courses/pending/",
+      "view": "pending_courses"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 60,
+      "route": "/api/learning/courses/1/lessons/",
+      "view": "course_lessons"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 77,
+      "route": "/api/learning/courses/create/",
+      "view": "course_create"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 87,
+      "route": "/api/learning/courses/1/lessons/create/",
+      "view": "lesson_create"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 96,
+      "route": "/api/learning/courses/1/submit/",
+      "view": "course_submit"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 114,
+      "route": "/api/learning/courses/1/",
+      "view": "course_detail"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 123,
+      "route": "/api/learning/courses/1/approve/",
+      "view": "course_approve"
+    },
+    {
+      "file": "mobile\\app\\learning\\studio.tsx",
+      "line": 123,
+      "route": "/api/learning/courses/1/reject/",
+      "view": "course_reject"
+    },
+    {
+      "file": "mobile\\app\\learning\\[id].tsx",
+      "line": 38,
+      "route": "/api/learning/courses/1/",
+      "view": "course_detail"
+    },
+    {
+      "file": "mobile\\app\\learning\\[id].tsx",
+      "line": 41,
+      "route": "/api/learning/courses/1/lessons/",
+      "view": "course_lessons"
+    },
+    {
+      "file": "mobile\\app\\learning\\[id].tsx",
+      "line": 42,
+      "route": "/api/learning/courses/1/progress/",
+      "view": "course_progress"
+    },
+    {
+      "file": "mobile\\app\\learning\\[id].tsx",
+      "line": 44,
+      "route": "/api/learning/courses/1/reviews/",
+      "view": "course_reviews"
+    },
+    {
+      "file": "mobile\\app\\learning\\[id].tsx",
+      "line": 49,
+      "route": "/api/learning/lessons/1/quiz/",
+      "view": "lesson_quiz"
+    },
+    {
+      "file": "mobile\\app\\learning\\[id].tsx",
+      "line": 65,
+      "route": "/api/learning/courses/1/enroll/",
+      "view": "course_enroll"
+    },
+    {
+      "file": "mobile\\app\\learning\\[id].tsx",
+      "line": 71,
+      "route": "/api/learning/lessons/1/progress/",
+      "view": "lesson_progress"
+    },
+    {
+      "file": "mobile\\app\\learning\\[id].tsx",
+      "line": 77,
+      "route": "/api/learning/courses/1/reviews/",
+      "view": "course_reviews"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 53,
+      "route": "/api/talents/1/",
+      "view": "api:talent_detail"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 54,
+      "route": "/api/follows/following/",
+      "view": "api:following_list"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 55,
+      "route": "/api/connections/",
+      "view": "api:my_connections"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 56,
+      "route": "/api/connections/outgoing/",
+      "view": "api:outgoing_connections"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 57,
+      "route": "/api/connections/incoming/",
+      "view": "api:incoming_connections"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 58,
+      "route": "/api/portfolio/talent/1/",
+      "view": "portfolio_api:talent_portfolio"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 86,
+      "route": "/api/scouts/talents/1/view/",
+      "view": "scouts_api:view_talent"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 86,
+      "route": "/api/coaches/talents/1/view/",
+      "view": "coaches_api:view_talent"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 95,
+      "route": "/api/shortlists/create/",
+      "view": "api:shortlist_create"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 111,
+      "route": "/api/follows/1/remove/",
+      "view": "api:unfollow_user_remove"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 114,
+      "route": "/api/follows/create/",
+      "view": "api:follow_user_create"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 143,
+      "route": "/api/connections/create/",
+      "view": "api:connection_create"
+    },
+    {
+      "file": "mobile\\app\\talent\\[id].tsx",
+      "line": 164,
+      "route": "/api/messaging/conversations/create/",
+      "view": "messaging_api:conversation_create"
+    },
+    {
+      "file": "mobile\\app\\learning\\quiz\\[id].tsx",
+      "line": 29,
+      "route": "/api/learning/lessons/1/quiz/",
+      "view": "lesson_quiz"
+    },
+    {
+      "file": "mobile\\app\\learning\\quiz\\[id].tsx",
+      "line": 30,
+      "route": "/api/learning/quizzes/1/questions/",
+      "view": "quiz_questions"
+    },
+    {
+      "file": "mobile\\app\\learning\\quiz\\[id].tsx",
+      "line": 40,
+      "route": "/api/learning/quizzes/1/attempt/",
+      "view": "quiz_attempt"
+    },
+    {
+      "file": "mobile\\src\\api\\client.ts",
+      "line": 156,
+      "route": "/api/auth/login/",
+      "view": "api:api_login"
+    },
+    {
+      "file": "mobile\\src\\api\\client.ts",
+      "line": 164,
+      "route": "/api/auth/register/",
+      "view": "api:api_register"
+    },
+    {
+      "file": "mobile\\src\\api\\client.ts",
+      "line": 172,
+      "route": "/api/auth/me/",
+      "view": "api:api_me"
+    },
+    {
+      "file": "mobile\\src\\auth\\AuthProvider.tsx",
+      "line": 115,
+      "route": "/api/notifications/mobile-push/",
+      "view": "api:mobile_push_token"
+    },
+    {
+      "file": "mobile\\src\\calls\\IncomingCallListener.tsx",
+      "line": 91,
+      "route": "/api/notifications/mobile-push/",
+      "view": "api:mobile_push_token"
+    },
+    {
+      "file": "mobile\\src\\calls\\IncomingCallListener.tsx",
+      "line": 132,
+      "route": "/api/messaging/calls/1/reject/",
+      "view": "messaging_api:call_reject"
+    },
+    {
+      "file": "mobile\\src\\calls\\IncomingCallListener.tsx",
+      "line": 149,
+      "route": "/api/messaging/calls/1/reject/",
+      "view": "messaging_api:call_reject"
+    },
+    {
+      "file": "mobile\\src\\components\\DirectoryScreen.tsx",
+      "line": 108,
+      "route": "/api/events/1/register/",
+      "view": "events_api:event_register"
+    },
+    {
+      "file": "mobile\\src\\components\\DirectoryScreen.tsx",
+      "line": 108,
+      "route": "/api/competitions/1/register/",
+      "view": "competitions_api:competition_register"
+    },
+    {
+      "file": "mobile\\src\\components\\DirectoryScreen.tsx",
+      "line": 122,
+      "route": "/api/competitions/1/submission/",
+      "view": "competitions_api:competition_submission"
+    },
+    {
+      "file": "mobile\\src\\components\\DirectoryScreen.tsx",
+      "line": 138,
+      "route": "/api/competitions/1/results/",
+      "view": "competitions_api:competition_results"
+    },
+    {
+      "file": "mobile\\src\\components\\DirectoryScreen.tsx",
+      "line": 147,
+      "route": "/api/events/1/feedback/list/",
+      "view": "events_api:event_feedback_list"
+    },
+    {
+      "file": "mobile\\src\\components\\DirectoryScreen.tsx",
+      "line": 148,
+      "route": "/api/events/1/media/",
+      "view": "events_api:event_media"
+    },
+    {
+      "file": "mobile\\src\\components\\DirectoryScreen.tsx",
+      "line": 158,
+      "route": "/api/events/1/cancel-registration/",
+      "view": "events_api:event_cancel_registration"
+    },
+    {
+      "file": "mobile\\src\\components\\DirectoryScreen.tsx",
+      "line": 169,
+      "route": "/api/events/1/feedback/",
+      "view": "events_api:event_feedback_create"
+    },
+    {
+      "file": "mobile\\src\\components\\DirectoryScreen.tsx",
+      "line": 186,
+      "route": "/api/events/1/media/upload/",
+      "view": "events_api:event_media_upload"
+    }
+  ],
+  "unresolved": [],
+  "limitation": "Literal/template path resolution only; dynamic paths, methods, payloads and native runtime need integration tests."
+}

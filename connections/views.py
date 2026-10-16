@@ -10,6 +10,10 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 from notifications.models import Notification
+from recommendations.unified import (
+    UnifiedRecommendationService,
+    unified_recommendations_enabled,
+)
 from organizations.models import Organization
 from messaging.models import (
     Conversation,
@@ -480,6 +484,32 @@ def connections_list(request):
         "receiver"
     )
 
+    followers = Follow.objects.filter(
+        following=request.user
+    ).select_related("follower")
+    following = Follow.objects.filter(
+        follower=request.user
+    ).select_related("following")
+    followed_ids = following.values_list("following_id", flat=True)
+    following_user_ids = set(followed_ids)
+    if unified_recommendations_enabled() and getattr(request.user, "talent_profile", None):
+        unified_suggestions = UnifiedRecommendationService().recommend_connections(
+            request.user, limit=12
+        )
+        suggested_users = []
+        for row in unified_suggestions:
+            person = row["item"].user
+            person.recommendation_score = row["score"]
+            person.matched_topics = row["matched_topics"]
+            person.recommendation_explanation = row["explanation"]
+            suggested_users.append(person)
+    else:
+        suggested_users = User.objects.exclude(
+            id=request.user.id
+        ).exclude(
+            id__in=followed_ids
+        ).order_by("username")[:12]
+
 
     # -----------------------------------------------------
     # GROUPS THE CURRENT USER BELONGS TO
@@ -523,6 +553,10 @@ def connections_list(request):
             "groups": groups,
             
             "available_users": available_users,
+            "followers": followers,
+            "following": following,
+            "following_user_ids": following_user_ids,
+            "suggested_users": suggested_users,
         }
     )
     # ==========================================
@@ -631,4 +665,4 @@ def remove_connection(request, connection_id):
 
     return redirect(
         "connections_list"
-    )    
+    )

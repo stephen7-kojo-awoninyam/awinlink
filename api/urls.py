@@ -4,6 +4,12 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from notifications.api_views import MobilePushTokenAPIView
+from recommendations.api_views import (
+    InferredInterestsAPIView,
+    RecommendationDismissalsAPIView,
+    RecommendationImpressionsAPIView,
+    RecommendationInterestPreferencesAPIView,
+)
 
 from .views import (
     CourseRecommendationAPIView,
@@ -106,6 +112,31 @@ app_name = "api"
 
 
 urlpatterns = [
+    path(
+        "recommendations/interests/",
+        RecommendationInterestPreferencesAPIView.as_view(),
+        name="recommendation_interest_preferences",
+    ),
+    path(
+        "recommendations/interests/inferred/",
+        InferredInterestsAPIView.as_view(),
+        name="inferred_recommendation_interests",
+    ),
+    path(
+        "recommendations/impressions/",
+        RecommendationImpressionsAPIView.as_view(),
+        name="recommendation_impressions",
+    ),
+    path(
+        "recommendations/dismissals/",
+        RecommendationDismissalsAPIView.as_view(),
+        name="recommendation_dismissals",
+    ),
+    path(
+        "recommendations/dismissals/<str:item_kind>/<int:item_id>/",
+        RecommendationDismissalsAPIView.as_view(),
+        name="recommendation_dismissal_delete",
+    ),
 
     # =====================================================
     # AUTHENTICATION

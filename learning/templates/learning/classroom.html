@@ -1,0 +1,44 @@
+{% extends "learning/ui_base.html" %}
+{% load static %}
+{% block title %}{{ session.title }} | Awinlink classroom{% endblock %}
+{% block learning_content %}
+<main id="vc-classroom" data-session-id="{{ session.id }}">
+  <a class="lc-back" href="{% url 'learning_classrooms' %}">Back to classrooms</a>
+  <header class="lc-heading"><div><span class="lc-eyebrow">LIVE CLASSROOM</span><h1>{{ session.title }}</h1><p id="vc-status" role="status">Loading classroom…</p></div></header>
+  <p id="vc-error" role="alert"></p>
+  <div class="vc-toolbar" aria-label="Classroom controls">
+    <button data-action="request-admission" class="lc-button" hidden>Request admission</button>
+    <button data-action="start" class="lc-button" hidden>Start session</button>
+    <button data-action="cancel" class="lc-button lc-button-secondary" hidden>Cancel session</button>
+    <label><input type="checkbox" id="vc-camera" checked> Camera</label>
+    <label><input type="checkbox" id="vc-microphone" checked> Microphone</label>
+    <button id="vc-join" class="lc-button" disabled>Join classroom</button>
+    <button id="vc-leave" class="lc-button lc-button-secondary" disabled>Leave</button>
+    <button id="vc-share" class="lc-button lc-button-secondary" hidden>Share screen</button>
+    <button data-action="end" class="lc-button vc-danger" hidden>End for everyone</button>
+  </div>
+  <p class="vc-hint">Camera and microphone are optional. Permission prompts appear when you join. Hosts admit learners before they can join.</p>
+  <div class="vc-layout">
+    <section><h2 class="vc-section-title">Participants</h2><div id="vc-grid" class="vc-grid"></div><div id="vc-roster"></div></section>
+    <aside class="vc-panels">
+      <section class="lc-card"><h2 class="vc-section-title">Whiteboard</h2><p id="vc-board-status">Join to view the board.</p>
+        <div id="vc-board-tools" class="vc-toolbar">
+          <label>Tool <select id="vc-tool"><option value="stroke">Draw</option><option value="text">Text</option><option value="rectangle">Rectangle</option><option value="ellipse">Ellipse</option><option value="line">Line</option><option value="erase">Erase object</option></select></label>
+          <label>Color <input id="vc-color" type="color" value="#2458d3"></label>
+          <label>Text <input id="vc-board-text" maxlength="2000" placeholder="Text to place"></label>
+          <button id="vc-undo" class="lc-button lc-button-secondary" disabled>Undo</button><button id="vc-clear" class="lc-button vc-danger" hidden>Clear board</button>
+        </div>
+        <canvas id="vc-board" width="1000" height="650" aria-label="Shared whiteboard" role="img"></canvas>
+        <p class="vc-hint">Drag to draw; tap to place text or erase an object. Undo applies to your latest change.</p>
+        <details><summary>Accessible board content</summary><ul id="vc-board-content"></ul></details>
+      </section>
+      <section class="lc-card"><h2 class="vc-section-title">Classroom chat</h2><div id="vc-chat" role="log" aria-live="polite" aria-relevant="additions text"></div>
+        <form id="vc-chat-form"><label for="vc-message">Message</label><textarea id="vc-message" maxlength="2000" rows="2" disabled></textarea><button class="lc-button" id="vc-send" disabled>Send</button></form>
+      </section>
+    </aside>
+  </div>
+  <div hidden>{% csrf_token %}</div>
+</main>
+{% endblock %}
+{% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/classroom.css' %}">{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/classroom-client.js' %}" defer></script><script src="{% static 'js/classroom-browser.js' %}" defer></script>{% endblock %}

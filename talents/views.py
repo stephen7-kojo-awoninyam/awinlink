@@ -351,6 +351,7 @@ def talent_profile(request, talent_id):
     # =====================================================
 
     followers_count = talent.user.followers.count()
+    following_count = talent.user.following.count()
 
     following = Follow.objects.filter(
         follower=request.user,
@@ -441,6 +442,7 @@ def talent_profile(request, talent_id):
             "portfolio_items": portfolio_items,
 
             "followers_count": followers_count,
+            "following_count": following_count,
 
             "following": following,
 
@@ -1511,10 +1513,14 @@ def talent_settings(request):
 def role_models(request):
 
 
+    from django.db.models import Count
+
     role_models = TalentProfile.objects.filter(
 
         is_role_model=True
 
+    ).annotate(
+        actual_followers_count=Count("user__followers", distinct=True),
     ).select_related(
 
         "user"
@@ -1874,5 +1880,3 @@ def arts_profile_setup(request):
             "is_scout": request.user.role == "SCOUT",
         }
     )
-
-    

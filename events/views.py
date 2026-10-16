@@ -27,6 +27,10 @@ from django.http import JsonResponse
 from django.utils import timezone
 
 from .services import EventRecommendationEngine, CertificateGenerator
+from recommendations.unified import (
+    UnifiedRecommendationService,
+    unified_recommendations_enabled,
+)
 
 from django.contrib.auth.decorators import user_passes_test
 
@@ -1322,6 +1326,25 @@ def recommended_events(request):
         user=request.user
 
     )
+
+    if unified_recommendations_enabled():
+        unified_rows = UnifiedRecommendationService().recommend_events(
+            request.user, limit=10
+        )
+        recommendations = [
+            {
+                "event": row["item"],
+                "score": row["score"],
+                "matched_topics": row["matched_topics"],
+                "explanation": row["explanation"],
+            }
+            for row in unified_rows
+        ]
+        return render(
+            request,
+            "events/recommended_events.html",
+            {"recommendations": recommendations},
+        )
 
 
     events = Event.objects.filter(

@@ -19,6 +19,10 @@ from applications.models import Application
 from notifications.models import Notification
 
 from recommendations.services import RecommendationEngine
+from recommendations.unified import (
+    UnifiedRecommendationService,
+    unified_recommendations_enabled,
+)
 
 from django.contrib import messages
 
@@ -472,6 +476,25 @@ def recommended_opportunities(request):
         user=request.user
 
     )
+
+    if unified_recommendations_enabled():
+        unified_rows = UnifiedRecommendationService().recommend_opportunities(
+            request.user, limit=10
+        )
+        recommendations = [
+            {
+                "opportunity": row["item"],
+                "score": row["score"],
+                "matched_topics": row["matched_topics"],
+                "explanation": row["explanation"],
+            }
+            for row in unified_rows
+        ]
+        return render(
+            request,
+            "opportunities/recommendations.html",
+            {"recommendations": recommendations},
+        )
 
 
 

@@ -33,6 +33,8 @@ class Notification(models.Model):
         ("INCOMING_CALL", "Incoming Call"),
 
         ("MISSED_CALL", "Missed Call"),
+        ("CLASSROOM_INVITATION", "Classroom Invitation"),
+        ("CLASSROOM_SESSION", "Classroom Session"),
 
     )
     
@@ -75,6 +77,9 @@ class Notification(models.Model):
 
 
     message = models.TextField()
+
+    metadata = models.JSONField(default=dict, blank=True)
+    deduplication_key = models.CharField(max_length=200, unique=True, null=True, blank=True, editable=False)
 
 
     post = models.ForeignKey(

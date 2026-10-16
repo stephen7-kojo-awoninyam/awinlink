@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from .api_views import (
     CourseSubmitAPIView,
@@ -184,3 +184,5 @@ urlpatterns = [
     ),
 
 ]
+
+urlpatterns += [path("", include("learning.classroom_api_urls"))]

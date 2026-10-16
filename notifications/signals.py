@@ -25,15 +25,20 @@ def publish_notification(notification_id):
         notification = Notification.objects.select_related("user").get(
             pk=notification_id,
         )
+        from learning.classroom_notifications import classroom_notification_is_current
+        if not classroom_notification_is_current(notification):
+            return
         from .push import (
             notification_payload,
             send_expo_call_push,
+            send_expo_classroom_push,
             send_push_notification,
         )
 
         payload = notification_payload(notification)
         send_push_notification(notification)
         send_expo_call_push(notification)
+        send_expo_classroom_push(notification)
 
         channel_layer = get_channel_layer()
         if channel_layer is not None:

@@ -34,6 +34,24 @@ class ScoutTalentAccessTests(TestCase):
         self.api_client = APIClient()
         self.api_client.force_authenticate(user=self.scout_user)
 
+    def test_api_follow_and_unfollow_are_idempotent_and_list_once(self):
+        url = reverse("scouts_api:follow_talent", args=[self.public_talent.pk])
+        first = self.api_client.post(url)
+        repeated = self.api_client.post(url)
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(repeated.status_code, 200)
+        self.assertEqual(ScoutTalentFollow.objects.filter(
+            scout=self.scout, talent=self.public_talent,
+        ).count(), 1)
+        listing = self.api_client.get(reverse("scouts_api:followed_talents"))
+        rows = listing.data["results"] if isinstance(listing.data, dict) else listing.data
+        self.assertEqual(len(rows), 1)
+
+        unfollow_url = reverse("scouts_api:unfollow_talent", args=[self.public_talent.pk])
+        self.assertEqual(self.api_client.delete(unfollow_url).status_code, 200)
+        self.assertEqual(self.api_client.delete(unfollow_url).status_code, 200)
+        self.assertFalse(ScoutTalentFollow.objects.filter(scout=self.scout).exists())
+
     @staticmethod
     def create_talent(username, visibility):
         user = get_user_model().objects.create_user(username=username)
