@@ -17,6 +17,7 @@ import {
   signInRequest,
   signUpRequest,
   storeTokens,
+  onSessionCleared,
 } from '@/src/api/client';
 import type { RegistrationData, User } from '@/src/types';
 
@@ -48,6 +49,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  useEffect(() => onSessionCleared(() => {
+    setUser(null);
+    void SecureStore.deleteItemAsync(USER_KEY).catch(() => {});
+  }), []);
 
   useEffect(() => {
     let active = true;
@@ -109,6 +114,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const signOut = useCallback(async () => {
+    const voipToken = await SecureStore.getItemAsync('awinlink.voip-token');
+    if (voipToken) {
+      try { await apiRequest('notifications/voip-push/', { method: 'DELETE', body: { token: voipToken } }); } catch { /* Local logout must work offline. */ }
+      await SecureStore.deleteItemAsync('awinlink.voip-token');
+    }
     const pushToken = await SecureStore.getItemAsync('awinlink.push-token');
     if (pushToken) {
       try {

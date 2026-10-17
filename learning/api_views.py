@@ -371,7 +371,10 @@ class CourseLessonsAPIView(APIView):
             many=True
         )
 
-        return Response(serializer.data)
+        data = serializer.data
+        if not course.is_free and course.creator_id != request.user.pk and request.user.role != 'ADMIN' and not Enrollment.objects.filter(course=course, user=request.user).exists():
+            data = [{**lesson, 'video': None, 'notes': None} for lesson in data]
+        return Response(data)
 
 
 # ============================================================
@@ -417,12 +420,10 @@ class LessonCreateAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        serializer = LessonSerializer(
-            data={
-                **request.data,
-                "course": course.id
-            }
-        )
+        # Flatten multipart values without deep-copying temporary upload streams.
+        data = {key: request.data.get(key) for key in request.data}
+        data['course'] = course.id
+        serializer = LessonSerializer(data=data)
 
         if serializer.is_valid():
 
@@ -455,6 +456,9 @@ class LessonDetailAPIView(APIView):
         )
 
         course = lesson.course
+
+        if not course.is_free and course.creator_id != request.user.pk and request.user.role != 'ADMIN' and not Enrollment.objects.filter(course=course, user=request.user).exists():
+            return Response({'detail': 'Enrollment is required to access this lesson.'}, status=403)
 
         if (
             course.status != "APPROVED"
@@ -490,6 +494,9 @@ class CourseEnrollmentAPIView(APIView):
             id=course_id,
             status="APPROVED"
         )
+
+        if not course.is_free:
+            return Response({"detail": "Paid enrollment is unavailable until store billing is configured."}, status=402)
 
         if Enrollment.objects.filter(
             user=request.user,
@@ -660,6 +667,9 @@ class CourseProgressAPIView(APIView):
                 "completed_lessons": completed_lessons,
                 "progress_percentage": percentage,
                 "completed": enrollment.completed,
+                "completed_lesson_ids": list(LessonProgress.objects.filter(
+                    enrollment=enrollment, completed=True,
+                ).values_list("lesson_id", flat=True)),
             }
         )
 

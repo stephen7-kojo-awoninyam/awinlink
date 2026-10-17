@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Image,
   Linking,
   KeyboardAvoidingView,
@@ -12,12 +13,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { apiRequest } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthProvider';
+import { waitForCallEndRequests } from '@/src/calls/callLifecycle';
 import { EmptyState } from '@/src/components/EmptyState';
 import { VideoPlayer, VoicePlayer } from '@/src/components/MediaPlayer';
 import { VoiceRecorder } from '@/src/components/VoiceRecorder';
@@ -38,8 +40,12 @@ export default function ConversationScreen() {
   const [sending, setSending] = useState(false);
   const [startingCall, setStartingCall] = useState(false);
   const [error, setError] = useState('');
+  const loadGeneration = useRef(0);
+  const messageRevision = useRef(0);
 
   const loadMessages = useCallback(async () => {
+    const generation = ++loadGeneration.current;
+    const revision = messageRevision.current;
     if (!Number.isInteger(conversationId) || conversationId < 1) {
       setError('This conversation link is invalid.');
       setLoading(false);
@@ -50,20 +56,35 @@ export default function ConversationScreen() {
       const result = await apiRequest<Message[]>(
         `messaging/conversations/${conversationId}/messages/`,
       );
-      setMessages(result);
+      if (generation !== loadGeneration.current) return;
+      setMessages(current => revision === messageRevision.current ? result :
+        [...new Map([...result, ...current].map(message => [message.id, message])).values()]
+          .sort((a, b) => a.id - b.id));
       await apiRequest(`messaging/conversations/${conversationId}/read-all/`, {
         method: 'POST',
       });
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load this conversation.');
+      if (generation === loadGeneration.current) setError(loadError instanceof Error ? loadError.message : 'Unable to load this conversation.');
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) setLoading(false);
     }
   }, [conversationId]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     void loadMessages();
-  }, [loadMessages]);
+    const timer = setInterval(() => {
+      if (AppState.currentState === 'active') void loadMessages();
+    }, 5000);
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') void loadMessages();
+    });
+    return () => { clearInterval(timer); subscription.remove(); loadGeneration.current += 1; };
+  }, [loadMessages]));
+
+  function appendMessage(message: Message) {
+    messageRevision.current += 1;
+    setMessages(current => current.some(item => item.id === message.id) ? current : [...current, message]);
+  }
 
   const screenTitle = useMemo(() => title || 'Conversation', [title]);
 
@@ -72,6 +93,7 @@ export default function ConversationScreen() {
     setStartingCall(true);
     setError('');
     try {
+      await waitForCallEndRequests();
       const call = await apiRequest<{
         id: number;
         participants: { user: { id: number }; status: string }[];
@@ -100,7 +122,7 @@ export default function ConversationScreen() {
         `messaging/conversations/${conversationId}/messages/create/`,
         { method: 'POST', body: { content, message_type: 'TEXT' } },
       );
-      setMessages((current) => [...current, message]);
+      appendMessage(message);
       setDraft('');
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : 'Unable to send this message.');
@@ -124,7 +146,7 @@ export default function ConversationScreen() {
       body.append(field, Platform.OS === 'web' && asset.file ? asset.file : { uri: asset.uri, name: asset.name, type: mime } as unknown as Blob);
       setSending(true); setError('');
       const message = await apiRequest<Message>(`messaging/conversations/${conversationId}/messages/create/`, { method: 'POST', body });
-      setMessages((current) => [...current, message]);
+      appendMessage(message);
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : 'Unable to send this attachment.');
     } finally { setSending(false); }
@@ -218,13 +240,14 @@ export default function ConversationScreen() {
                             minute: '2-digit',
                           }).format(new Date(message.created_at))}
                         </Text>
+                        {!ownMessage && <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/report', params: { type: 'message', id: String(message.id) } })}><Text style={[styles.timestamp, ownMessage && styles.ownTimestamp]}>Report message</Text></Pressable>}
                       </View>
                     );
                   })
                 )}
               </ScrollView>
               {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-              <VoiceRecorder conversationId={conversationId} disabled={sending} onSent={message => setMessages(current => [...current, message])} />
+              <VoiceRecorder conversationId={conversationId} disabled={sending} onSent={appendMessage} />
               <View style={styles.composer}>
                 <Pressable accessibilityLabel="Attach a file" accessibilityRole="button" disabled={sending} onPress={() => void sendAttachment()} style={styles.attachButton}><Text style={styles.attachText}>＋</Text></Pressable>
                 <TextInput

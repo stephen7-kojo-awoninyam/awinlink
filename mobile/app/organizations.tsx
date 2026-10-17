@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 import { apiRequest } from '@/src/api/client';
@@ -99,6 +99,13 @@ export default function OrganizationsScreen() {
             <Text style={styles.meta}>{[selected.category_name, selected.domain_name].filter(Boolean).join(' | ')}</Text>
             <Text style={styles.meta}>{[selected.city, selected.country].filter(Boolean).join(', ')}</Text>
             <Text style={styles.description}>{selected.description || 'No description provided.'}</Text>
+            {!!selected.website && <Pressable accessibilityRole="link" onPress={() => {
+              try {
+                const url = new URL(selected.website);
+                if (!['https:', 'http:'].includes(url.protocol)) throw new Error('This website address is invalid.');
+                void Linking.openURL(url.href).catch(() => setError('Unable to open this website.'));
+              } catch { setError('This website address is invalid.'); }
+            }}><Text style={styles.back}>Visit website</Text></Pressable>}
             <Text style={styles.meta}>{selected.followers_count} followers</Text>
             <Pressable accessibilityRole="button" disabled={working} onPress={() => void toggleFollow()}
               style={[styles.button, working && styles.disabled]}>

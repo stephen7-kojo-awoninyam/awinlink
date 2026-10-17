@@ -3,7 +3,8 @@ from django.urls import include, path
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
-from notifications.api_views import MobilePushTokenAPIView
+from notifications.api_views import MobilePushTokenAPIView, VoipPushTokenAPIView
+from accounts.mobile_api import PasswordResetRequest, PasswordResetConfirm, DeleteAccount, BlockAccounts, ReportContent
 from recommendations.api_views import (
     InferredInterestsAPIView,
     RecommendationDismissalsAPIView,
@@ -112,6 +113,12 @@ app_name = "api"
 
 
 urlpatterns = [
+    path('notifications/voip-push/', VoipPushTokenAPIView.as_view(), name='voip_push_token'),
+    path('auth/password-reset/', PasswordResetRequest.as_view(), name='mobile_password_reset'),
+    path('auth/password-reset/confirm/', PasswordResetConfirm.as_view(), name='mobile_password_reset_confirm'),
+    path('auth/account/', DeleteAccount.as_view(), name='mobile_delete_account'),
+    path('safety/blocks/', BlockAccounts.as_view(), name='mobile_blocks'),
+    path('safety/reports/', ReportContent.as_view(), name='mobile_reports'),
     path(
         "recommendations/interests/",
         RecommendationInterestPreferencesAPIView.as_view(),

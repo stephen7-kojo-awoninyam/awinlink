@@ -32,6 +32,7 @@ export type RegistrationData = {
 };
 
 export type FeedPost = {
+  author: number;
   id: number;
   author_name: string;
   author_username: string;
@@ -100,6 +101,9 @@ export type Conversation = {
 };
 
 export type AppNotification = {
+  post_id?: number | null;
+  conversation_id?: number | null;
+  opportunity_id?: number | null;
   id: number;
   message: string;
   notification_type_display: string;

@@ -11,6 +11,7 @@ from .serializers import PostSerializer,PostLike,PostLikeSerializer,Comment,Comm
 
 from connections.models import Connection, Follow, OrganizationFollow
 from recommendations.ecosystems import get_ecosystem_user_ids
+from accounts.safety import blocked_user_ids
 
 # ============================================================
 
@@ -173,7 +174,7 @@ class PostListAPIView(APIView):
         # ----------------------------------------------------
 
         posts = (
-            posts
+            posts.exclude(author_id__in=blocked_user_ids(user))
             .distinct()
             .select_related(
                 "author",
@@ -268,6 +269,9 @@ class PostDetailAPIView(APIView):
     # --------------------------------------------------------
 
     def can_view_post(self, user, post):
+
+        if post.author_id in blocked_user_ids(user):
+            return False
 
         # Author can always see their own post
 
@@ -600,6 +604,14 @@ class PostCommentsAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        from django.shortcuts import get_object_or_404
+        from rest_framework.exceptions import PermissionDenied
+        post = get_object_or_404(Post, pk=kwargs['post_id'])
+        if not PostDetailAPIView().can_view_post(request.user, post):
+            raise PermissionDenied('You do not have permission to view this post.')
+
     def get(self, request, post_id):
 
         try:
@@ -619,6 +631,7 @@ class PostCommentsAPIView(APIView):
 
         comments = (
             Comment.objects
+            .exclude(user_id__in=blocked_user_ids(request.user))
             .filter(
                 post=post
             )
@@ -661,7 +674,11 @@ class PostCommentsAPIView(APIView):
         text = request.data.get(
             "text",
             ""
-        ).strip()
+        )
+
+        if not isinstance(text, str):
+            return Response({"detail": "Comment text must be a string."}, status=400)
+        text = text.strip()
 
         if not text:
 

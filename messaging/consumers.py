@@ -2,12 +2,14 @@ import json
 import logging
 
 from django.utils import timezone
+from django.db import transaction
 from redis.exceptions import RedisError
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from .models import CallParticipant
+from .models import Call, CallParticipant
+from .call_lifecycle import finish_call
 
 
 logger = logging.getLogger(__name__)
@@ -232,6 +234,10 @@ class CallConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def check_participant(self):
 
+        from accounts.safety import blocked_user_ids
+        if CallParticipant.objects.filter(call_id=self.call_id, user_id__in=blocked_user_ids(self.user)).exists():
+            return False
+
         return CallParticipant.objects.filter(
             call_id=self.call_id,
             user=self.user,
@@ -247,93 +253,26 @@ class CallConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def mark_participant_left(self):
+        with transaction.atomic():
+            call = Call.objects.select_for_update().filter(pk=self.call_id).first()
+            if not call or call.status not in ('RINGING', 'ACTIVE'):
+                return
+            participant = CallParticipant.objects.filter(call=call, user=self.user, status__in=['INVITED', 'RINGING', 'JOINED']).first()
+            if not participant:
+                return
+            participant.status = 'LEFT'
+            participant.left_at = timezone.now()
+            participant.save(update_fields=['status', 'left_at'])
+            if (call.status == 'RINGING' and call.initiated_by_id == self.user.pk) or not CallParticipant.objects.filter(call=call, status__in=['INVITED', 'RINGING', 'JOINED']).exists():
+                finish_call(call, self.user.pk)
 
-        participant = (
-            CallParticipant.objects
-            .select_related("call")
-            .filter(
-                call_id=self.call_id,
-                user=self.user,
-                status__in=[
-                    "INVITED",
-                    "RINGING",
-                    "JOINED",
-                ],
-            )
-            .first()
-        )
 
-        if not participant:
-            return
-
-        # ---------------------------------------------------------
-        # MARK PARTICIPANT AS LEFT
-        # ---------------------------------------------------------
-
-        participant.status = "LEFT"
-        participant.left_at = timezone.now()
-
-        participant.save(
-            update_fields=[
-                "status",
-                "left_at",
-            ]
-        )
-
-        call = participant.call
-
-        # ---------------------------------------------------------
-        # CHECK WHETHER ANYONE IS STILL IN THE CALL
-        # ---------------------------------------------------------
-
-        remaining_participants = (
-            CallParticipant.objects
-            .filter(
-                call=call,
-                status__in=[
-                    "INVITED",
-                    "RINGING",
-                    "JOINED",
-                ],
-            )
-            .exclude(
-                user=self.user
-            )
-            .exists()
-        )
-
-        # ---------------------------------------------------------
-        # END CALL IF EVERYONE HAS LEFT
-        # ---------------------------------------------------------
-
-        if not remaining_participants:
-
-            call.status = "ENDED"
-            call.ended_at = timezone.now()
-
-            # -----------------------------------------------------
-            # CALCULATE DURATION
-            # -----------------------------------------------------
-
-            if call.answered_at:
-
-                call.duration = int(
-                    (
-                        call.ended_at -
-                        call.answered_at
-                    ).total_seconds()
-                )
-
-            call.save(
-                update_fields=[
-                    "status",
-                    "ended_at",
-                    "duration",
-                ]
-            )
-            
-            
 class UserConsumer(AsyncWebsocketConsumer):
+    async def call_ended(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'call_ended', 'call_id': event['call_id'],
+            'status': event.get('status', 'ENDED'), 'ended_by': event.get('ended_by'),
+        }))
 
     async def connect(self):
 

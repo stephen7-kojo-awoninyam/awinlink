@@ -32,6 +32,8 @@ export default function ProfileScreen() {
 
   return (
     <Page eyebrow="YOUR ACCOUNT" title="Profile">
+      <Pressable accessibilityRole="button" onPress={() => router.push('/account-settings')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Account and safety</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/team-invitation')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Respond to team invitation</Text></Pressable>
       <View style={styles.profileCard}>
         {user.profile_picture ? (
           <Image source={{ uri: user.profile_picture }} style={styles.avatar} />
@@ -52,7 +54,7 @@ export default function ProfileScreen() {
       </View>
 
       <Text style={styles.note}>
-        Profile editing and ecosystem setup currently use the Awinlink web onboarding flow.
+        Manage your profile, learning, conversations, and ecosystem below.
       </Text>
 
       {(user.role === 'ATHLETE' || user.role === 'ORGANIZATION') && (
@@ -75,6 +77,9 @@ export default function ProfileScreen() {
       ) : null}
       {user.role === 'ORGANIZATION' && (
         <>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/organization-team')} style={ui.primaryButton}>
+            <Text style={ui.primaryButtonText}>Manage organization team</Text>
+          </Pressable>
           <Pressable accessibilityRole="button" onPress={() => router.push('/shortlists')}
             style={({ pressed }) => [ui.primaryButton, styles.messages, pressed && styles.pressed]}>
             <Text style={ui.primaryButtonText}>Manage talent shortlist</Text>

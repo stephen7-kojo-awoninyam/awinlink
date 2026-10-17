@@ -37,6 +37,10 @@ SECRET_KEY = os.environ.get(
 TURN_SERVER_URLS = os.environ.get("TURN_SERVER_URLS", "")
 TURN_SHARED_SECRET = os.environ.get("TURN_SHARED_SECRET", "")
 EXPO_PUSH_ACCESS_TOKEN = os.environ.get("EXPO_PUSH_ACCESS_TOKEN", "").strip()
+MOBILE_APNS_TEAM_ID = os.environ.get('MOBILE_APNS_TEAM_ID', '')
+MOBILE_APNS_KEY_ID = os.environ.get('MOBILE_APNS_KEY_ID', '')
+MOBILE_APNS_PRIVATE_KEY = os.environ.get('MOBILE_APNS_PRIVATE_KEY', '').replace('\\n', '\n')
+MOBILE_IOS_BUNDLE_ID = os.environ.get('MOBILE_IOS_BUNDLE_ID', 'com.awinlink.app')
 
 # The new unified ranking pipeline remains opt-in until explicitly enabled.
 UNIFIED_RECOMMENDATIONS_ENABLED = os.environ.get(
@@ -368,6 +372,11 @@ AUTH_USER_MODEL = "accounts.User"
 # =====================================================
 # DJANGO REST FRAMEWORK
 # =====================================================
+
+SIMPLE_JWT = {
+    "CHECK_REVOKE_TOKEN": True,
+    "TOKEN_REFRESH_SERIALIZER": "accounts.tokens.AccountTokenRefreshSerializer",
+}
 
 REST_FRAMEWORK = {
 

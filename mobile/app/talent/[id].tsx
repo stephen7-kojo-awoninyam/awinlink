@@ -15,6 +15,7 @@ import { apiRequest } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { EmptyState } from '@/src/components/EmptyState';
 import { Page, ui } from '@/src/components/Page';
+import { SafetyActions } from '@/src/components/SafetyActions';
 import { colors } from '@/src/theme';
 import type { Connection, TalentProfile } from '@/src/types';
 
@@ -244,6 +245,7 @@ export default function TalentProfileScreen() {
               )}
               <Text style={styles.name}>{name}</Text>
               <Text style={styles.username}>@{profile.user.username}</Text>
+              <SafetyActions userId={profile.user.id} onBlocked={() => router.replace('/(tabs)/discover')} />
               <Text style={styles.headline}>
                 {profile.headline || profile.talent_category || 'Awinlink talent'}
               </Text>

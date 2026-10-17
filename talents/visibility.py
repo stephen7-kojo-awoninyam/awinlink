@@ -12,4 +12,5 @@ def visible_talent_profiles_for(user):
         visibility |= Q(user=user)
         if organizations_for_capability(user, OrganizationCapability.VIEW_TALENTS).exists():
             visibility |= Q(profile_visibility="ORGANIZATIONS")
-    return TalentProfile.objects.filter(visibility)
+    from accounts.safety import blocked_user_ids
+    return TalentProfile.objects.filter(visibility, user__is_active=True).exclude(user_id__in=blocked_user_ids(user))

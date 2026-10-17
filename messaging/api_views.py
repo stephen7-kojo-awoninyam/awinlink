@@ -1,4 +1,5 @@
 from accounts.models import User
+from accounts.safety import require_unblocked, blocked_user_ids
 import base64
 import hashlib
 import hmac
@@ -16,6 +17,7 @@ from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from .models import Conversation, ConversationParticipant, Message,Call, CallParticipant
+from .call_lifecycle import finish_call, publish_call_ended
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from opportunities.models import Opportunity
@@ -72,7 +74,7 @@ def expire_ringing_call(call):
 
     call = (
         Call.objects
-        .select_for_update()
+        .select_for_update(of=('self',))
         .select_related("initiated_by", "conversation")
         .get(pk=call.pk)
     )
@@ -167,6 +169,7 @@ def expire_ringing_call(call):
             conversation=call.conversation,
         )
 
+    publish_call_ended(call)
     return True
 
 
@@ -236,6 +239,7 @@ class ConversationCreateAPIView(APIView):
             "user_ids",
             []
         )
+        require_unblocked(request.user, user_ids)
 
         opportunity_id = serializer.validated_data.get(
             "opportunity_id"
@@ -1033,6 +1037,7 @@ class StartCallAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, conversation_id):
 
         call_type = request.data.get("call_type")
@@ -1052,7 +1057,7 @@ class StartCallAPIView(APIView):
 
         try:
             conversation = (
-                Conversation.objects
+                Conversation.objects.select_for_update()
                 .prefetch_related("participants__user")
                 .get(id=conversation_id)
             )
@@ -1175,9 +1180,8 @@ class StartCallAPIView(APIView):
             if participant.user_id == request.user.id:
                 continue
 
-            async_to_sync(channel_layer.group_send)(
-                f"user_{participant.user_id}",
-                {
+            group = f"user_{participant.user_id}"
+            event = {
                     "type": "incoming_call",
                     "call_id": call.id,
                     "call_type": call.call_type,
@@ -1186,7 +1190,7 @@ class StartCallAPIView(APIView):
                     "caller_first_name": request.user.first_name,
                     "caller_last_name": request.user.last_name,
                 }
-            )
+            transaction.on_commit(lambda group=group, event=event: async_to_sync(channel_layer.group_send)(group, event))
         
         # ---------------------------------------------------------
         # CREATE INCOMING CALL NOTIFICATIONS
@@ -1236,11 +1240,12 @@ class AcceptCallAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, call_id):
 
         try:
             call = (
-                Call.objects
+                Call.objects.select_for_update(of=('self',))
                 .select_related(
                     "conversation",
                     "initiated_by",
@@ -1300,7 +1305,7 @@ class AcceptCallAPIView(APIView):
         # CHECK PARTICIPANT STATUS
         # ---------------------------------------------------------
 
-        if participant.status != "RINGING":
+        if call.status not in ('RINGING', 'ACTIVE') or participant.status != "RINGING":
 
             return Response(
                 {
@@ -1371,10 +1376,11 @@ class RejectCallAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, call_id):
 
         try:
-            call = Call.objects.get(id=call_id)
+            call = Call.objects.select_for_update().get(id=call_id)
 
         except Call.DoesNotExist:
 
@@ -1470,16 +1476,7 @@ class RejectCallAPIView(APIView):
         ).exists()
 
         if not remaining:
-
-            call.status = "ENDED"
-            call.ended_at = timezone.now()
-
-            call.save(
-                update_fields=[
-                    "status",
-                    "ended_at",
-                ]
-            )
+            finish_call(call, request.user.pk)
 
         serializer = CallSerializer(call)
 
@@ -1490,197 +1487,30 @@ class RejectCallAPIView(APIView):
         
 
 class EndCallAPIView(APIView):
-
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, call_id):
-
-        # =====================================================
-        # GET CALL
-        # =====================================================
-
         try:
-
-            call = (
-                Call.objects
-                .select_related(
-                    "conversation",
-                    "initiated_by",
-                )
-                .prefetch_related(
-                    "participants__user",
-                )
-                .get(id=call_id)
-            )
-
+            call = Call.objects.select_for_update().get(pk=call_id)
         except Call.DoesNotExist:
+            return Response({'detail': 'Call not found.'}, status=404)
+        participant = CallParticipant.objects.filter(call=call, user=request.user).first()
+        if not participant:
+            return Response({'detail': 'You are not a participant in this call.'}, status=403)
+        # Repeated end requests are harmless, including delayed requests after redial.
+        if call.status not in ('RINGING', 'ACTIVE'):
+            return Response(CallSerializer(call).data)
+        # Closing the signaling socket may already have marked the caller LEFT.
+        if participant.status not in ('JOINED', 'RINGING', 'LEFT'):
+            return Response({'detail': 'You are no longer active in this call.'}, status=400)
+        if call.status == 'RINGING' and call.initiated_by_id == request.user.pk and expire_ringing_call(call):
+            call.refresh_from_db()
+        else:
+            finish_call(call, request.user.pk)
+        return Response(CallSerializer(call).data)
 
-            return Response(
-                {
-                    "detail": "Call not found."
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
 
-        # =====================================================
-        # CHECK PARTICIPANT
-        # =====================================================
-
-        try:
-
-            participant = (
-                CallParticipant.objects
-                .get(
-                    call=call,
-                    user=request.user
-                )
-            )
-
-        except CallParticipant.DoesNotExist:
-
-            return Response(
-                {
-                    "detail":
-                    "You are not a participant in this call."
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # =====================================================
-        # CHECK PARTICIPANT STATUS
-        # =====================================================
-
-        if participant.status not in [
-            "JOINED",
-            "RINGING",
-        ]:
-
-            return Response(
-                {
-                    "detail":
-                    "You are no longer active in this call."
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if (
-            call.status == "RINGING"
-            and call.initiated_by_id == request.user.id
-            and request.data.get("end_for_everyone")
-            and expire_ringing_call(call)
-        ):
-            call = (
-                Call.objects
-                .select_related("conversation", "initiated_by")
-                .prefetch_related("participants__user")
-                .get(pk=call.pk)
-            )
-            return Response(
-                CallSerializer(call).data,
-                status=status.HTTP_200_OK,
-            )
-
-        now = timezone.now()
-
-        # =====================================================
-        # END CALL FOR EVERYONE
-        #
-        # IMPORTANT:
-        # Any participant can end the entire call.
-        #
-        # This works for:
-        # - 1-to-1 calls
-        # - group calls
-        # =====================================================
-
-        CallParticipant.objects.filter(
-            call=call,
-            status__in=[
-                "JOINED",
-                "RINGING",
-                "INVITED",
-            ]
-        ).update(
-            status="LEFT",
-            left_at=now
-        )
-
-        # =====================================================
-        # UPDATE CALL
-        # =====================================================
-
-        call.status = "ENDED"
-        call.ended_at = now
-
-        if call.answered_at:
-
-            call.duration = int(
-                (
-                    now - call.answered_at
-                ).total_seconds()
-            )
-
-        call.save(
-            update_fields=[
-                "status",
-                "ended_at",
-                "duration",
-            ]
-        )
-
-        # =====================================================
-        # BROADCAST CALL ENDED TO EVERYONE
-        # =====================================================
-
-        channel_layer = get_channel_layer()
-
-        async_to_sync(
-            channel_layer.group_send
-        )(
-            f"call_{call.id}",
-            {
-                "type": "call_ended",
-
-                "call_id": call.id,
-
-                "ended_by":
-                    request.user.id,
-
-                "ended_by_username":
-                    request.user.username,
-            }
-        )
-
-        # =====================================================
-        # REFRESH CALL
-        # =====================================================
-
-        call = (
-            Call.objects
-            .select_related(
-                "conversation",
-                "initiated_by",
-            )
-            .prefetch_related(
-                "participants__user",
-            )
-            .get(
-                id=call.id
-            )
-        )
-
-        # =====================================================
-        # SERIALIZE
-        # =====================================================
-
-        serializer = CallSerializer(call)
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
-        
-        
 class IncomingCallsAPIView(APIView):
 
     permission_classes = [IsAuthenticated]

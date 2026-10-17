@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -8,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
 
 import { apiRequest } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthProvider';
@@ -36,7 +38,6 @@ const OPTIONS_BY_ROLE: Record<string, CreateOption[]> = {
   ORGANIZATION: [
     { key: 'opportunity', title: 'Opportunity', description: 'Publish a role, trial, or scholarship.', enabled: true, icon: '↗' },
     { key: 'competition', title: 'Competition', description: 'Create a competition for your community.', enabled: true, icon: '♜' },
-    { key: 'advertisement', title: 'Advertisement', description: 'Build a sponsored campaign.', enabled: false, icon: '◇' },
     { key: 'post', title: 'Post', description: 'Share an update with your audience.', enabled: true, icon: '✎' },
   ],
   DEFAULT: [
@@ -179,6 +180,14 @@ export default function CreateScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
+  const [postMedia, setPostMedia] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+
+  async function selectPostMedia() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: ['image/*', 'video/*'], copyToCacheDirectory: true });
+      if (!result.canceled) setPostMedia(result.assets[0]);
+    } catch (e) { setIsError(true); setMessage(e instanceof Error ? e.message : 'Unable to select media.'); }
+  }
 
   function updateValue(key: string, value: string) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -215,11 +224,20 @@ export default function CreateScreen() {
     setIsError(false);
     try {
       if (selected === 'post') {
-        if (!values.caption.trim()) throw new Error('Write something before sharing your post.');
+        if (!values.caption.trim() && !postMedia) throw new Error('Write something or attach media before sharing your post.');
+        let body: unknown = { caption: values.caption.trim(), visibility: 'PUBLIC' };
+        if (postMedia) {
+          const form = new FormData();
+          form.append('caption', values.caption.trim()); form.append('visibility', 'PUBLIC');
+          const mime = postMedia.mimeType || (postMedia.name.match(/\.(mp4|mov|webm)$/i) ? 'video/mp4' : 'image/jpeg');
+          form.append(mime.startsWith('video/') ? 'video' : 'image', Platform.OS === 'web' && postMedia.file ? postMedia.file : { uri: postMedia.uri, name: postMedia.name, type: mime } as unknown as Blob);
+          body = form;
+        }
         await apiRequest('feed/posts/create/', {
           method: 'POST',
-          body: { caption: values.caption.trim(), visibility: 'PUBLIC' },
+          body,
         });
+        setPostMedia(null);
         setValues(INITIAL_VALUES);
         setSelected('');
         router.navigate('/(tabs)');
@@ -357,7 +375,7 @@ export default function CreateScreen() {
           <View style={styles.optionCopy}>
             <Text style={styles.optionTitle}>{option.title}</Text>
             <Text style={styles.optionDescription}>{option.description}</Text>
-            {!option.enabled && <Text style={styles.comingSoon}>Not available in the API yet</Text>}
+            {!option.enabled && <Text style={styles.comingSoon}>Purchases are unavailable in this build</Text>}
           </View>
           {option.enabled && <Text style={styles.chevron}>›</Text>}
         </Pressable>
@@ -378,6 +396,7 @@ export default function CreateScreen() {
           </Text>
 
           {selected === 'post' && (
+            <>
             <FormField
               label="Post"
               multiline
@@ -385,6 +404,9 @@ export default function CreateScreen() {
               placeholder="Share a moment, an idea, or a milestone..."
               value={values.caption}
             />
+            <Pressable accessibilityRole="button" disabled={submitting} onPress={() => void selectPostMedia()} style={ui.primaryButton}><Text style={ui.primaryButtonText}>{postMedia?.name || 'Attach photo or video'}</Text></Pressable>
+            {!!postMedia && <Pressable accessibilityRole="button" disabled={submitting} onPress={() => setPostMedia(null)}><Text style={ui.muted}>Remove attachment</Text></Pressable>}
+            </>
           )}
 
           {(selected === 'portfolio' || selected === 'achievement') && (

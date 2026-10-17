@@ -1,5 +1,7 @@
 import type { PropsWithChildren, ReactNode } from 'react';
+import { router, useSegments } from 'expo-router';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,8 +28,13 @@ export function Page({
   refreshControl,
   children,
 }: PageProps) {
+  const segments = useSegments();
+  const showBack = segments[0] !== '(tabs)' && segments[0] !== 'login' && segments[0] !== 'register';
   const content = (
     <>
+      {showBack && <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} style={{ alignSelf: 'flex-start', minHeight: 40, justifyContent: 'center' }}>
+        <Text style={{ color: colors.primary, fontWeight: '700' }}>Back</Text>
+      </Pressable>}
       <View style={styles.header}>
         <View style={styles.titleGroup}>
           {!!eyebrow && <Text style={styles.eyebrow}>{eyebrow}</Text>}

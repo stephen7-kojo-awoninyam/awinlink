@@ -14,6 +14,8 @@ import { apiRequest, getAccessToken, getWebSocketUrl } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { validatedIceServers, type CallIceServer } from '@/src/calls/iceServers';
 import { colors } from '@/src/theme';
+import { bindNativeCall, nativeCallConnected, syncNativeMute, endNativeCall } from '@/src/calls/nativeCallUI';
+import { callHasEnded, finishCallRequest, onCallEnded } from '@/src/calls/callLifecycle';
 
 type CallParticipant = { user: { id: number }; status: string };
 type CallInfo = { id: number; participants: CallParticipant[] };
@@ -63,33 +65,79 @@ export default function CallScreen() {
   const autoAcceptHandled = useRef(false);
   const acceptedRef = useRef(!incoming);
   const connectedRef = useRef(false);
+  const mediaGeneration = useRef(0);
+  const nativeMuted = useRef(false);
+  const nativeHeld = useRef(false);
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const accepting = useRef(false);
 
   const closeLocal = useCallback(() => {
-    socketRef.current?.close();
+    mediaGeneration.current += 1;
+    timers.current.forEach(timer => { clearTimeout(timer); clearInterval(timer); });
+    timers.current.clear();
+    pendingCandidates.current.clear();
+    offerMakingRef.current.clear();
+    endNativeCall(callId);
+    if (socketRef.current) {
+      socketRef.current.onmessage = null; socketRef.current.onopen = null;
+      socketRef.current.onerror = null; socketRef.current.onclose = null;
+    }
+    try { socketRef.current?.close(); } catch { /* Continue releasing media. */ }
     socketRef.current = null;
-    peersRef.current.forEach((peer) => peer.close());
+    peersRef.current.forEach((peer) => {
+      peer.ontrack = null; peer.onicecandidate = null; peer.onconnectionstatechange = null;
+      try { peer.close(); } catch { /* Release the remaining peers and tracks. */ }
+    });
     peersRef.current.clear();
-    localRef.current?.getTracks().forEach((track) => track.stop());
+    localRef.current?.getTracks().forEach((track) => { try { track.stop(); } catch { /* Release remaining tracks. */ } });
     localRef.current = null;
     setLocalStream(null);
     setRemoteStreams({});
-  }, []);
+  }, [callId]);
 
   const leaveCall = useCallback(async (reject = false) => {
     if (leavingRef.current) return;
     leavingRef.current = true;
-    try {
-      if (reject && incoming && !acceptedRef.current) {
-        await apiRequest(`messaging/calls/${callId}/reject/`, { method: 'POST' });
+    closeLocal();
+    const request = finishCallRequest(callId, () => {
+      if (reject && incoming && !acceptedRef.current && !accepting.current) {
+        return apiRequest(`messaging/calls/${callId}/reject/`, { method: 'POST' });
       } else {
-        await apiRequest(`messaging/calls/${callId}/end/`, {
+        return apiRequest(`messaging/calls/${callId}/end/`, {
           method: 'POST', body: { end_for_everyone: true },
         });
       }
-    } catch { /* Close local media even when the server cannot be reached. */ }
-    closeLocal();
+    });
     router.back();
+    await request.catch(() => {});
   }, [callId, closeLocal, incoming]);
+
+  useEffect(() => {
+    const ended = (id: number) => {
+      if (id !== callId || leavingRef.current) return;
+      leavingRef.current = true; closeLocal(); router.back();
+    };
+    const remove = onCallEnded(ended);
+    if (callHasEnded(callId)) ended(callId);
+    return remove;
+  }, [callId, closeLocal]);
+
+  useEffect(() => {
+    if (!Number.isSafeInteger(callId) || callId < 1 || leavingRef.current || callHasEnded(callId)) return;
+    const applyAudio = () => localRef.current?.getAudioTracks().forEach(track => { track.enabled = !nativeMuted.current && !nativeHeld.current; });
+    const unbind = bindNativeCall(callId, incoming, title, video, {
+      end: () => { void leaveCall(incoming && !acceptedRef.current); },
+      mute: value => { nativeMuted.current = value; setMuted(value); applyAudio(); },
+      hold: value => { nativeHeld.current = value; applyAudio(); },
+    });
+    return () => {
+      unbind(); closeLocal();
+      if (!leavingRef.current) {
+        leavingRef.current = true;
+        void finishCallRequest(callId, () => apiRequest(`messaging/calls/${callId}/${incoming && !acceptedRef.current && !accepting.current ? 'reject' : 'end'}/`, { method: 'POST', body: { end_for_everyone: true } })).catch(() => {});
+      }
+    };
+  }, [callId, closeLocal, incoming, leaveCall, title, video]);
 
   const sendSignal = useCallback((payload: Record<string, unknown>) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -98,6 +146,7 @@ export default function CallScreen() {
   }, []);
 
   const makePeer = useCallback((remoteUserId: number) => {
+    if (leavingRef.current) throw new Error('Call ended.');
     const existing = peersRef.current.get(remoteUserId);
     if (existing) return existing;
     const local = localRef.current;
@@ -112,12 +161,15 @@ export default function CallScreen() {
       });
     };
     peer.ontrack = (event: { streams: MediaStream[] }) => {
+      if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
       const stream = event.streams[0];
       if (stream) setRemoteStreams((current) => ({ ...current, [remoteUserId]: stream }));
     };
     peer.onconnectionstatechange = () => {
+      if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
       if (peer.connectionState === 'connected') {
         connectedRef.current = true;
+        nativeCallConnected(callId);
         setStatus('Connected');
       } else if (peer.connectionState === 'failed') {
         setError('The call could not connect. Check the network or TURN server and try again.');
@@ -127,7 +179,7 @@ export default function CallScreen() {
       }
     };
     return peer;
-  }, [sendSignal]);
+  }, [callId, sendSignal]);
 
   const createOffer = useCallback(async (remoteUserId: number) => {
     const existing = peersRef.current.get(remoteUserId);
@@ -136,7 +188,9 @@ export default function CallScreen() {
     try {
       const peer = makePeer(remoteUserId);
       const offer = await peer.createOffer();
+      if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
       await peer.setLocalDescription(offer);
+      if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
       sendSignal({ type: 'offer', to_user_id: remoteUserId, description: offer });
     } finally {
       offerMakingRef.current.delete(remoteUserId);
@@ -145,10 +199,12 @@ export default function CallScreen() {
 
   const connectSignaling = useCallback(async (call: CallInfo) => {
     const token = await getAccessToken();
+    if (leavingRef.current) return;
     if (!token) throw new Error('Your session expired. Sign in again to call.');
     const socket = socketWithToken(getWebSocketUrl(`ws/calls/${callId}/`), token);
     socketRef.current = socket;
     socket.onopen = () => {
+      if (leavingRef.current || socketRef.current !== socket) { socket.close(); return; }
       setStatus('Waiting for others…');
       const activePeers = call.participants.filter(
         (participant) => participant.status === 'JOINED' && participant.user.id !== user?.id,
@@ -164,13 +220,16 @@ export default function CallScreen() {
       }
     };
     socket.onmessage = (event) => {
+      if (leavingRef.current || socketRef.current !== socket) return;
       void (async () => {
         const message = JSON.parse(String(event.data)) as Signal & { call_id?: number };
         const peerId = Number(message.sender_id ?? message.user_id);
         if (message.type === 'call_ended') {
+          if (message.call_id && message.call_id !== callId) return;
+          leavingRef.current = true;
           setStatus('Call ended');
           closeLocal();
-          setTimeout(() => router.back(), 500);
+          router.back();
           return;
         }
         if (message.type === 'participant_rejected') {
@@ -203,11 +262,14 @@ export default function CallScreen() {
         if (message.type === 'offer' && message.description) {
           const peer = makePeer(peerId);
           await peer.setRemoteDescription(message.description);
+          if (leavingRef.current || peersRef.current.get(peerId) !== peer) return;
           const candidates = pendingCandidates.current.get(peerId) ?? [];
           pendingCandidates.current.delete(peerId);
           for (const candidate of candidates) await peer.addIceCandidate(candidate);
           const answer = await peer.createAnswer();
+          if (leavingRef.current || peersRef.current.get(peerId) !== peer) return;
           await peer.setLocalDescription(answer);
+          if (leavingRef.current || peersRef.current.get(peerId) !== peer) return;
           sendSignal({ type: 'answer', to_user_id: peerId, description: answer });
         } else if (message.type === 'answer' && message.description) {
           const peer = peersRef.current.get(peerId);
@@ -226,13 +288,17 @@ export default function CallScreen() {
   }, [callId, closeLocal, createOffer, makePeer, sendSignal, user?.id]);
 
   const startMedia = useCallback(async (call: CallInfo) => {
+    if (leavingRef.current || callHasEnded(callId)) return;
+    const generation = mediaGeneration.current;
     try {
       setError('');
       const ice = await apiRequest<{ ice_servers?: unknown }>('messaging/calls/ice-servers/');
+      if (leavingRef.current || generation !== mediaGeneration.current) return;
       iceServersRef.current = validatedIceServers(ice.ice_servers);
       const stream = await mediaDevices.getUserMedia({ audio: true, video: video ? {
         facingMode: 'user', width: 1280, height: 720, frameRate: 24,
       } : false });
+      if (leavingRef.current || generation !== mediaGeneration.current) { stream.getTracks().forEach(track => track.stop()); return; }
       localRef.current = stream;
       setLocalStream(stream);
       setAccepted(true);
@@ -240,6 +306,7 @@ export default function CallScreen() {
       setStatus('Connecting…');
       await connectSignaling(call);
     } catch (mediaError) {
+      if (leavingRef.current || generation !== mediaGeneration.current) return;
       const message = mediaError instanceof Error ? mediaError.message : 'Unable to access the microphone or camera.';
       setError(message.includes('Permission') || message.includes('permission')
         ? 'Microphone or camera access was denied. Enable the permission in device settings and retry.'
@@ -247,9 +314,10 @@ export default function CallScreen() {
       setStatus('Unable to start call');
       void leaveCall();
     }
-  }, [connectSignaling, incoming, leaveCall, video]);
+  }, [callId, connectSignaling, incoming, leaveCall, video]);
 
   useEffect(() => {
+    if (leavingRef.current || callHasEnded(callId)) return;
     if (!Number.isInteger(callId) || callId < 1 || !user) {
       setError('This call link is invalid or your session has expired.');
       return;
@@ -260,15 +328,15 @@ export default function CallScreen() {
       const checkIncoming = async () => {
         try {
           const calls = await apiRequest<{ id: number }[]>('messaging/calls/incoming/');
-          if (active && !expired && !calls.some((call) => call.id === callId)) {
+          if (active && !expired && !accepting.current && !acceptedRef.current && !calls.some((call) => call.id === callId)) {
             expired = true;
-            setStatus('Call expired');
-            setError('This call has ended or timed out.');
+            leavingRef.current = true; closeLocal(); router.back();
           }
         } catch { /* Keep the answer controls available during a temporary network outage. */ }
       };
       void checkIncoming();
       const poll = setInterval(() => void checkIncoming(), 4000);
+      timers.current.add(poll);
       return () => { active = false; clearInterval(poll); };
     }
     if (incoming) return;
@@ -285,18 +353,23 @@ export default function CallScreen() {
         void leaveCall();
       }
     }, 35_000);
+    timers.current.add(timeout);
     return () => { active = false; clearTimeout(timeout); closeLocal(); };
   }, [accepted, callId, closeLocal, incoming, leaveCall, params.participants, startMedia, user]);
 
   async function acceptCall() {
+    if (leavingRef.current || accepting.current || acceptedRef.current) return;
+    accepting.current = true;
     try {
       const call = await apiRequest<CallInfo>(`messaging/calls/${callId}/accept/`, { method: 'POST' });
+      if (leavingRef.current || callHasEnded(callId)) return;
       acceptedRef.current = true;
       setAccepted(true);
       await startMedia(call);
     } catch (acceptError) {
+      if (leavingRef.current) return;
       setError(acceptError instanceof Error ? acceptError.message : 'Unable to accept the call.');
-    }
+    } finally { accepting.current = false; }
   }
 
   useEffect(() => {
@@ -308,7 +381,9 @@ export default function CallScreen() {
 
   function toggleMute() {
     const next = !muted;
-    localRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next; });
+    nativeMuted.current = next;
+    localRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next && !nativeHeld.current; });
+    syncNativeMute(callId, next);
     setMuted(next);
   }
 

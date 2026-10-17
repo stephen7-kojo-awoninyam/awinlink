@@ -1,37 +1,42 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Awinlink",
+    "slug": "awinlink",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "icon": "./assets/images/awinlink-icon.png",
+    "scheme": "awinlink",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.awinlink.app",
+      "supportsTablet": true,
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.awinlink.app",
+      "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#2458d3",
+        "foregroundImage": "./assets/images/awinlink-foreground.png",
+        "monochromeImage": "./assets/images/awinlink-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/awinlink-icon.png"
     },
     "plugins": [
       "expo-router",
+      "expo-secure-store",
       "./plugins/withClassroomScreenShare.cjs",
+      "./plugins/withNativeCalls.cjs",
       "expo-document-picker",
       "expo-notifications",
       ["expo-audio", {"microphonePermission": "Allow Awinlink to record voice messages.", "enableBackgroundPlayback": false, "enableBackgroundRecording": false}],
@@ -45,13 +50,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/awinlink-splash.png",
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-video",
-      "expo-audio"
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

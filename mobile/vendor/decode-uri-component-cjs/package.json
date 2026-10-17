@@ -1,0 +1,7 @@
+{
+  "name": "@awinlink/decode-uri-component-cjs",
+  "version": "0.5.0-awinlink.1",
+  "private": true,
+  "main": "index.cjs",
+  "license": "MIT"
+}

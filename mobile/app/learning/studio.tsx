@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -27,7 +27,7 @@ export default function LearningStudioScreen() {
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [courseForm, setCourseForm] = useState(emptyCourse);
   const [lessonForm, setLessonForm] = useState(emptyLesson);
-  const [isFree, setIsFree] = useState(true);
+  const [lessonFiles, setLessonFiles] = useState<Partial<Record<'video' | 'notes', DocumentPicker.DocumentPickerAsset>>>({});
   const [thumbnail, setThumbnail] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,9 +54,10 @@ export default function LearningStudioScreen() {
 
   async function openCourse(course: Course) {
     setSelected(course); setError('');
+    setLessonFiles({}); setLessonForm(emptyLesson);
     setCategoryId(course.category);
     setCourseForm({ title: course.title, description: course.description, level: course.level, duration: String(course.duration) });
-    setIsFree(course.is_free); setThumbnail(null);
+    setThumbnail(null);
     try { setLessons(await apiRequest<Lesson[]>(`learning/courses/${course.id}/lessons/`)); }
     catch (e) { setLessons([]); setError(e instanceof Error ? e.message : 'Unable to load course lessons.'); }
   }
@@ -66,7 +67,7 @@ export default function LearningStudioScreen() {
     setWorking(true); setError('');
     try {
       const slug = courseForm.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      const courseData = { ...courseForm, slug, category: categoryId, duration: Number(courseForm.duration) || 0, is_free: isFree };
+      const courseData = { ...courseForm, slug, category: categoryId, duration: Number(courseForm.duration) || 0, is_free: true };
       let body: unknown = courseData;
       if (thumbnail) {
         const form = new FormData();
@@ -84,10 +85,27 @@ export default function LearningStudioScreen() {
     if (!selected || !lessonForm.title.trim()) { setError('Enter a lesson title.'); return; }
     setWorking(true); setError('');
     try {
-      const lesson = await apiRequest<Lesson>(`learning/courses/${selected.id}/lessons/create/`, { method: 'POST', body: { ...lessonForm, video: lessonForm.video.trim() || null, duration: Number(lessonForm.duration) || 0, order: lessons.length + 1 } });
+      const body = new FormData();
+      body.append('title', lessonForm.title.trim());
+      body.append('description', lessonForm.description.trim());
+      body.append('duration', String(Number(lessonForm.duration) || 0));
+      body.append('order', String(Math.max(0, ...lessons.map(item => item.order)) + 1));
+      for (const field of ['video', 'notes'] as const) {
+        const file = lessonFiles[field];
+        if (file) body.append(field, Platform.OS === 'web' && file.file ? file.file : { uri: file.uri, name: file.name, type: file.mimeType || 'application/octet-stream' } as unknown as Blob);
+      }
+      const lesson = await apiRequest<Lesson>(`learning/courses/${selected.id}/lessons/create/`, { method: 'POST', body });
+      setLessonFiles({});
       setLessons(current => [...current, lesson]); setCourses(current => current.map(course => course.id === selected.id ? { ...course, lesson_count: course.lesson_count + 1 } : course)); setLessonForm(emptyLesson);
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to add lesson.'); }
     finally { setWorking(false); }
+  }
+
+  async function pickLessonFile(field: 'video' | 'notes') {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: field === 'video' ? 'video/*' : ['application/pdf', 'text/plain'], copyToCacheDirectory: true });
+      if (!result.canceled) setLessonFiles(current => ({ ...current, [field]: result.assets[0] }));
+    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to select this file.'); }
   }
 
   async function submitCourse(course: Course) {
@@ -103,7 +121,7 @@ export default function LearningStudioScreen() {
     if (!categoryId || !courseForm.title.trim() || !courseForm.description.trim()) { setError('Choose a category and complete the title and description.'); return; }
     setWorking(true); setError('');
     try {
-      const data = { ...courseForm, slug: courseForm.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''), category: categoryId, duration: Number(courseForm.duration) || 0, is_free: isFree };
+      const data = { ...courseForm, slug: courseForm.title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''), category: categoryId, duration: Number(courseForm.duration) || 0, is_free: true };
       let body: unknown = data;
       if (thumbnail) {
         const form = new FormData();
@@ -141,7 +159,7 @@ export default function LearningStudioScreen() {
           <View style={styles.row}><Pressable onPress={() => setCourseForm(current => ({ ...current, level: 'BEGINNER' }))} style={[styles.category, courseForm.level === 'BEGINNER' && styles.categorySelected]}><Text style={styles.categoryText}>Beginner</Text></Pressable><Pressable onPress={() => setCourseForm(current => ({ ...current, level: 'INTERMEDIATE' }))} style={[styles.category, courseForm.level === 'INTERMEDIATE' && styles.categorySelected]}><Text style={styles.categoryText}>Intermediate</Text></Pressable><Pressable onPress={() => setCourseForm(current => ({ ...current, level: 'ADVANCED' }))} style={[styles.category, courseForm.level === 'ADVANCED' && styles.categorySelected]}><Text style={styles.categoryText}>Advanced</Text></Pressable></View>
           <TextInput accessibilityLabel="Course duration in minutes" keyboardType="number-pad" onChangeText={duration => setCourseForm(current => ({ ...current, duration }))} placeholder="Total duration in minutes" placeholderTextColor={colors.muted} style={styles.input} value={courseForm.duration} />
           <Pressable accessibilityRole="button" onPress={async () => { const picked = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true }); if (!picked.canceled) setThumbnail(picked.assets[0]); }} style={styles.category}><Text style={styles.categoryText}>{thumbnail?.name || 'Replace thumbnail (optional)'}</Text></Pressable>
-          <View style={styles.row}><Text style={styles.meta}>Free course</Text><Switch value={isFree} onValueChange={setIsFree} /></View>
+          <Text style={styles.meta}>Courses are free at launch.</Text>
           <Pressable accessibilityRole="button" disabled={working} onPress={() => void saveCourseChanges(selected)} style={styles.button}><Text style={styles.buttonText}>{working ? 'Saving...' : 'Save course changes'}</Text></Pressable>
           <Pressable accessibilityRole="button" disabled={working || lessons.length === 0} onPress={() => void submitCourse(selected)} style={[styles.button, (working || lessons.length === 0) && styles.disabled]}><Text style={styles.buttonText}>{working ? 'Submitting...' : lessons.length === 0 ? 'Add a lesson before submitting' : 'Submit for admin review'}</Text></Pressable>
         </>}
@@ -151,8 +169,10 @@ export default function LearningStudioScreen() {
           <Text style={styles.section}>Add lesson</Text>
           <TextInput accessibilityLabel="Lesson title" onChangeText={title => setLessonForm(current => ({ ...current, title }))} placeholder="Lesson title" placeholderTextColor={colors.muted} style={styles.input} value={lessonForm.title} />
           <TextInput accessibilityLabel="Lesson description" onChangeText={description => setLessonForm(current => ({ ...current, description }))} placeholder="Description" placeholderTextColor={colors.muted} style={styles.input} value={lessonForm.description} />
-          <TextInput accessibilityLabel="Lesson video URL" autoCapitalize="none" onChangeText={video => setLessonForm(current => ({ ...current, video }))} placeholder="Video URL (optional)" placeholderTextColor={colors.muted} style={styles.input} value={lessonForm.video} />
-          <TextInput accessibilityLabel="Lesson notes" multiline onChangeText={notes => setLessonForm(current => ({ ...current, notes }))} placeholder="Lesson notes" placeholderTextColor={colors.muted} style={[styles.input, styles.multiline]} value={lessonForm.notes} />
+          {(['video', 'notes'] as const).map(field => <View key={field}>
+            <Pressable accessibilityRole="button" disabled={working} onPress={() => void pickLessonFile(field)} style={styles.category}><Text style={styles.categoryText}>{lessonFiles[field]?.name || `Choose lesson ${field} (optional)`}</Text></Pressable>
+            {!!lessonFiles[field] && <Pressable disabled={working} onPress={() => setLessonFiles(current => ({ ...current, [field]: undefined }))}><Text style={styles.meta}>Remove {field}</Text></Pressable>}
+          </View>)}
           <TextInput accessibilityLabel="Lesson duration in minutes" keyboardType="number-pad" onChangeText={duration => setLessonForm(current => ({ ...current, duration }))} placeholder="Duration in minutes" placeholderTextColor={colors.muted} style={styles.input} value={lessonForm.duration} />
           <Pressable accessibilityRole="button" disabled={working} onPress={() => void createLesson()} style={styles.button}><Text style={styles.buttonText}>{working ? 'Saving...' : 'Add lesson'}</Text></Pressable>
         </>}
@@ -172,7 +192,7 @@ export default function LearningStudioScreen() {
         <View style={styles.row}><Pressable onPress={() => setCourseForm(current => ({ ...current, level: 'BEGINNER' }))} style={[styles.category, courseForm.level === 'BEGINNER' && styles.categorySelected]}><Text style={styles.categoryText}>Beginner</Text></Pressable><Pressable onPress={() => setCourseForm(current => ({ ...current, level: 'INTERMEDIATE' }))} style={[styles.category, courseForm.level === 'INTERMEDIATE' && styles.categorySelected]}><Text style={styles.categoryText}>Intermediate</Text></Pressable><Pressable onPress={() => setCourseForm(current => ({ ...current, level: 'ADVANCED' }))} style={[styles.category, courseForm.level === 'ADVANCED' && styles.categorySelected]}><Text style={styles.categoryText}>Advanced</Text></Pressable></View>
         <TextInput accessibilityLabel="Course duration in minutes" keyboardType="number-pad" onChangeText={duration => setCourseForm(current => ({ ...current, duration }))} placeholder="Total duration in minutes" placeholderTextColor={colors.muted} style={styles.input} value={courseForm.duration} />
         <Pressable accessibilityRole="button" onPress={async () => { const picked = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true }); if (!picked.canceled) setThumbnail(picked.assets[0]); }} style={styles.category}><Text style={styles.categoryText}>{thumbnail?.name || 'Choose course thumbnail (optional)'}</Text></Pressable>
-        <View style={styles.row}><Text style={styles.meta}>Free course</Text><Switch value={isFree} onValueChange={setIsFree} /></View>
+        <Text style={styles.meta}>Courses are free at launch.</Text>
         <Pressable accessibilityRole="button" disabled={working || categories.length === 0} onPress={() => void createCourse()} style={[styles.button, working && styles.disabled]}><Text style={styles.buttonText}>{working ? 'Creating...' : 'Create draft course'}</Text></Pressable>
         <Text style={styles.section}>My courses</Text>
         {loading ? <ActivityIndicator color={colors.primary} /> : courses.length === 0 ? <EmptyState title="No courses yet" message="Create a course, add lessons, then submit it for review." /> : courses.map(course => <Pressable accessibilityRole="button" key={course.id} onPress={() => void openCourse(course)} style={styles.card}><Text style={styles.itemTitle}>{course.title}</Text><Text style={styles.meta}>{course.status} · {course.lesson_count} lessons</Text><Text style={styles.open}>Manage course</Text></Pressable>)}

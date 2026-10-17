@@ -249,7 +249,7 @@
 
     </div>
 
-    {% if request.resolver_match and request.resolver_match.url_name == 'home_feed' %}
+    {% if request.resolver_match and request.resolver_match.url_name == 'home_feed' or request.resolver_match.url_name == 'conversation_list' %}
     <div class="header-search mobile-header-search" data-feed-search>
         <i class="bi bi-search" aria-hidden="true"></i>
         <input

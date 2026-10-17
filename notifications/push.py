@@ -107,8 +107,6 @@ def send_expo_call_push(notification):
             "token", "platform"
         )
     )
-    if not tokens:
-        return
 
     caller_name = (
         notification.sender.get_full_name() or notification.sender.username
@@ -123,18 +121,21 @@ def send_expo_call_push(notification):
         "call_type": call.call_type,
         "caller_name": caller_name,
     }
+    from .voip import native_call_uuid, send_voip_call_push
+    data['uuid'] = native_call_uuid(call.pk)
+    data['expires_at'] = int(call.started_at.timestamp()) + 30
+    delivered = send_voip_call_push(notification.user_id, data)
+    tokens = [(token, platform) for token, platform in tokens if token not in delivered]
+    if not tokens:
+        return
     messages = [
         {
             "to": token,
-            "title": f"Incoming {call_label} call",
-            "body": f"{caller_name} is calling you.",
             "data": data,
-            "sound": "default",
             "priority": "high",
             "ttl": 30,
-            "channelId": "incoming-calls",
-            "categoryId": "incoming-call",
             "collapseId": f"awinlink-call-{call.pk}",
+            **({"title": f"Incoming {call_label} call", "body": f"{caller_name} is calling you.", "sound": "default", "categoryId": "incoming-call"} if _platform == 'ios' else {}),
         }
         for token, _platform in tokens
     ]

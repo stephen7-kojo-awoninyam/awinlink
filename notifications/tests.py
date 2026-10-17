@@ -277,8 +277,19 @@ class ExpoCallPushDeliveryTests(TestCase):
 		self.assertEqual(payload["data"]["conversation_id"], self.call.conversation_id)
 		self.assertEqual(payload["data"]["call_type"], "VIDEO")
 		self.assertEqual(payload["ttl"], 30)
-		self.assertEqual(payload["channelId"], "incoming-calls")
-		self.assertEqual(payload["categoryId"], "incoming-call")
+		self.assertEqual(payload['categoryId'], 'incoming-call')
+		self.assertIn('expires_at', payload['data'])
+
+	def test_android_call_is_data_only_for_background_native_dispatch(self):
+		from .push import send_expo_call_push
+		MobilePushToken.objects.update(platform='android')
+		with patch('notifications.push.urlopen', return_value=self.fake_response([{'status': 'ok'}])) as send:
+			send_expo_call_push(self.notification)
+		payload = json.loads(send.call_args.args[0].data)[0]
+		self.assertEqual(payload['priority'], 'high')
+		self.assertEqual(payload['data']['uuid'][-12:], f'{self.call.id:012x}')
+		for key in ('title', 'body', 'sound', 'categoryId'):
+			self.assertNotIn(key, payload)
 
 	def test_stale_call_notification_is_not_pushed_and_invalid_device_token_is_removed(self):
 		from .push import send_expo_call_push

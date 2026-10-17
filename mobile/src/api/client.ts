@@ -4,6 +4,18 @@ import type { AuthResponse, RegistrationData } from '@/src/types';
 
 const ACCESS_TOKEN_KEY = 'awinlink.access-token';
 const REFRESH_TOKEN_KEY = 'awinlink.refresh-token';
+const sessionListeners = new Set<() => void>();
+let tokenGeneration = 0;
+let tokenMutation: Promise<unknown> = Promise.resolve();
+function mutateTokens<T>(operation: () => Promise<T>): Promise<T> {
+  const result = tokenMutation.then(operation);
+  tokenMutation = result.catch(() => {});
+  return result;
+}
+export function onSessionCleared(listener: () => void) {
+  sessionListeners.add(listener);
+  return () => { sessionListeners.delete(listener); };
+}
 const API_ORIGIN = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
 
 export async function mediaSource(uri: string) {
@@ -67,7 +79,17 @@ async function readError(response: Response) {
   return `Request failed (${response.status}).`;
 }
 
+let refreshInFlight: Promise<string | null> | null = null;
+
 async function refreshAccessToken() {
+  if (!refreshInFlight) {
+    refreshInFlight = performTokenRefresh().finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+async function performTokenRefresh() {
+  const generation = tokenGeneration;
   const refresh = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
   if (!refresh) return null;
 
@@ -78,32 +100,52 @@ async function refreshAccessToken() {
   });
   if (!response.ok) {
     if (response.status === 400 || response.status === 401) {
-      await clearTokens();
+      await mutateTokens(async () => {
+        if (generation === tokenGeneration && await SecureStore.getItemAsync(REFRESH_TOKEN_KEY) === refresh) {
+          tokenGeneration += 1;
+          await deleteStoredTokens();
+        }
+      });
       return null;
     }
     throw new ApiError(await readError(response), response.status);
   }
 
-  const data = (await response.json()) as { access?: unknown };
+  const data = (await response.json()) as { access?: unknown; refresh?: unknown };
   if (typeof data.access !== 'string') {
     throw new Error('The token refresh response did not include an access token.');
   }
-  await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.access);
-  return data.access;
+  // A response from a previous session must never restore credentials after logout.
+  const access = data.access;
+  return mutateTokens(async () => {
+    if (generation !== tokenGeneration || await SecureStore.getItemAsync(REFRESH_TOKEN_KEY) !== refresh) return null;
+    await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, access);
+    if (typeof data.refresh === 'string') await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refresh);
+    return access;
+  });
 }
 
-export async function clearTokens() {
+async function deleteStoredTokens() {
   await Promise.all([
     SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY),
     SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
   ]);
+  sessionListeners.forEach(listener => listener());
+}
+
+export async function clearTokens() {
+  tokenGeneration += 1;
+  return mutateTokens(deleteStoredTokens);
 }
 
 export async function storeTokens(access: string, refresh: string) {
-  await Promise.all([
-    SecureStore.setItemAsync(ACCESS_TOKEN_KEY, access),
-    SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refresh),
-  ]);
+  tokenGeneration += 1;
+  await mutateTokens(async () => {
+    await Promise.all([
+      SecureStore.setItemAsync(ACCESS_TOKEN_KEY, access),
+      SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refresh),
+    ]);
+  });
 }
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
@@ -159,6 +201,15 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 401 && authenticated && !retryAfterRefresh) {
+      const generation = tokenGeneration;
+      await mutateTokens(async () => {
+        if (generation === tokenGeneration && await getAccessToken() === accessToken) {
+          tokenGeneration += 1;
+          await deleteStoredTokens();
+        }
+      });
+    }
     throw new ApiError(await readError(response), response.status);
   }
   if (response.status === 204) return undefined as T;

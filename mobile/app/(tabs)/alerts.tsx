@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { apiRequest } from '@/src/api/client';
 import type { AppNotification } from '@/src/types';
@@ -84,6 +84,14 @@ export default function AlertsScreen() {
                   <Text style={styles.sender}>
                     {notification.sender_name || `@${notification.sender_username || 'awinlink'}`}
                   </Text>
+                  {!!notification.conversation_id && <Pressable accessibilityRole="button" onPress={() => {
+                    if (!notification.is_read) void markRead(notification.id);
+                    router.push({ pathname: '/conversation/[id]', params: { id: String(notification.conversation_id) } });
+                  }}><Text style={styles.markRead}>Open conversation</Text></Pressable>}
+                  {!!notification.opportunity_id && <Pressable accessibilityRole="button" onPress={() => {
+                    if (!notification.is_read) void markRead(notification.id);
+                    router.navigate('/(tabs)/opportunities');
+                  }}><Text style={styles.markRead}>View opportunities</Text></Pressable>}
                   {!notification.is_read && (
                     <Pressable accessibilityRole="button" disabled={working}
                       onPress={() => void markRead(notification.id)}>

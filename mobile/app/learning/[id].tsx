@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
-import { ApiError, apiRequest } from '@/src/api/client';
+import { ApiError, apiRequest, mediaSource } from '@/src/api/client';
 import { EmptyState } from '@/src/components/EmptyState';
 import { Page } from '@/src/components/Page';
+import { VideoPlayer } from '@/src/components/MediaPlayer';
 import { colors } from '@/src/theme';
 import { useAuth } from '@/src/auth/AuthProvider';
 
 type Course = { id: number; title: string; description: string; creator_name: string; category_name: string; level: string; duration: number; is_free: boolean; lesson_count: number };
 type Lesson = { id: number; title: string; description: string; notes: string; video: string | null; order: number; duration: number };
-type Progress = { progress_percentage: number; completed_lessons: number; total_lessons: number; completed: boolean };
+type Progress = { progress_percentage: number; completed_lessons: number; total_lessons: number; completed: boolean; completed_lesson_ids?: number[] };
 type Review = { id: number; user: number; user_name: string; rating: number; review: string; created_at: string };
 type LessonQuiz = { id: number; title: string; passing_score: number; question_count: number };
 type QuizAvailability = 'available' | 'none' | 'unknown';
@@ -39,10 +40,14 @@ export default function CourseScreen() {
       setCourse(info);
       const [lessonList, courseProgress] = await Promise.all([
         apiRequest<Lesson[]>(`learning/courses/${id}/lessons/`),
-        apiRequest<Progress>(`learning/courses/${id}/progress/`).catch(() => null),
+        apiRequest<Progress>(`learning/courses/${id}/progress/`).catch((e: unknown) => {
+          if (e instanceof ApiError && e.status === 404) return null;
+          throw e;
+        }),
       ]);
       const reviewList = await apiRequest<Review[]>(`learning/courses/${id}/reviews/`);
       setLessons(lessonList); setProgress(courseProgress); setReviews(reviewList);
+      setCompletedLessonIds(new Set(courseProgress?.completed_lesson_ids || []));
       if (courseProgress) {
         const quizChecks = await Promise.all(lessonList.map(async (lesson): Promise<[number, QuizAvailability]> => {
           try {
@@ -85,10 +90,10 @@ export default function CourseScreen() {
         <Text style={styles.meta}>{course.category_name} · {course.level.toLowerCase()} · {course.duration} minutes</Text>
         <Text style={styles.description}>{course.description}</Text>
         <Text style={styles.meta}>By {course.creator_name}</Text>
-        {progress ? <View style={styles.progress}><Text style={styles.progressText}>{progress.progress_percentage}% complete ({progress.completed_lessons}/{progress.total_lessons} lessons)</Text></View> : <Pressable disabled={working} onPress={() => void enroll()} style={styles.button}><Text style={styles.buttonText}>{working ? 'Working...' : 'Enroll in course'}</Text></Pressable>}
+        {progress ? <View style={styles.progress}><Text style={styles.progressText}>{progress.progress_percentage}% complete ({progress.completed_lessons}/{progress.total_lessons} lessons)</Text></View> : <Pressable disabled={working || !course.is_free} onPress={() => void enroll()} style={styles.button}><Text style={styles.buttonText}>{working ? 'Working...' : course.is_free ? 'Enroll in course' : 'Paid enrollment unavailable'}</Text></Pressable>}
         <Text style={styles.section}>Course lessons</Text>
         {!progress && <Text style={styles.meta}>Enroll to track your lesson progress.</Text>}
-        {lessons.map((lesson, index) => <View key={lesson.id} style={styles.lesson}><Text style={styles.lessonTitle}>{index + 1}. {lesson.title}</Text>{!!lesson.description && <Text style={styles.meta}>{lesson.description}</Text>}{!!lesson.notes && <Text style={styles.description}>{lesson.notes}</Text>}{!!lesson.video && <Text style={styles.meta}>Lesson video: {lesson.video}</Text>}{progress && <View style={styles.lessonActions}><Pressable disabled={working || completedLessonIds.has(lesson.id) || progress.completed} onPress={() => void markComplete(lesson)} style={styles.lessonAction}><Text style={styles.lessonActionText}>{completedLessonIds.has(lesson.id) || progress.completed ? 'Completed' : 'Mark lesson complete'}</Text></Pressable>{quizAvailability[lesson.id] === 'available' ? <Pressable onPress={() => router.push({ pathname: '/learning/quiz/[id]', params: { id: String(lesson.id) } })} style={styles.lessonAction}><Text style={styles.lessonActionText}>Open quiz</Text></Pressable> : quizAvailability[lesson.id] === 'none' ? <Text style={styles.meta}>No quiz for this lesson.</Text> : quizAvailability[lesson.id] === 'unknown' ? <Text style={styles.meta}>Quiz availability could not be checked. Refresh to retry.</Text> : null}</View>}</View>)}
+        {lessons.map((lesson, index) => <View key={lesson.id} style={styles.lesson}><Text style={styles.lessonTitle}>{index + 1}. {lesson.title}</Text>{!!lesson.description && <Text style={styles.meta}>{lesson.description}</Text>}{!!lesson.notes && <Pressable accessibilityRole="link" onPress={() => { void mediaSource(lesson.notes).then(source => Linking.openURL(source.uri)).catch(() => setError("Unable to open lesson notes.")); }}><Text style={styles.lessonActionText}>Open lesson notes</Text></Pressable>}{!!lesson.video && <VideoPlayer uri={lesson.video} />}{progress && <View style={styles.lessonActions}><Pressable disabled={working || completedLessonIds.has(lesson.id) || progress.completed} onPress={() => void markComplete(lesson)} style={styles.lessonAction}><Text style={styles.lessonActionText}>{completedLessonIds.has(lesson.id) || progress.completed ? 'Completed' : 'Mark lesson complete'}</Text></Pressable>{quizAvailability[lesson.id] === 'available' ? <Pressable onPress={() => router.push({ pathname: '/learning/quiz/[id]', params: { id: String(lesson.id) } })} style={styles.lessonAction}><Text style={styles.lessonActionText}>Open quiz</Text></Pressable> : quizAvailability[lesson.id] === 'none' ? <Text style={styles.meta}>No quiz for this lesson.</Text> : quizAvailability[lesson.id] === 'unknown' ? <Text style={styles.meta}>Quiz availability could not be checked. Refresh to retry.</Text> : null}</View>}</View>)}
         <Text style={styles.section}>Reviews</Text>
         {!!progress && !reviews.some((review) => review.user === user?.id) && <View style={styles.lesson}><Text style={styles.meta}>Your rating: {rating} / 5</Text><View style={styles.lessonActions}>{[1, 2, 3, 4, 5].map((value) => <Pressable accessibilityRole="button" key={value} onPress={() => setRating(value)} style={styles.lessonAction}><Text style={styles.lessonActionText}>{value}{rating === value ? ' ★' : ''}</Text></Pressable>)}</View><TextInput accessibilityLabel="Course review" multiline onChangeText={setReviewDraft} placeholder="Share your course review" placeholderTextColor={colors.muted} style={styles.reviewInput} value={reviewDraft} /><Pressable disabled={working || !reviewDraft.trim()} onPress={() => void submitReview()} style={styles.lessonAction}><Text style={styles.lessonActionText}>{working ? 'Submitting...' : 'Submit review'}</Text></Pressable></View>}
         {reviews.length ? reviews.map((review) => <View key={review.id} style={styles.lesson}><Text style={styles.lessonTitle}>{review.user_name} · {review.rating}/5</Text><Text style={styles.meta}>{review.review}</Text></View>) : <Text style={styles.meta}>No reviews yet.</Text>}

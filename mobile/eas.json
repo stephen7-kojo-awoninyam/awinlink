@@ -1,0 +1,22 @@
+{
+  "cli": { "appVersionSource": "remote" },
+  "build": {
+    "preview": {
+      "environment": "preview",
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "ios": { "simulator": true }
+    },
+    "preview-device": {
+      "extends": "preview",
+      "ios": { "simulator": false, "credentialsSource": "remote" }
+    },
+    "production": {
+      "environment": "production",
+      "distribution": "store",
+      "autoIncrement": true,
+      "android": { "buildType": "app-bundle", "credentialsSource": "remote" },
+      "ios": { "credentialsSource": "remote" }
+    }
+  }
+}

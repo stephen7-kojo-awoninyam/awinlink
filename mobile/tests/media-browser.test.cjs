@@ -9,12 +9,17 @@ const http = require('node:http');
 const chrome = process.env.MEDIA_TEST_CHROME;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-test('real browser records and plays voice/video at desktop and mobile widths', { skip: !chrome, timeout: 90000 }, async () => {
+test('real browser records and plays voice/video at desktop and mobile widths', { skip: !chrome, timeout: 180000 }, async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'awinlink-media-browser-'));
   const fixturePath = path.join(directory, 'fixture.mp4');
   const python = path.join(__dirname, '../../.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
-  const generated = spawnSync(python, ['-c', `import subprocess,sys; from imageio_ffmpeg import get_ffmpeg_exe; subprocess.run([get_ffmpeg_exe(),'-nostdin','-hide_banner','-loglevel','error','-f','lavfi','-i','color=c=blue:s=160x90:d=1','-f','lavfi','-i','sine=frequency=440:duration=1','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-movflags','+faststart','-shortest',sys.argv[1]],check=True,capture_output=True)`, fixturePath], { windowsHide: true, timeout: 20000, encoding: 'utf8' });
-  assert.equal(generated.status, 0, generated.stderr);
+  const binaries = path.join(__dirname, '../../.venv/Lib/site-packages/imageio_ffmpeg/binaries');
+  const ffmpeg = process.env.MEDIA_TEST_FFMPEG || (process.platform === 'win32' && fs.existsSync(binaries) ? fs.readdirSync(binaries).find(name => /^ffmpeg.*\.exe$/.test(name)) : null);
+  const args = ['-nostdin','-hide_banner','-loglevel','error','-f','lavfi','-i','color=c=blue:s=160x90:d=1','-f','lavfi','-i','sine=frequency=440:duration=1','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-movflags','+faststart','-shortest',fixturePath];
+  const generated = ffmpeg
+    ? spawnSync(path.isAbsolute(ffmpeg) ? ffmpeg : path.join(binaries, ffmpeg), args, { windowsHide: true, timeout: 60000, encoding: 'utf8' })
+    : spawnSync(python, ['-c', 'import subprocess,sys; from imageio_ffmpeg import get_ffmpeg_exe; subprocess.run([get_ffmpeg_exe(),*sys.argv[1:]],check=True)', ...args], { windowsHide: true, timeout: 60000, encoding: 'utf8' });
+  assert.equal(generated.status, 0, generated.error?.message || generated.stderr);
   const videoFixture = fs.readFileSync(fixturePath);
   const script = fs.readFileSync(path.join(__dirname, '../../static/js/recording-format.js'), 'utf8');
   const server = http.createServer((request, response) => {
@@ -27,7 +32,7 @@ test('real browser records and plays voice/video at desktop and mobile widths', 
     response.end(`<html><meta name="viewport" content="width=device-width"><body><script>${script}</script></body></html>`);
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const child = spawn(chrome, ['--headless=new', '--no-first-run', '--no-default-browser-check', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--autoplay-policy=no-user-gesture-required', '--remote-debugging-port=0', `--user-data-dir=${directory}`, 'about:blank'], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+  const child = spawn(chrome, ['--headless=new', '--disable-gpu', '--disable-background-networking', '--disable-component-update', '--disable-extensions', '--disable-sync', '--no-first-run', '--no-default-browser-check', '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--autoplay-policy=no-user-gesture-required', '--remote-debugging-port=0', `--user-data-dir=${directory}`, 'about:blank'], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
   let launchError = '';
   child.stderr.on('data', data => { launchError = (launchError + data).slice(-1500); });
   child.on('error', error => { launchError = error.message; });

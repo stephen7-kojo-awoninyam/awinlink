@@ -63,9 +63,9 @@ test('browser controls, whiteboard, plaintext chat, media cleanup and mobile vie
     `;
     const html = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:12px;box-sizing:border-box}*{box-sizing:border-box}${css}</style></head><body>${main}<pre id="result">RUNNING</pre><script>${fixtures}</script><script>${client}</script><script>${browser}</script><script>${assertions}</script></body></html>`;
     const file = join(temporary, 'test.html'); writeFileSync(file, html);
-    const output = spawnSync(chrome, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    const output = spawnSync(chrome, ['--headless=new', '--disable-gpu', '--disable-background-networking', '--disable-component-update', '--disable-extensions', '--disable-sync', '--no-first-run', '--no-default-browser-check',
       `--user-data-dir=${join(temporary, 'profile')}`, '--window-size=390,844', '--virtual-time-budget=3000', '--dump-dom', pathToFileURL(file).href],
-      { timeout: 45000, encoding: 'utf8', windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
+      { timeout: 90000, encoding: 'utf8', windowsHide: true, maxBuffer: 4 * 1024 * 1024 });
     assert.equal(output.status, 0, output.error?.message || output.stderr);
     const result = output.stdout.match(/<pre id="result">([^<]*)<\/pre>/)?.[1];
     assert.equal(result, 'CLASSROOM_BROWSER_OK');

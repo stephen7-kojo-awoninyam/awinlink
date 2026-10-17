@@ -197,3 +197,11 @@ class MobilePushToken(models.Model):
 
     def __str__(self):
         return f"{self.platform} push token for {self.user}"
+
+
+class VoipPushToken(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='voip_push_tokens')
+    token = models.CharField(max_length=512, unique=True)
+    environment = models.CharField(max_length=16, choices=[('development', 'Development'), ('production', 'Production')])
+    expo_token = models.CharField(max_length=255, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)

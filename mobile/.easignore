@@ -1,0 +1,21 @@
+node_modules/
+.dependency-repair/
+android/
+ios/
+dist/
+dist-audit/
+.expo/
+.env
+.env.*
+!.env.example
+audit-*.json
+*.keystore
+*.jks
+*.p12
+*.p8
+*.key
+*.pem
+*.mobileprovision
+credentials.json
+
+# Keep native config plugins, native-call sources and vendor dependencies in the archive.

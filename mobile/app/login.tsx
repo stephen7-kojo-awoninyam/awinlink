@@ -118,6 +118,7 @@ export default function LoginScreen() {
           >
             <Text style={styles.footnote}>New to Awinlink? Create an account</Text>
           </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/password-reset')}><Text style={styles.footnote}>Forgot password?</Text></Pressable>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

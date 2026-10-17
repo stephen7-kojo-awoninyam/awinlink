@@ -1184,6 +1184,35 @@ let currentCallType = null;
 let callTimerInterval = null;
 let callConnectedAt = null;
 let isCallStarting = false;
+let callGeneration = 0;
+let pendingCallMutation = Promise.resolve();
+const endedCallIds = new Set();
+
+function rememberEndedCall(id) {
+    endedCallIds.add(Number(id));
+    if (endedCallIds.size > 100) endedCallIds.delete(endedCallIds.values().next().value);
+}
+function queueCallMutation(work) {
+    const result = pendingCallMutation.then(work);
+    pendingCallMutation = result.catch(() => {});
+    return result;
+}
+async function postCall(url, body = {}) {
+    const response = await fetch(url, { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify(body) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || 'Unable to update the call.');
+    return data;
+}
+function handleCallEnded(data) {
+    const id = Number(data.call_id);
+    if (!id) return;
+    rememberEndedCall(id);
+    if (incomingCallId === id) clearGlobalIncomingCall();
+    if (currentCallId === id) cleanupWebRTC();
+}
+
 
 
 /*
@@ -1591,9 +1620,9 @@ async function createPeerConnection(
     createOffer = false
 ) {
 
-    remoteUserId =
-        Number(remoteUserId);
-
+    const generation = callGeneration;
+    if (!currentCallId) throw new Error('Call ended.');
+    remoteUserId = Number(remoteUserId);
 
     if (peerConnections[remoteUserId]) {
 
@@ -1650,6 +1679,7 @@ async function createPeerConnection(
                 remoteUserId
             );
 
+            if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
             if (event.streams.length > 0) {
 
                 addRemoteVideo(
@@ -1669,6 +1699,7 @@ async function createPeerConnection(
     peerConnection.onicecandidate =
         function (event) {
 
+            if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
             if (event.candidate) {
 
                 sendCallSignal({
@@ -1701,6 +1732,7 @@ async function createPeerConnection(
                 peerConnection.connectionState
             );
 
+            if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
             if (peerConnection.connectionState === "connected") {
                 setCallStatus("Connected");
                 startCallTimer();
@@ -1738,9 +1770,9 @@ async function createPeerConnection(
         const offer =
             await peerConnection.createOffer();
 
-        await peerConnection.setLocalDescription(
-            offer
-        );
+        if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return peerConnection;
+        await peerConnection.setLocalDescription(offer);
+        if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return peerConnection;
 
 
         sendCallSignal({
@@ -1836,6 +1868,7 @@ async function processPendingIceCandidates(
 ========================================================= */
 
 async function handleCallSignal(data) {
+    const generation = callGeneration;
 
     console.log(
         "Received WebRTC message:",
@@ -1850,24 +1883,8 @@ async function handleCallSignal(data) {
 // CALL ENDED FOR EVERYONE
 // =====================================================
 
-if (data.type === "call_ended") {
-
-    console.log(
-        "Call ended by:",
-        data.ended_by_username || data.ended_by
-    );
-
-    clearOutgoingCallTimeout();
-    clearIncomingCallTimeout();
-
-    // Prevent another /end/ request
-    currentCallId = null;
-
-    // Close all peer connections
-    cleanupWebRTC();
-
-    return;
-}
+if (data.type === 'call_ended') { handleCallEnded(data); return; }
+if (!currentCallId) return;
 
     /*
      * Connection established.
@@ -2059,13 +2076,13 @@ if (data.type === "call_ended") {
         );
 
 
-        const answer =
-            await peerConnection.createAnswer();
+        if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
+        const answer = await peerConnection.createAnswer();
+        if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
 
 
-        await peerConnection.setLocalDescription(
-            answer
-        );
+        await peerConnection.setLocalDescription(answer);
+        if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
 
 
         sendCallSignal({
@@ -2227,97 +2244,22 @@ if (data.type === "call_ended") {
 ========================================================= */
 
 function connectCallSocket(callId) {
-
-    return new Promise(
-        function (resolve, reject) {
-
-            currentCallId =
-                Number(callId);
-
-
-            const protocol =
-                location.protocol === "https:"
-                    ? "wss"
-                    : "ws";
-
-
-            const socketUrl =
-                `${protocol}://${window.location.host}/ws/calls/${currentCallId}/`;
-
-
-            console.log(
-                "Connecting to call WebSocket:",
-                socketUrl
-            );
-
-
-            callSocket =
-                new WebSocket(socketUrl);
-
-
-            callSocket.onopen =
-                function () {
-
-                    console.log(
-                        "Call WebSocket connected."
-                    );
-
-                    resolve();
-
-                };
-
-
-            callSocket.onmessage =
-                async function (event) {
-
-                    try {
-
-                        const data =
-                            JSON.parse(
-                                event.data
-                            );
-
-                        await handleCallSignal(
-                            data
-                        );
-
-                    } catch (error) {
-
-                        console.error(
-                            "Call WebSocket message error:",
-                            error
-                        );
-
-                    }
-
-                };
-
-
-            callSocket.onerror =
-                function (error) {
-
-                    console.error(
-                        "Call WebSocket error:",
-                        error
-                    );
-
-                    reject(error);
-
-                };
-
-
-            callSocket.onclose =
-                function () {
-
-                    console.log(
-                        "Call WebSocket disconnected."
-                    );
-
-                };
-
-        }
-    );
-
+    const generation = callGeneration;
+    return new Promise((resolve, reject) => {
+        const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+        const socket = new WebSocket(`${protocol}://${window.location.host}/ws/calls/${callId}/`);
+        callSocket = socket;
+        socket.onopen = () => {
+            if (generation !== callGeneration || callSocket !== socket) { socket.close(); reject(new Error('Call cancelled.')); return; }
+            resolve();
+        };
+        socket.onmessage = event => {
+            if (generation !== callGeneration || callSocket !== socket) return;
+            void handleCallSignal(JSON.parse(event.data)).catch(error => console.warn('Call signaling failed:', error));
+        };
+        socket.onerror = reject;
+        socket.onclose = () => reject(new Error('Call signaling closed.'));
+    });
 }
 
 
@@ -2325,304 +2267,41 @@ function connectCallSocket(callId) {
    START CALL
 ========================================================= */
 
-async function startCall(
-    callType,
-    conversationId
-) {
-
-    if (isCallStarting || currentCallId) {
-        return;
-    }
-
+async function startCall(callType, conversationId) {
+    if (isCallStarting || currentCallId) return;
     isCallStarting = true;
-
+    const generation = ++callGeneration;
     try {
-
-        if (!conversationId) {
-
-            throw new Error(
-                "Conversation ID is required."
-            );
-
-        }
-
-
-        /*
-         * Get microphone/camera.
-         */
-
-        localStream =
-            await navigator.mediaDevices.getUserMedia({
-
-                audio: true,
-
-                video:
-                    callType === "VIDEO"
-
-            });
-
-
-        console.log(
-            `${callType} call media stream started.`
-        );
-
-
-        /*
-         * Create call.
-         */
-
-        const response =
-            await fetch(
-                `/api/messaging/conversations/${conversationId}/calls/start/`,
-                {
-
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        "X-CSRFToken":
-                            getCookie("csrftoken")
-
-                    },
-
-                    credentials:
-                        "same-origin",
-
-                    body:
-                        JSON.stringify({
-
-                            call_type:
-                                callType
-
-                        })
-
-                }
-            );
-
-
-        if (!response.ok) {
-
-            const errorData =
-                await response.json()
-                    .catch(
-                        () => ({})
-                    );
-
-
-            throw new Error(
-                errorData.detail ||
-                "Unable to start call."
-            );
-
-        }
-
-
-        const callData =
-            await response.json();
-
-
-        console.log(
-            "Awinlink call created:",
-            callData
-        );
-
+        if (!conversationId) throw new Error('Conversation ID is required.');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'VIDEO' });
+        if (generation !== callGeneration) { stream.getTracks().forEach(track => track.stop()); return; }
+        localStream = stream;
+        const callData = await queueCallMutation(async () => {
+            if (generation !== callGeneration) return null;
+            const data = await postCall(`/api/messaging/conversations/${conversationId}/calls/start/`, { call_type: callType });
+            if (generation !== callGeneration || endedCallIds.has(Number(data.id))) {
+                await postCall(`/api/messaging/calls/${data.id}/end/`, { end_for_everyone: true });
+                return null;
+            }
+            return data;
+        });
+        if (!callData || generation !== callGeneration) return;
         syncGlobalCallState(callData);
-
-
-        currentCallId =
-            Number(callData.id);
+        currentCallId = Number(callData.id);
         currentCallType = callType;
-
-
-        /*
-         * Save participants.
-         */
-
-        if (
-            callData.participants
-        ) {
-
-            callData.participants.forEach(
-                function (participant) {
-
-                    const user =
-                        participant.user;
-
-                    if (
-                        user &&
-                        Number(user.id) !==
-                        currentUserId
-                    ) {
-
-                        callParticipants[
-                            Number(user.id)
-                        ] = user;
-
-                    }
-
-                }
-            );
-
-        }
-
-
-        /*
-         * Show call UI.
-         */
-
-        showCallInterface(
-            callType,
-            callData.participants || [],
-            "Calling…"
-        );
-
-
-        /*
-         * Attach local video.
-         */
-
-        const localVideo =
-            document.getElementById(
-                "localVideo"
-            );
-
-
-        if (localVideo) {
-
-            localVideo.srcObject =
-                localStream;
-
-        }
-
-
-        /*
-         * Give receiver 30 seconds
-         * to answer.
-         */
-
-        clearOutgoingCallTimeout();
-
-
-        const thisCallId =
-            currentCallId;
-
-
-        outgoingCallTimeout =
-            setTimeout(
-                async function () {
-
-                    if (
-                        currentCallId !==
-                        thisCallId
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    console.log(
-                        "Outgoing call timed out."
-                    );
-
-
-                    currentCallId =
-                        null;
-
-
-                    try {
-
-                        await fetch(
-                            `/api/messaging/calls/${thisCallId}/end/`,
-                            {
-
-                                method: "POST",
-
-                                headers: {
-
-                                    "Content-Type":
-                                        "application/json",
-
-                                    "X-CSRFToken":
-                                        getCookie(
-                                            "csrftoken"
-                                        )
-
-                                },
-
-                                credentials:
-                                    "same-origin",
-
-                                body:
-                                    JSON.stringify({
-
-                                        end_for_everyone:
-                                            true
-
-                                    })
-
-                            }
-                        );
-
-                    } catch (error) {
-
-                        console.error(
-                            "Unable to end timed-out call:",
-                            error
-                        );
-
-                    }
-
-
-                    cleanupWebRTC();
-
-                },
-                30000
-            );
-
-
-        /*
-         * Connect call WebSocket.
-         */
-
-        await connectCallSocket(
-            currentCallId
-        );
-
-
-        console.log(
-            "Waiting for other participants to join..."
-        );
-
-
+        showCallInterface(callType, callData.participants || [], 'Calling...');
+        const thisCallId = currentCallId;
+        outgoingCallTimeout = setTimeout(() => {
+            if (generation === callGeneration && currentCallId === thisCallId) void endWebRTCCall();
+        }, 30000);
+        await connectCallSocket(thisCallId);
     } catch (error) {
-
-        console.error(
-            "Unable to start call:",
-            error
-        );
-
-
-        if (currentCallId) {
-            await endWebRTCCall();
-        } else {
-            cleanupWebRTC();
-        }
-
-
-        alert(
-            error.message ||
-            "Unable to start call."
-        );
-
+        if (generation !== callGeneration) return;
+        void endWebRTCCall();
+        alert(error.message || 'Unable to start call.');
     } finally {
-        isCallStarting = false;
-
+        if (generation === callGeneration) isCallStarting = false;
     }
-
 }
 
 
@@ -2912,6 +2591,20 @@ function removePeerConnection(
 ========================================================= */
 
 function cleanupWebRTC() {
+    callGeneration++;
+    isCallStarting = false;
+    clearGlobalIncomingCall();
+    globalCallState.callId = null;
+    globalCallState.callType = null;
+    globalCallState.status = 'ENDED';
+    for (const key of ['participants', 'joinedParticipants', 'ringingParticipants', 'invitedParticipants', 'rejectedParticipants', 'leftParticipants']) globalCallState[key] = {};
+    const containerMedia = document.querySelectorAll('#awinlinkCallContainer audio, #awinlinkCallContainer video');
+    containerMedia.forEach(media => {
+        media.pause();
+        media.srcObject?.getTracks().forEach(track => track.stop());
+        media.srcObject = null;
+    });
+
 
     console.log(
         "Cleaning up WebRTC..."
@@ -3032,113 +2725,14 @@ function cleanupWebRTC() {
    END WEBRTC CALL
 ========================================================= */
 async function endWebRTCCall() {
-
-    // =====================================================
-    // STOP CALL TIMEOUTS
-    // =====================================================
-
-    clearOutgoingCallTimeout();
-    clearIncomingCallTimeout();
-
-
-    // =====================================================
-    // NO ACTIVE CALL
-    // =====================================================
-
-    if (!currentCallId) {
-
-        cleanupWebRTC();
-
-        return;
-    }
-
-
-    // =====================================================
-    // SAVE CALL ID
-    // =====================================================
-
-    const callId =
-        currentCallId;
-
-
-    // =====================================================
-    // CLEAR IMMEDIATELY
-    //
-    // Prevents duplicate /end/ requests.
-    // =====================================================
-
-    currentCallId = null;
-
-
+    const id = currentCallId;
+    if (id) rememberEndedCall(id);
+    // Release media synchronously; no late response may clean up a newer call.
+    cleanupWebRTC();
+    if (!id) return;
     try {
-
-        const response =
-            await fetch(
-                `/api/messaging/calls/${callId}/end/`,
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-
-                        "X-CSRFToken":
-                            getCookie(
-                                "csrftoken"
-                            )
-                    },
-
-                    credentials:
-                        "same-origin",
-
-                    body:
-                        JSON.stringify({
-                            end_for_everyone:
-                                true
-                        })
-                }
-            );
-
-
-        const data =
-            await response
-                .json()
-                .catch(
-                    () => ({})
-                );
-
-
-        if (!response.ok) {
-
-            console.warn(
-                "Call may already be ended:",
-                data
-            );
-
-        } else {
-
-            console.log(
-                "Call ended for everyone:",
-                data
-            );
-        }
-
-
-    } catch (error) {
-
-        console.error(
-            "Error ending call:",
-            error
-        );
-
-    } finally {
-
-        // =================================================
-        // CLEAN THIS USER'S WEBRTC CONNECTION
-        // =================================================
-
-        cleanupWebRTC();
-    }
+        await queueCallMutation(() => postCall(`/api/messaging/calls/${id}/end/`, { end_for_everyone: true }));
+    } catch (error) { console.warn('Unable to end call on server:', error); }
 }
 
 /* =========================================================
@@ -3147,7 +2741,7 @@ async function endWebRTCCall() {
 
 function showIncomingCall(call) {
 
-    if (!call || !call.call_id) {
+    if (!call || !call.call_id || endedCallIds.has(Number(call.call_id))) {
 
         return;
 
@@ -3374,202 +2968,29 @@ function clearGlobalIncomingCall() {
 ========================================================= */
 
 async function answerIncomingCall(call) {
-
-    if (!call || !call.call_id) {
-
-        return;
-
-    }
-
-
-    const callId =
-        Number(call.call_id);
-
-
-    /*
-     * Prevent double acceptance.
-     */
-
-    if (
-        currentCallId ||
-        incomingCallId !== callId
-    ) {
-
-        console.warn(
-            "This incoming call is already being handled."
-        );
-
-        return;
-
-    }
-
-
+    const id = Number(call?.call_id);
+    if (!id || currentCallId || isCallStarting || incomingCallId !== id || endedCallIds.has(id)) return;
     clearGlobalIncomingCall();
-
-    currentCallType = call.call_type;
-
+    isCallStarting = true;
+    currentCallId = id;
+    const generation = ++callGeneration;
     try {
-
-        const constraints = {
-
-            audio: true,
-
-            video:
-                call.call_type === "VIDEO"
-
-        };
-
-
-        localStream =
-            await navigator.mediaDevices.getUserMedia(
-                constraints
-            );
-
-
-        console.log(
-            "Incoming call media access granted."
-        );
-
-
-        const response =
-            await fetch(
-                `/api/messaging/calls/${callId}/accept/`,
-                {
-
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        "X-CSRFToken":
-                            getCookie(
-                                "csrftoken"
-                            )
-
-                    },
-
-                    credentials:
-                        "same-origin"
-
-                }
-            );
-
-
-        if (!response.ok) {
-
-            const errorData =
-                await response.json()
-                    .catch(
-                        () => ({})
-                    );
-
-
-            throw new Error(
-                errorData.detail ||
-                "Unable to accept the call."
-            );
-
-        }
-
-
-        const callData =
-            await response.json();
-
-
-        console.log(
-            "Call accepted:",
-            callData
-        );
-
-
-        currentCallId =
-            Number(callData.id);
-
-
-        if (
-            callData.participants
-        ) {
-
-            callData.participants.forEach(
-                function (participant) {
-
-                    const user =
-                        participant.user;
-
-                    if (
-                        user &&
-                        Number(user.id) !==
-                        currentUserId
-                    ) {
-
-                        callParticipants[
-                            Number(user.id)
-                        ] = user;
-
-                    }
-
-                }
-            );
-
-        }
-
-
-        showCallInterface(
-            call.call_type,
-            callData.participants || [],
-            "Connecting audio and video…"
-        );
-
-
-        const localVideo =
-            document.getElementById(
-                "localVideo"
-            );
-
-
-        if (localVideo) {
-
-            localVideo.srcObject =
-                localStream;
-
-        }
-
-
-        await connectCallSocket(
-            currentCallId
-        );
-
-
-        console.log(
-            "Connected to incoming call."
-        );
-
-
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.call_type === 'VIDEO' });
+        if (generation !== callGeneration) { stream.getTracks().forEach(track => track.stop()); return; }
+        localStream = stream;
+        const data = await queueCallMutation(async () => {
+            if (generation !== callGeneration) return null;
+            return postCall(`/api/messaging/calls/${id}/accept/`);
+        });
+        if (!data || generation !== callGeneration) return;
+        syncGlobalCallState(data);
+        showCallInterface(call.call_type, data.participants || [], 'Connecting audio and video...');
+        await connectCallSocket(id);
     } catch (error) {
-
-        console.error(
-            "Unable to accept incoming call:",
-            error
-        );
-
-
-        if (currentCallId === callId) {
-            await endWebRTCCall();
-        } else {
-            await rejectIncomingCall(callId);
-            cleanupWebRTC();
-        }
-
-
-        alert(
-            error.message ||
-            "Unable to answer the call."
-        );
-
-    }
-
+        if (generation !== callGeneration) return;
+        void endWebRTCCall();
+        alert(error.message || 'Unable to answer the call.');
+    } finally { if (generation === callGeneration) isCallStarting = false; }
 }
 
 
@@ -3577,81 +2998,14 @@ async function answerIncomingCall(call) {
    REJECT INCOMING CALL
 ========================================================= */
 
-async function rejectIncomingCall(
-    callId,
-    timedOut = false
-) {
-
-    const id =
-        Number(callId);
-
-
-    clearGlobalIncomingCall();
-
-
+async function rejectIncomingCall(callId, timedOut = false) {
+    const id = Number(callId);
+    if (!id) return;
+    if (incomingCallId === id) clearGlobalIncomingCall();
+    rememberEndedCall(id);
     try {
-
-        const response =
-            await fetch(
-                `/api/messaging/calls/${id}/reject/`,
-                {
-
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        "X-CSRFToken":
-                            getCookie(
-                                "csrftoken"
-                            )
-
-                    },
-
-                    credentials:
-                        "same-origin",
-
-                    body: JSON.stringify({
-                        timed_out: timedOut,
-                    })
-
-                }
-            );
-
-
-        if (!response.ok) {
-
-            const errorData =
-                await response.json()
-                    .catch(
-                        () => ({})
-                    );
-
-
-            console.warn(
-                "Unable to reject call:",
-                errorData
-            );
-
-        } else {
-
-            console.log(
-                "Incoming call rejected."
-            );
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            "Error rejecting call:",
-            error
-        );
-
-    }
-
+        await queueCallMutation(() => postCall(`/api/messaging/calls/${id}/reject/`, { timed_out: timedOut }));
+    } catch (error) { console.warn('Unable to reject call:', error); }
 }
 
 
@@ -3777,6 +3131,7 @@ function connectGlobalUserSocket() {
 
                 }
 
+                if (data.type === 'call_ended') handleCallEnded(data);
                 if (data.type === "notification_created") {
                     window.dispatchEvent(
                         new CustomEvent("awinlink:notification", {
