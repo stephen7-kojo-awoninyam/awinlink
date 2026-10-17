@@ -42,3 +42,12 @@ class DeploymentSettingsTests(SimpleTestCase):
         self.assertTrue(configured['DEBUG'])
         self.assertNotIn('SECURE_SSL_REDIRECT', configured)
         self.assertEqual(configured['EMAIL_BACKEND'], 'django.core.mail.backends.console.EmailBackend')
+
+    def test_turn_environment_flags_are_loaded_without_client_secrets(self):
+        configured = self.load_settings(
+            TURN_REQUIRED='true', CALL_ICE_TRANSPORT_POLICY='relay',
+            TURN_CREDENTIAL_TTL_SECONDS='1800',
+        )
+        self.assertTrue(configured['TURN_REQUIRED'])
+        self.assertEqual(configured['CALL_ICE_TRANSPORT_POLICY'], 'relay')
+        self.assertEqual(configured['TURN_CREDENTIAL_TTL_SECONDS'], '1800')

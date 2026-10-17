@@ -13,8 +13,8 @@ export function validatedIceServers(value: unknown): CallIceServer[] {
       typeof server === 'object' &&
       server !== null &&
       'urls' in server &&
-      (typeof server.urls === 'string' ||
-        (Array.isArray(server.urls) && server.urls.every((url: unknown) => typeof url === 'string'))),
+      ((typeof server.urls === 'string' && /^(stun|stuns|turn|turns):/.test(server.urls)) ||
+        (Array.isArray(server.urls) && server.urls.length > 0 && server.urls.every((url: unknown) => typeof url === 'string' && /^(stun|stuns|turn|turns):/.test(url)))),
   );
   return servers.length ? servers : [DEFAULT_STUN];
 }

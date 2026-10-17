@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Stack, useFocusEffect } from 'expo-router';
 
@@ -18,6 +18,7 @@ export default function ConnectionsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [workingId, setWorkingId] = useState<number | null>(null);
+  const mutationInFlight = useRef(false);
   const [error, setError] = useState('');
   const load = useCallback(async () => {
     setError('');
@@ -29,16 +30,20 @@ export default function ConnectionsScreen() {
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
   async function respond(item: ConnectionRequest, status: 'ACCEPTED' | 'REJECTED') {
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
     setWorkingId(item.id); setError('');
-    try { await apiRequest(`connections/${item.id}/respond/`, { method: 'PATCH', body: { status } }); setIncoming((current) => current.filter((request) => request.id !== item.id)); }
+    try { const updated = await apiRequest<ConnectionRequest>(`connections/${item.id}/respond/`, { method: 'PATCH', body: { status } }); if (status === 'ACCEPTED') setAccepted((current) => [...current.filter((request) => request.id !== item.id), updated]); setIncoming((current) => current.filter((request) => request.id !== item.id)); }
     catch (e) { setError(e instanceof Error ? e.message : 'Unable to update this request.'); }
-    finally { setWorkingId(null); }
+    finally { mutationInFlight.current = false; setWorkingId(null); }
   }
   async function cancel(item: ConnectionRequest) {
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
     setWorkingId(item.id); setError('');
     try { await apiRequest(`connections/${item.id}/cancel/`, { method: 'POST' }); setOutgoing((current) => current.filter((request) => request.id !== item.id)); }
     catch (e) { setError(e instanceof Error ? e.message : 'Unable to cancel this request.'); }
-    finally { setWorkingId(null); }
+    finally { mutationInFlight.current = false; setWorkingId(null); }
   }
   return <>
     <Stack.Screen options={{ headerShown: true, title: 'Connections', headerTintColor: colors.primary, headerShadowVisible: false }} />

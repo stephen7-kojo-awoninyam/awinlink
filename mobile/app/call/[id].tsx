@@ -6,7 +6,7 @@ import {
   mediaDevices,
   RTCPeerConnection,
   RTCView,
-  type MediaStream,
+  MediaStream,
   type RTCPeerConnection as PeerConnection,
 } from 'react-native-webrtc';
 
@@ -25,6 +25,9 @@ type Signal = {
   to_user_id?: number;
   description?: { type: 'offer' | 'answer'; sdp: string };
   candidate?: RTCIceCandidateInit;
+  target_id?: number;
+  offer?: { type: 'offer'; sdp: string };
+  answer?: { type: 'answer'; sdp: string };
   user_id?: number;
 };
 
@@ -60,7 +63,15 @@ export default function CallScreen() {
   const peersRef = useRef(new Map<number, PeerConnection>());
   const offerMakingRef = useRef(new Set<number>());
   const pendingCandidates = useRef(new Map<number, RTCIceCandidateInit[]>());
+  const icePolicyRef = useRef<'all' | 'relay'>('all');
   const iceServersRef = useRef<CallIceServer[]>([]);
+  const diagnostics = useRef<Record<string, unknown>[]>([]);
+  const diagnose = useCallback((event: string, detail: Record<string, unknown> = {}) => {
+    const entry = { at: Date.now(), callId, event, ...detail };
+    diagnostics.current.push(entry);
+    if (diagnostics.current.length > 100) diagnostics.current.shift();
+    console.info('[Awinlink call]', entry);
+  }, [callId]);
   const leavingRef = useRef(false);
   const autoAcceptHandled = useRef(false);
   const acceptedRef = useRef(!incoming);
@@ -85,7 +96,7 @@ export default function CallScreen() {
     try { socketRef.current?.close(); } catch { /* Continue releasing media. */ }
     socketRef.current = null;
     peersRef.current.forEach((peer) => {
-      peer.ontrack = null; peer.onicecandidate = null; peer.onconnectionstatechange = null;
+      peer.ontrack = null; peer.onicecandidate = null; peer.onconnectionstatechange = null; peer.oniceconnectionstatechange = null;
       try { peer.close(); } catch { /* Release the remaining peers and tracks. */ }
     });
     peersRef.current.clear();
@@ -151,7 +162,7 @@ export default function CallScreen() {
     if (existing) return existing;
     const local = localRef.current;
     if (!local) throw new Error('The microphone or camera is not ready yet.');
-    const peer = new RTCPeerConnection({ iceServers: iceServersRef.current });
+    const peer = new RTCPeerConnection({ iceServers: iceServersRef.current, iceTransportPolicy: icePolicyRef.current });
     peersRef.current.set(remoteUserId, peer);
     local.getTracks().forEach((track) => peer.addTrack(track, local));
     peer.onicecandidate = (event: { candidate: { toJSON: () => RTCIceCandidateInit } | null }) => {
@@ -160,10 +171,45 @@ export default function CallScreen() {
         candidate: event.candidate.toJSON(),
       });
     };
-    peer.ontrack = (event: { streams: MediaStream[] }) => {
+    const receivedStream = new MediaStream();
+    peer.ontrack = (event: { streams?: MediaStream[]; track?: MediaStreamTrack }) => {
       if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
-      const stream = event.streams[0];
+      const stream = event.streams?.[0] || receivedStream;
+      if (event.track && !stream.getTracks().some(track => track.id === event.track!.id)) stream.addTrack(event.track as never);
+      diagnose('remote_track', { peerId: remoteUserId, kind: event.track?.kind });
       if (stream) setRemoteStreams((current) => ({ ...current, [remoteUserId]: stream }));
+    };
+    const sampleStats = async () => {
+      if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
+      try {
+        const report = await peer.getStats();
+        report.forEach((row: { type: string; isRemote?: boolean; kind?: string; mediaType?: string; bytesReceived?: number; packetsLost?: number; framesDecoded?: number; selectedCandidatePairId?: string }) => {
+          if (row.type === 'inbound-rtp' && !row.isRemote) diagnose('inbound_media', {
+            peerId: remoteUserId, kind: row.kind || row.mediaType, bytesReceived: row.bytesReceived || 0,
+            packetsLost: row.packetsLost || 0, framesDecoded: row.framesDecoded || 0,
+          });
+          if (row.type === 'transport' && row.selectedCandidatePairId) {
+            const pair = report.get(row.selectedCandidatePairId);
+            diagnose('selected_ice_pair', {
+              peerId: remoteUserId,
+              localType: pair && report.get(pair.localCandidateId)?.candidateType,
+              remoteType: pair && report.get(pair.remoteCandidateId)?.candidateType,
+            });
+          }
+        });
+      } catch { /* Older engines may not expose all stats. */ }
+    };
+    const statsTimer = setInterval(() => {
+      if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) {
+        clearInterval(statsTimer); timers.current.delete(statsTimer); return;
+      }
+      void sampleStats();
+    }, 5000);
+    timers.current.add(statsTimer);
+    peer.oniceconnectionstatechange = () => {
+      if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
+      diagnose('ice_state', { peerId: remoteUserId, state: peer.iceConnectionState });
+      if (['connected', 'completed', 'failed'].includes(peer.iceConnectionState)) void sampleStats();
     };
     peer.onconnectionstatechange = () => {
       if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
@@ -179,7 +225,7 @@ export default function CallScreen() {
       }
     };
     return peer;
-  }, [callId, sendSignal]);
+  }, [callId, diagnose, sendSignal]);
 
   const createOffer = useCallback(async (remoteUserId: number) => {
     const existing = peersRef.current.get(remoteUserId);
@@ -219,11 +265,17 @@ export default function CallScreen() {
         setError('The signaling connection closed. Reconnect or hang up.');
       }
     };
+    let signalQueue = Promise.resolve();
     socket.onmessage = (event) => {
       if (leavingRef.current || socketRef.current !== socket) return;
-      void (async () => {
+      signalQueue = signalQueue.then(async () => {
+        if (leavingRef.current || socketRef.current !== socket) return;
         const message = JSON.parse(String(event.data)) as Signal & { call_id?: number };
+        message.type = message.type === 'ice-candidate' ? 'ice_candidate' : message.type;
+        message.description = message.description || message.offer || message.answer;
+        message.to_user_id = message.to_user_id ?? message.target_id;
         const peerId = Number(message.sender_id ?? message.user_id);
+        diagnose('signal_received', { type: message.type, peerId });
         if (message.type === 'call_ended') {
           if (message.call_id && message.call_id !== callId) return;
           leavingRef.current = true;
@@ -245,6 +297,10 @@ export default function CallScreen() {
             delete next[peerId];
             return next;
           });
+          return;
+        }
+        if (message.type === 'connection') {
+          call.participants.filter(p => p.status === 'JOINED' && p.user.id !== user?.id).forEach(p => sendSignal({ type: 'ready', to_user_id: p.user.id }));
           return;
         }
         if (message.type === 'participant_joined' && peerId && peerId !== user?.id) {
@@ -273,7 +329,13 @@ export default function CallScreen() {
           sendSignal({ type: 'answer', to_user_id: peerId, description: answer });
         } else if (message.type === 'answer' && message.description) {
           const peer = peersRef.current.get(peerId);
-          if (peer) await peer.setRemoteDescription(message.description);
+          if (peer) {
+            await peer.setRemoteDescription(message.description);
+            if (leavingRef.current || peersRef.current.get(peerId) !== peer) return;
+            const candidates = pendingCandidates.current.get(peerId) ?? [];
+            pendingCandidates.current.delete(peerId);
+            for (const candidate of candidates) await peer.addIceCandidate(candidate);
+          }
         } else if (message.type === 'ice_candidate' && message.candidate) {
           const peer = peersRef.current.get(peerId);
           if (peer?.remoteDescription) await peer.addIceCandidate(message.candidate);
@@ -281,24 +343,28 @@ export default function CallScreen() {
             ...(pendingCandidates.current.get(peerId) ?? []), message.candidate,
           ]);
         }
-      })().catch((signalError: unknown) => {
+      }).catch((signalError: unknown) => {
+        diagnose('signaling_error', { name: signalError instanceof Error ? signalError.name : 'Error' });
         setError(signalError instanceof Error ? signalError.message : 'WebRTC signaling failed.');
       });
     };
-  }, [callId, closeLocal, createOffer, makePeer, sendSignal, user?.id]);
+  }, [callId, closeLocal, createOffer, diagnose, makePeer, sendSignal, user?.id]);
 
   const startMedia = useCallback(async (call: CallInfo) => {
     if (leavingRef.current || callHasEnded(callId)) return;
     const generation = mediaGeneration.current;
     try {
       setError('');
-      const ice = await apiRequest<{ ice_servers?: unknown }>('messaging/calls/ice-servers/');
+      const ice = await apiRequest<{ ice_servers?: unknown; ice_transport_policy?: string }>('messaging/calls/ice-servers/');
       if (leavingRef.current || generation !== mediaGeneration.current) return;
+      icePolicyRef.current = ice.ice_transport_policy === 'relay' ? 'relay' : 'all';
       iceServersRef.current = validatedIceServers(ice.ice_servers);
+      diagnose('ice_configuration', { policy: icePolicyRef.current, relayConfigured: iceServersRef.current.some(server => [server.urls].flat().some(url => /^turns?:/.test(url))) });
       const stream = await mediaDevices.getUserMedia({ audio: true, video: video ? {
         facingMode: 'user', width: 1280, height: 720, frameRate: 24,
       } : false });
       if (leavingRef.current || generation !== mediaGeneration.current) { stream.getTracks().forEach(track => track.stop()); return; }
+      diagnose('local_tracks', { count: stream.getTracks().length });
       localRef.current = stream;
       setLocalStream(stream);
       setAccepted(true);
@@ -312,9 +378,10 @@ export default function CallScreen() {
         ? 'Microphone or camera access was denied. Enable the permission in device settings and retry.'
         : message);
       setStatus('Unable to start call');
+      Alert.alert('Unable to start call', 'Check microphone permissions and network connectivity, then try again.');
       void leaveCall();
     }
-  }, [callId, connectSignaling, incoming, leaveCall, video]);
+  }, [callId, connectSignaling, diagnose, incoming, leaveCall, video]);
 
   useEffect(() => {
     if (leavingRef.current || callHasEnded(callId)) return;

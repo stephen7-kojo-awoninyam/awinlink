@@ -1,0 +1,24 @@
+# Reference for an EXTERNAL coturn host, not a Railway HTTP service.
+# Not ready to run: supply host addresses, TLS files and a private auth secret.
+listening-port=3478
+tls-listening-port=443
+# listening-ip=PRIVATE_OR_INTERFACE_IP
+# relay-ip=PRIVATE_OR_INTERFACE_IP
+# external-ip=PUBLIC_IP/PRIVATE_IP  # only when behind 1:1 NAT
+realm=turn.example.com
+fingerprint
+use-auth-secret
+# Provision static-auth-secret in the private runtime config, never this file.
+# Shell-style environment substitution is NOT performed by coturn.
+# static-auth-secret=PRIVATE_VALUE_FROM_SECRET_MANAGER
+cert=/etc/coturn/tls/fullchain.pem
+pkey=/etc/coturn/tls/privkey.pem
+min-port=49160
+max-port=49260
+no-multicast-peers
+no-cli
+# Keep loopback peers disabled (the default). Do not enable allow-loopback-peers.
+# Block private/link-local/metadata destinations at the network firewall too.
+# Size relay quotas, bandwidth and UDP port range for measured concurrency.
+user-quota=12
+total-quota=120

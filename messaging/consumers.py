@@ -143,6 +143,23 @@ class CallConsumer(AsyncWebsocketConsumer):
         # ADD SENDER INFORMATION
         # ---------------------------------------------------------
 
+        # Normalize older web payloads while retaining aliases for older clients.
+        if data.get("type") == "ice-candidate":
+            data["type"] = "ice_candidate"
+        if data.get("type") in ("offer", "answer"):
+            description = data.get("description") or data.get(data["type"])
+            if description is not None:
+                data["description"] = description
+                data[data["type"]] = description
+        target = data.get("to_user_id", data.get("target_id"))
+        if target is not None:
+            try:
+                target = int(target)
+            except (TypeError, ValueError):
+                await self.send(text_data=json.dumps({"type": "error", "message": "Invalid signal recipient."}))
+                return
+            data["to_user_id"] = target
+            data["target_id"] = target
         data["sender_id"] = self.user.id
 
         # ---------------------------------------------------------
@@ -166,6 +183,9 @@ class CallConsumer(AsyncWebsocketConsumer):
         if event.get("sender_channel") == self.channel_name:
             return
 
+        target = event["data"].get("to_user_id", event["data"].get("target_id"))
+        if target is not None and int(target) != self.user.id:
+            return
         await self.send(
             text_data=json.dumps(
                 event["data"]

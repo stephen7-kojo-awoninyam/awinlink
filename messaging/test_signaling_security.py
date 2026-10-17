@@ -52,6 +52,47 @@ class SignalingPayloadTests(SimpleTestCase):
         async_to_sync(consumer.receive)(bytes_data=b'not a text signal')
         self.assertEqual(json.loads(consumer.send.call_args.kwargs['text_data'])['type'], 'error')
 
+    def test_legacy_web_payloads_are_normalized_for_mobile(self):
+        for payload in (
+            {"type": "offer", "target_id": 2, "offer": {"type": "offer", "sdp": "legacy"}},
+            {"type": "ice-candidate", "target_id": 2, "candidate": {"candidate": "ice"}},
+        ):
+            consumer = CallConsumer()
+            consumer.user = SimpleNamespace(id=1)
+            consumer.room_group_name = 'call_1'
+            consumer.channel_name = 'sender'
+            consumer.channel_layer = SimpleNamespace(group_send=AsyncMock())
+            consumer.check_participant = AsyncMock(return_value=True)
+            async_to_sync(consumer.receive)(json.dumps(payload))
+            data = consumer.channel_layer.group_send.call_args.args[1]['data']
+            self.assertEqual(data['to_user_id'], 2)
+            if payload['type'] == 'offer':
+                self.assertEqual(data['description'], payload['offer'])
+            else:
+                self.assertEqual(data['type'], 'ice_candidate')
+
+    def test_directed_signals_only_reach_recipient(self):
+        consumer = CallConsumer()
+        consumer.user = SimpleNamespace(id=3)
+        consumer.channel_name = 'third-peer'
+        consumer.send = AsyncMock()
+        event = {'sender_channel': 'sender', 'data': {'type': 'answer', 'to_user_id': 2}}
+        async_to_sync(consumer.call_signal)(event)
+        consumer.send.assert_not_awaited()
+        consumer.user.id = 2
+        async_to_sync(consumer.call_signal)(event)
+        consumer.send.assert_awaited_once()
+
+    def test_invalid_target_returns_error(self):
+        consumer = CallConsumer()
+        consumer.user = SimpleNamespace(id=1)
+        consumer.check_participant = AsyncMock(return_value=True)
+        consumer.send = AsyncMock()
+        consumer.channel_layer = SimpleNamespace(group_send=AsyncMock())
+        async_to_sync(consumer.receive)(json.dumps({'type': 'ready', 'to_user_id': 'invalid'}))
+        consumer.channel_layer.group_send.assert_not_awaited()
+        self.assertEqual(json.loads(consumer.send.call_args.kwargs['text_data'])['type'], 'error')
+
 
 @override_settings(ALLOWED_HOSTS=['testserver'])
 class WebSocketOriginTests(SimpleTestCase):

@@ -7,29 +7,40 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 function compile(source) { return ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText; }
 
-function nativeScreen({ incoming = false, media = null, accepting = null, ending = null } = {}) {
-  const effects = [], timers = new Map(), sockets = [], peers = [], requests = [];
+function nativeScreen({ incoming = false, media = null, accepting = null, ending = null, iceFailure = false } = {}) {
+  const effects = [], timers = new Map(), sockets = [], peers = [], requests = [], alerts = [];
   const tracks = [{ stopped: false, stop() { this.stopped = true; }, enabled: true }];
   const stream = { getTracks: () => tracks, getAudioTracks: () => tracks, getVideoTracks: () => [] };
+  const states = [];
   let controls, ended, back = 0, captures = 0;
-  const react = { useRef: value => ({ current: value }), useState: value => [value, () => {}], useCallback: fn => fn, useEffect: fn => effects.push(fn) };
-  class Socket { static OPEN = 1; readyState = 1; closed = false; constructor() { sockets.push(this); } close() { this.closed = true; } send() {} }
-  class Peer { constructor() { peers.push(this); } addTrack() {} close() { this.closed = true; } async createOffer() { return {}; } async setLocalDescription() {} }
+  const react = { useRef: value => ({ current: value }), useState: value => { const slot = states.length; states.push(value); return [value, next => { states[slot] = typeof next === "function" ? next(states[slot]) : next; }]; }, useCallback: fn => fn, useEffect: fn => effects.push(fn) };
+  class Socket { static OPEN = 1; readyState = 1; closed = false; constructor() { sockets.push(this); } close() { this.closed = true; } send(payload) { (this.sent ||= []).push(JSON.parse(payload)); } }
+  class Peer {
+    signalingState = 'stable'; candidates = []; tracks = [];
+    constructor(config) { this.config = config; peers.push(this); }
+    addTrack(track) { this.tracks.push(track); } close() { this.closed = true; }
+    async createOffer() { return { type: 'offer', sdp: 'local-offer' }; }
+    async createAnswer() { return { type: 'answer', sdp: 'local-answer' }; }
+    async setLocalDescription(value) { this.localDescription = value; }
+    async setRemoteDescription(value) { this.remoteDescription = value; }
+    async addIceCandidate(value) { this.candidates.push(value); }
+  }
+  class Stream { tracks = []; getTracks() { return this.tracks; } addTrack(track) { this.tracks.push(track); } }
   const lifecycle = { callHasEnded: () => false, finishCallRequest: (_id, work) => work(), onCallEnded: fn => { ended = fn; return () => {}; } };
   const exports = {};
   vm.runInNewContext(compile(fs.readFileSync(require.resolve('../app/call/[id].tsx'), 'utf8')), {
-    exports, WebSocket: Socket,
+    exports, WebSocket: Socket, console: { info() {} },
     setTimeout: fn => { const id = timers.size + 1; timers.set(id, fn); return id; },
     setInterval: fn => { const id = timers.size + 1; timers.set(id, fn); return id; },
     clearTimeout: id => timers.delete(id), clearInterval: id => timers.delete(id),
     require: name => ({
       react, 'react/jsx-runtime': { jsx: () => ({}), jsxs: () => ({}) },
-      'react-native': { StyleSheet: { create: value => value } }, 'react-native-safe-area-context': {},
+      'react-native': { Alert: { alert: (...args) => alerts.push(args) }, StyleSheet: { create: value => value } }, 'react-native-safe-area-context': {},
       'expo-router': { Stack: { Screen() {} }, router: { back: () => { back++; } }, useLocalSearchParams: () => ({ id: '42', mode: incoming ? 'incoming' : 'outgoing', autoAccept: incoming ? 'true' : 'false' }) },
-      'react-native-webrtc': { RTCPeerConnection: Peer, mediaDevices: { getUserMedia: () => { captures++; return media?.promise || Promise.resolve(stream); } } },
+      'react-native-webrtc': { MediaStream: Stream, RTCPeerConnection: Peer, mediaDevices: { getUserMedia: () => { captures++; return media?.promise || Promise.resolve(stream); } } },
       '@/src/auth/AuthProvider': { useAuth: () => ({ user: { id: incoming ? 2 : 1 } }) },
       '@/src/api/client': { getAccessToken: async () => 'token', getWebSocketUrl: value => value,
-        apiRequest: async (url, options) => { requests.push(url); if (url.endsWith('/accept/')) return accepting?.promise || { id: 42, participants: [] }; if (url.endsWith('/end/')) return ending?.promise || {}; if (url.endsWith('/incoming/')) return [{ id: 42 }]; return { ice_servers: [] }; } },
+        apiRequest: async (url, options) => { requests.push(url); if (iceFailure && url.endsWith('/ice-servers/')) throw new Error('Call connectivity is temporarily unavailable.'); if (url.endsWith('/accept/')) return accepting?.promise || { id: 42, participants: [] }; if (url.endsWith('/end/')) return ending?.promise || {}; if (url.endsWith('/incoming/')) return [{ id: 42 }]; return { ice_servers: [], ice_transport_policy: 'relay' }; } },
       '@/src/calls/iceServers': { validatedIceServers: () => [] }, '@/src/theme': { colors: {} },
       '@/src/calls/nativeCallUI': { bindNativeCall: (_id, _in, _name, _video, value) => { controls = value; return () => {}; }, endNativeCall() {}, nativeCallConnected() {}, syncNativeMute() {} },
       '@/src/calls/callLifecycle': lifecycle,
@@ -37,7 +48,7 @@ function nativeScreen({ incoming = false, media = null, accepting = null, ending
   });
   exports.default();
   const cleanups = effects.map(fn => fn());
-  return { stream, tracks, sockets, peers, requests, timers, controls: () => controls, remoteEnd: () => ended(42), back: () => back, captures: () => captures, unmount: () => cleanups.forEach(fn => fn?.()) };
+  return { alerts, states, stream, tracks, sockets, peers, requests, timers, controls: () => controls, remoteEnd: () => ended(42), back: () => back, captures: () => captures, unmount: () => cleanups.forEach(fn => fn?.()) };
 }
 
 test('mobile caller closes media/socket/peers and timers before delayed end API returns', async () => {
@@ -182,4 +193,35 @@ test('web no-answer timeout releases media before a slow server response', async
   assert.equal(call.run('currentCallId'), null);
   assert.equal(call.timers.size, 0);
   endResponse.resolve(call.response({})); await flush();
+});
+
+test('mobile drains ICE queued before answer and attaches streamless remote audio', async () => {
+  const screen = nativeScreen(); await flush(); const socket = screen.sockets[0]; socket.onopen();
+  socket.onmessage({ data: JSON.stringify({ type: 'participant_joined', user_id: 2 }) }); await flush();
+  const peer = screen.peers[0];
+  socket.onmessage({ data: JSON.stringify({ type: 'ice-candidate', sender_id: 2, target_id: 1, candidate: { candidate: 'early-ice' } }) });
+  socket.onmessage({ data: JSON.stringify({ type: 'answer', sender_id: 2, answer: { type: 'answer', sdp: 'remote-answer' } }) });
+  await flush(); assert.equal(peer.remoteDescription.sdp, 'remote-answer'); assert.equal(peer.candidates.length, 1);
+  const track = { id: 'audio-1', kind: 'audio' }; peer.ontrack({ streams: [], track });
+  assert.equal(screen.states[6][2].getTracks()[0], track);
+  assert.equal(peer.tracks.length, 1);
+  assert.equal(peer.config.iceTransportPolicy, 'relay');
+  screen.unmount();
+});
+
+test('mobile serializes offer then ICE and sends canonical answer', async () => {
+  const screen = nativeScreen({ incoming: true }); await flush(); const socket = screen.sockets[0]; socket.onopen();
+  socket.onmessage({ data: JSON.stringify({ type: 'offer', sender_id: 1, to_user_id: 2, description: { type: 'offer', sdp: 'web-offer' } }) });
+  socket.onmessage({ data: JSON.stringify({ type: 'ice_candidate', sender_id: 1, to_user_id: 2, candidate: { candidate: 'ice' } }) });
+  await flush(); const peer = screen.peers[0];
+  assert.equal(peer.remoteDescription.sdp, 'web-offer'); assert.equal(peer.candidates.length, 1);
+  assert.equal(socket.sent.find(value => value.type === 'answer').description.type, 'answer');
+  screen.unmount();
+});
+
+test('native ICE configuration failure shows an alert and ends without capturing media', async () => {
+  const screen = nativeScreen({ iceFailure: true }); await flush();
+  assert.equal(screen.captures(), 0); assert.equal(screen.sockets.length, 0);
+  assert.equal(screen.alerts.length, 1); assert.equal(screen.back(), 1);
+  assert.ok(screen.requests.some(url => url.endsWith('/end/')));
 });

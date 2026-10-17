@@ -18,6 +18,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from .models import Conversation, ConversationParticipant, Message,Call, CallParticipant
 from .call_lifecycle import finish_call, publish_call_ended
+from .turn import turn_configuration
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from opportunities.models import Opportunity
@@ -45,14 +46,16 @@ class CallIceServersAPIView(APIView):
 
     def get(self, request):
         ice_servers = [{"urls": "stun:stun.l.google.com:19302"}]
-        turn_urls = [
-            url.strip()
-            for url in getattr(settings, "TURN_SERVER_URLS", "").split(",")
-            if url.strip()
-        ]
-        shared_secret = getattr(settings, "TURN_SHARED_SECRET", "")
+        config = turn_configuration()
+        if config['errors'] and (config['required'] or config['policy'] == 'relay'):
+            response = Response({"detail": "Call connectivity is temporarily unavailable. Please try again later.", "code": "turn_unavailable"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            response["Cache-Control"] = "no-store"
+            response["Retry-After"] = "60"
+            return response
+        turn_urls = config['urls']
+        shared_secret = config['secret']
         if turn_urls and shared_secret:
-            expires_at = int(time.time()) + 3600
+            expires_at = int(time.time()) + config['ttl']
             username = f"{expires_at}:{request.user.pk}"
             credential = base64.b64encode(
                 hmac.new(
@@ -62,7 +65,13 @@ class CallIceServersAPIView(APIView):
             ice_servers.append(
                 {"urls": turn_urls, "username": username, "credential": credential}
             )
-        return Response({"ice_servers": ice_servers}, status=status.HTTP_200_OK)
+        response = Response({
+            "ice_servers": ice_servers, "relay_configured": bool(turn_urls and shared_secret),
+            "ice_transport_policy": config['policy'] if config['policy'] in ('all', 'relay') else 'all',
+            "credential_ttl_seconds": config['ttl'],
+        }, status=status.HTTP_200_OK)
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 @transaction.atomic

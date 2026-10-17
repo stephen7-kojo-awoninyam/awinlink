@@ -1,3 +1,4 @@
+from connections.services import ConnectionResponseError, respond_to_connection
 from django.http import Http404
 from organizations.models import OrganizationMembership
 from organizations.permissions import (
@@ -2986,140 +2987,31 @@ class OutgoingConnectionsAPIView(APIView):
 # =====================================================
 
 class ConnectionAcceptAPIView(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request, connection_id):
-
         try:
+            connection = respond_to_connection(connection_id, request.user, "ACCEPTED")
+        except ConnectionResponseError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
+        return Response(ConnectionSerializer(connection).data)
 
-            connection = (
-                Connection.objects
-                .select_related(
-                    "sender",
-                    "receiver"
-                )
-                .get(
-                    id=connection_id
-                )
-            )
 
-        except Connection.DoesNotExist:
-
-            return Response(
-                {
-                    "detail": "Connection request not found."
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # ---------------------------------------------
-        # Only receiver can accept
-        # ---------------------------------------------
-
-        if connection.receiver != request.user:
-
-            return Response(
-                {
-                    "detail": (
-                        "Only the receiver can "
-                        "accept this request."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # ---------------------------------------------
-        # Check status
-        # ---------------------------------------------
-
-        if connection.status != "PENDING":
-
-            return Response(
-                {
-                    "detail": (
-                        "This connection request "
-                        "is no longer pending."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        connection.status = "ACCEPTED"
-        connection.save()
-
-        serializer = ConnectionSerializer(
-            connection
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
-        
-        
 # =====================================================
 # REJECT CONNECTION
 # =====================================================
 
 class ConnectionRejectAPIView(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request, connection_id):
-
         try:
+            connection = respond_to_connection(connection_id, request.user, "REJECTED")
+        except ConnectionResponseError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
+        return Response(ConnectionSerializer(connection).data)
 
-            connection = Connection.objects.get(
-                id=connection_id
-            )
 
-        except Connection.DoesNotExist:
-
-            return Response(
-                {
-                    "detail": "Connection request not found."
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        if connection.receiver != request.user:
-
-            return Response(
-                {
-                    "detail": (
-                        "Only the receiver can "
-                        "reject this request."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        if connection.status != "PENDING":
-
-            return Response(
-                {
-                    "detail": (
-                        "This connection request "
-                        "is no longer pending."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        connection.status = "REJECTED"
-        connection.save()
-
-        serializer = ConnectionSerializer(
-            connection
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
-        
-        
 # =====================================================
 # CANCEL CONNECTION
 # =====================================================
@@ -5411,141 +5303,16 @@ class SentConnectionsAPIView(APIView):
 # =====================================================
 
 class ConnectionRespondAPIView(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, connection_id):
-
-        # ---------------------------------------------
-        # GET CONNECTION
-        # ---------------------------------------------
-
         try:
+            connection = respond_to_connection(connection_id, request.user, request.data.get("status"))
+        except ConnectionResponseError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
+        return Response(ConnectionSerializer(connection).data)
 
-            connection = (
-                Connection.objects
-                .select_related(
-                    "sender",
-                    "receiver"
-                )
-                .get(
-                    id=connection_id
-                )
-            )
 
-        except Connection.DoesNotExist:
-
-            return Response(
-                {
-                    "detail": "Connection request not found."
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # ---------------------------------------------
-        # ONLY RECEIVER CAN RESPOND
-        # ---------------------------------------------
-
-        if connection.receiver != request.user:
-
-            return Response(
-                {
-                    "detail": (
-                        "Only the receiver can respond "
-                        "to this connection request."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # ---------------------------------------------
-        # MUST BE PENDING
-        # ---------------------------------------------
-
-        if connection.status != "PENDING":
-
-            return Response(
-                {
-                    "detail": (
-                        "This connection request has "
-                        "already been processed."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # ---------------------------------------------
-        # GET RESPONSE
-        # ---------------------------------------------
-
-        new_status = request.data.get(
-            "status"
-        )
-
-        if new_status not in [
-            "ACCEPTED",
-            "REJECTED"
-        ]:
-
-            return Response(
-                {
-                    "detail": (
-                        "Status must be ACCEPTED "
-                        "or REJECTED."
-                    )
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # ---------------------------------------------
-        # UPDATE
-        # ---------------------------------------------
-
-        connection.status = new_status
-        connection.save()
-
-        # ---------------------------------------------
-        # ACCEPTED NOTIFICATION
-        # ---------------------------------------------
-
-        if new_status == "ACCEPTED":
-
-            Notification.objects.create(
-                user=connection.sender,
-                sender=request.user,
-                notification_type="CONNECTION",
-                message=(
-                    f"{request.user.get_full_name() or request.user.username} "
-                    "accepted your connection request."
-                )
-            )
-
-        # ---------------------------------------------
-        # REJECTED NOTIFICATION
-        # ---------------------------------------------
-
-        else:
-
-            Notification.objects.create(
-                user=connection.sender,
-                sender=request.user,
-                notification_type="CONNECTION",
-                message=(
-                    f"{request.user.get_full_name() or request.user.username} "
-                    "rejected your connection request."
-                )
-            )
-
-        serializer = ConnectionSerializer(
-            connection
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK
-        )
-        
-        
 # =====================================================
 # CONNECTION DETAIL API
 # =====================================================

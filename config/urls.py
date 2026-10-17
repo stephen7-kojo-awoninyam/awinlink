@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from connections import views as connection_views
 from django.contrib import admin
 from .media_views import playback_media
 from django.urls import path,include,re_path
@@ -23,6 +24,9 @@ from django.views.static import serve
 from notifications.views import service_worker
 
 urlpatterns = [
+    # Preserve POST bodies from older clients using the capitalized prefix.
+    path("Connections/connection/<int:connection_id>/accept/", connection_views.accept_connection_request),
+    path("Connections/connection/<int:connection_id>/reject/", connection_views.reject_connection_request),
     path('admin/', admin.site.urls),
     path('service-worker.js', service_worker, name='service_worker'),
     path("", include("core.urls")),

@@ -1495,13 +1495,57 @@ function hasActiveCallParticipants() {
     );
 }
 
-const rtcConfiguration = {
-    iceServers: [
-        {
-            urls: "stun:stun.l.google.com:19302"
-        }
-    ]
-};
+const rtcConfiguration = { iceTransportPolicy: 'all', iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const callDiagnostics = [];
+function callDiagnostic(event, detail = {}) {
+    callDiagnostics.push({ at: Date.now(), callId: currentCallId, event, ...detail });
+    if (callDiagnostics.length > 100) callDiagnostics.shift();
+    console.info?.('[Awinlink call]', event, detail);
+}
+window.getAwinlinkCallDiagnostics = () => callDiagnostics.map(item => ({ ...item }));
+async function loadCallIceServers() {
+    const response = await fetch('/api/messaging/calls/ice-servers/', { credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) throw new Error('Unable to load call network configuration.');
+    const data = await response.json();
+    const servers = Array.isArray(data.ice_servers) ? data.ice_servers.filter(server => {
+        const urls = [].concat(server?.urls || []);
+        return urls.length && urls.every(url => typeof url === 'string' && /^(stun|stuns|turn|turns):/.test(url));
+    }) : [];
+    rtcConfiguration.iceTransportPolicy = data.ice_transport_policy === 'relay' ? 'relay' : 'all';
+    rtcConfiguration.iceServers = servers.length ? servers : [{ urls: 'stun:stun.l.google.com:19302' }];
+    callDiagnostic('ice_configuration', { policy: rtcConfiguration.iceTransportPolicy, relayConfigured: rtcConfiguration.iceServers.some(server => [].concat(server.urls).some(url => /^turns?:/.test(url))) });
+}
+async function recordCallStats(peer, remoteUserId) {
+    try {
+        const report = await peer.getStats();
+        report.forEach(row => {
+            if (row.type === 'inbound-rtp' && !row.isRemote) callDiagnostic('inbound_media', {
+                peerId: remoteUserId, kind: row.kind || row.mediaType, bytesReceived: row.bytesReceived || 0,
+                packetsLost: row.packetsLost || 0, framesDecoded: row.framesDecoded || 0,
+            });
+            if (row.type === 'transport' && row.selectedCandidatePairId) {
+                const pair = report.get(row.selectedCandidatePairId);
+                const local = pair && report.get(pair.localCandidateId);
+                const remote = pair && report.get(pair.remoteCandidateId);
+                callDiagnostic('selected_ice_pair', { peerId: remoteUserId, localType: local?.candidateType, remoteType: remote?.candidateType });
+            }
+        });
+    } catch { /* Stats are optional on older engines. */ }
+}
+window.sampleAwinlinkCallStats = () => Promise.all(Object.entries(peerConnections).map(([id, peer]) => recordCallStats(peer, Number(id))));
+function playCallMedia(element) {
+    element.muted = false;
+    const retryId = `${element.id}-play`;
+    Promise.resolve(element.play()).then(() => document.getElementById(retryId)?.remove()).catch(() => {
+        callDiagnostic('playback_blocked', { media: element.tagName });
+        setCallStatus('Tap Enable call audio to hear the call');
+        if (document.getElementById(retryId)) return;
+        const button = document.createElement('button');
+        button.id = retryId; button.type = 'button'; button.textContent = 'Enable call audio';
+        button.onclick = () => playCallMedia(element);
+        (document.getElementById('awinlinkCallContainer') || element.parentElement).appendChild(button);
+    });
+}
 
 const currentUserId =
     Number(window.awinlinkCurrentUserId || 0);
@@ -1605,6 +1649,7 @@ function sendCallSignal(data) {
         return;
     }
 
+    callDiagnostic('signal_sent', { type: data.type, peerId: data.to_user_id ?? data.target_id });
     callSocket.send(
         JSON.stringify(data)
     );
@@ -1671,26 +1716,19 @@ async function createPeerConnection(
      * Remote media.
      */
 
-    peerConnection.ontrack =
-        function (event) {
-
-            console.log(
-                "Remote track received from:",
-                remoteUserId
-            );
-
-            if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
-            if (event.streams.length > 0) {
-
-                addRemoteVideo(
-                    remoteUserId,
-                    event.streams[0]
-                );
-
-            }
-
-        };
-
+    const receivedStream = new MediaStream();
+    peerConnection.ontrack = event => {
+        if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
+        const stream = event.streams?.[0] || receivedStream;
+        if (event.track && !stream.getTracks().some(track => track.id === event.track.id)) stream.addTrack(event.track);
+        callDiagnostic('remote_track', { peerId: remoteUserId, kind: event.track?.kind });
+        addRemoteVideo(remoteUserId, stream);
+    };
+    peerConnection.oniceconnectionstatechange = () => {
+        callDiagnostic('ice_state', { peerId: remoteUserId, state: peerConnection.iceConnectionState });
+        if (['connected', 'completed', 'failed'].includes(peerConnection.iceConnectionState)) void recordCallStats(peerConnection, remoteUserId);
+    };
+    peerConnection.onicecandidateerror = event => callDiagnostic('ice_error', { peerId: remoteUserId, code: event.errorCode });
 
     /*
      * ICE candidates.
@@ -1704,9 +1742,9 @@ async function createPeerConnection(
 
                 sendCallSignal({
 
-                    type: "ice-candidate",
+                    type: "ice_candidate",
 
-                    target_id:
+                    to_user_id:
                         remoteUserId,
 
                     candidate:
@@ -1736,6 +1774,9 @@ async function createPeerConnection(
             if (peerConnection.connectionState === "connected") {
                 setCallStatus("Connected");
                 startCallTimer();
+                if (!peerConnection.callStatsTimer) peerConnection.callStatsTimer = setInterval(() => {
+                    if (generation === callGeneration && peerConnections[remoteUserId] === peerConnection) void recordCallStats(peerConnection, remoteUserId);
+                }, 5000);
             } else if (peerConnection.connectionState === "connecting") {
                 setCallStatus("Connecting audio and video…");
             } else if (peerConnection.connectionState === "disconnected") {
@@ -1779,10 +1820,10 @@ async function createPeerConnection(
 
             type: "offer",
 
-            target_id:
+            to_user_id:
                 remoteUserId,
 
-            offer:
+            description:
                 offer
 
         });
@@ -1869,375 +1910,51 @@ async function processPendingIceCandidates(
 
 async function handleCallSignal(data) {
     const generation = callGeneration;
-
-    console.log(
-        "Received WebRTC message:",
-        data
-    );
-
-
-    /*
- * Call ended for everyone.
- */
-// =====================================================
-// CALL ENDED FOR EVERYONE
-// =====================================================
-
-if (data.type === 'call_ended') { handleCallEnded(data); return; }
-if (!currentCallId) return;
-
-    /*
-     * Connection established.
-     */
-
-    if (data.type === "connection") {
-
-        console.log(
-            "Call WebSocket connection confirmed."
-        );
-
-        return;
-
-    }
-
-
-    /*
-     * Participant joined.
-     */
-
-    if (
-        data.type ===
-        "participant_joined"
-    ) {
-
-        const userId =
-            Number(data.user_id);
-
-
-        if (
-            userId === currentUserId
-        ) {
-
-            return;
-
-        }
-
-
-        callParticipants[userId] = {
-
-            id:
-                userId,
-
-            username:
-                data.username ||
-                "Participant"
-
-        };
-
-        setCallStatus("Connecting audio and video…");
-
-
-        console.log(
-            "Participant joined:",
-            userId,
-            data.username
-        );
-
-
-        clearOutgoingCallTimeout();
-
-
-        /*
-         * The existing participant
-         * creates the offer.
-         */
-
-        await createPeerConnection(
-            userId,
-            true
-        );
-
-
-        return;
-
-    }
-
-
-    /*
-     * Participant left.
-     */
-
-    if (
-        data.type ===
-        "participant_left"
-    ) {
-
-        const userId =
-            Number(data.user_id);
-
-
-        console.log(
-            "Participant left:",
-            userId
-        );
-
-
-        removePeerConnection(
-            userId
-        );
-
-
-        delete callParticipants[
-            userId
-        ];
-
-
-        return;
-
-    }
-
-
-    /*
-     * Participant rejected.
-     */
-
-    if (
-        data.type ===
-        "participant_rejected"
-    ) {
-
-        const userId =
-            Number(data.user_id);
-
-
-        removePeerConnection(
-            userId
-        );
-
-
-        delete callParticipants[
-            userId
-        ];
-
-
-        return;
-
-    }
-
-
-    /*
-     * Ignore signals intended
-     * for another user.
-     */
-
-    if (
-        data.target_id &&
-        Number(data.target_id) !==
-        currentUserId
-    ) {
-
-        return;
-
-    }
-
-
-    /* =====================================================
-       OFFER
-    ===================================================== */
-
-    if (data.type === "offer") {
-
-        const remoteUserId =
-            Number(data.sender_id);
-
-
-        console.log(
-            "Received offer from:",
-            remoteUserId
-        );
-
-
-        const peerConnection =
-            await createPeerConnection(
-                remoteUserId,
-                false
-            );
-
-
-        await peerConnection.setRemoteDescription(
-            new RTCSessionDescription(
-                data.offer
-            )
-        );
-
-
-        await processPendingIceCandidates(
-            remoteUserId
-        );
-
-
-        if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
-        const answer = await peerConnection.createAnswer();
-        if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
-
-
-        await peerConnection.setLocalDescription(answer);
-        if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
-
-
-        sendCallSignal({
-
-            type:
-                "answer",
-
-            target_id:
-                remoteUserId,
-
-            answer:
-                answer
-
+    if (data.type === 'call_ended') { handleCallEnded(data); return; }
+    if (!currentCallId) return;
+    const remoteUserId = Number(data.sender_id ?? data.user_id);
+    const target = Number(data.to_user_id ?? data.target_id);
+    if (target && target !== currentUserId) return;
+    if (data.type === 'connection') {
+        getActiveCallParticipants().forEach(participant => {
+            if (participant.id !== currentUserId) sendCallSignal({ type: 'ready', to_user_id: participant.id });
         });
-
-
-        console.log(
-            "Answer sent to:",
-            remoteUserId
-        );
-
-
         return;
-
     }
-
-
-    /* =====================================================
-       ANSWER
-    ===================================================== */
-
-    if (data.type === "answer") {
-
-        const remoteUserId =
-            Number(data.sender_id);
-
-
-        console.log(
-            "Received answer from:",
-            remoteUserId
-        );
-
-
-        const peerConnection =
-            peerConnections[
-                remoteUserId
-            ];
-
-
-        if (!peerConnection) {
-
-            console.warn(
-                "No peer connection for answer:",
-                remoteUserId
-            );
-
-            return;
-
-        }
-
-
-        await peerConnection.setRemoteDescription(
-            new RTCSessionDescription(
-                data.answer
-            )
-        );
-
-
-        await processPendingIceCandidates(
-            remoteUserId
-        );
-
-
+    if (!remoteUserId || remoteUserId === currentUserId) return;
+    callDiagnostic('signal_received', { type: data.type, peerId: remoteUserId });
+    if (['participant_left', 'participant_rejected'].includes(data.type)) {
+        removePeerConnection(remoteUserId); delete callParticipants[remoteUserId]; return;
+    }
+    if (data.type === 'participant_joined') {
+        callParticipants[remoteUserId] = { id: remoteUserId, username: data.username || 'Participant' };
+        clearOutgoingCallTimeout();
+        sendCallSignal({ type: 'ready', to_user_id: remoteUserId });
+    }
+    if (['participant_joined', 'ready'].includes(data.type)) {
+        if (currentUserId < remoteUserId) await createPeerConnection(remoteUserId, true);
         return;
-
     }
-
-
-    /* =====================================================
-       ICE CANDIDATE
-    ===================================================== */
-
-    if (
-        data.type ===
-        "ice-candidate"
-    ) {
-
-        const remoteUserId =
-            Number(data.sender_id);
-
-
-        const candidate =
-            new RTCIceCandidate(
-                data.candidate
-            );
-
-
-        const peerConnection =
-            peerConnections[
-                remoteUserId
-            ];
-
-
-        /*
-         * Queue ICE until the
-         * remote description exists.
-         */
-
-        if (
-            !peerConnection ||
-            !peerConnection.remoteDescription
-        ) {
-
-            if (
-                !pendingIceCandidates[
-                    remoteUserId
-                ]
-            ) {
-
-                pendingIceCandidates[
-                    remoteUserId
-                ] = [];
-
-            }
-
-
-            pendingIceCandidates[
-                remoteUserId
-            ].push(candidate);
-
-
-            return;
-
+    if (data.type === 'offer' || data.type === 'answer') {
+        const description = data.description || data[data.type];
+        if (!description || description.type !== data.type || typeof description.sdp !== 'string') throw new Error('Invalid session description.');
+        const peer = data.type === 'offer' ? await createPeerConnection(remoteUserId) : peerConnections[remoteUserId];
+        if (!peer) return;
+        await peer.setRemoteDescription(description);
+        await processPendingIceCandidates(remoteUserId);
+        if (generation !== callGeneration || peerConnections[remoteUserId] !== peer) return;
+        if (data.type === 'offer') {
+            const answer = await peer.createAnswer();
+            await peer.setLocalDescription(answer);
+            if (generation !== callGeneration || peerConnections[remoteUserId] !== peer) return;
+            sendCallSignal({ type: 'answer', to_user_id: remoteUserId, description: peer.localDescription || answer });
         }
-
-
-        try {
-
-            await peerConnection.addIceCandidate(
-                candidate
-            );
-
-        } catch (error) {
-
-            console.error(
-                "Unable to add ICE candidate:",
-                error
-            );
-
-        }
-
+    } else if (['ice_candidate', 'ice-candidate'].includes(data.type) && data.candidate) {
+        const peer = peerConnections[remoteUserId];
+        if (peer?.remoteDescription) await peer.addIceCandidate(data.candidate);
+        else (pendingIceCandidates[remoteUserId] ||= []).push(data.candidate);
     }
-
 }
-
 
 /* =========================================================
    CONNECT CALL WEBSOCKET
@@ -2253,9 +1970,12 @@ function connectCallSocket(callId) {
             if (generation !== callGeneration || callSocket !== socket) { socket.close(); reject(new Error('Call cancelled.')); return; }
             resolve();
         };
+        let signalQueue = Promise.resolve();
         socket.onmessage = event => {
             if (generation !== callGeneration || callSocket !== socket) return;
-            void handleCallSignal(JSON.parse(event.data)).catch(error => console.warn('Call signaling failed:', error));
+            signalQueue = signalQueue.then(() => {
+                if (generation === callGeneration && callSocket === socket) return handleCallSignal(JSON.parse(event.data));
+            }).catch(error => { callDiagnostic('signaling_error', { name: error.name }); setCallStatus('Unable to negotiate call media. Hang up and retry.'); });
         };
         socket.onerror = reject;
         socket.onclose = () => reject(new Error('Call signaling closed.'));
@@ -2276,6 +1996,9 @@ async function startCall(callType, conversationId) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: callType === 'VIDEO' });
         if (generation !== callGeneration) { stream.getTracks().forEach(track => track.stop()); return; }
         localStream = stream;
+        callDiagnostic('local_tracks', { count: stream.getTracks().length });
+        await loadCallIceServers();
+        if (generation !== callGeneration) return;
         const callData = await queueCallMutation(async () => {
             if (generation !== callGeneration) return null;
             const data = await postCall(`/api/messaging/conversations/${conversationId}/calls/start/`, { call_type: callType });
@@ -2490,10 +2213,7 @@ function addRemoteVideo(
             remoteVideos.appendChild(audio);
         }
         audio.srcObject = stream;
-        audio.play().catch(function (error) {
-            console.warn("Remote audio playback was blocked:", error);
-            setCallStatus("Tap the page to enable call audio");
-        });
+        playCallMedia(audio);
         return;
     }
 
@@ -2521,6 +2241,7 @@ function addRemoteVideo(
     const video = wrapper.querySelector("video");
     if (video && video.srcObject !== stream) {
         video.srcObject = stream;
+        playCallMedia(video);
     }
 }
 
@@ -2545,6 +2266,7 @@ function removePeerConnection(
 
         try {
 
+            clearInterval(peerConnection.callStatsTimer);
             peerConnection.close();
 
         } catch (error) {
@@ -2623,9 +2345,8 @@ function cleanupWebRTC() {
 
             try {
 
-                peerConnections[
-                    userId
-                ].close();
+                clearInterval(peerConnections[userId].callStatsTimer);
+                peerConnections[userId].close();
 
             } catch (error) {
 
@@ -2978,6 +2699,10 @@ async function answerIncomingCall(call) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: call.call_type === 'VIDEO' });
         if (generation !== callGeneration) { stream.getTracks().forEach(track => track.stop()); return; }
         localStream = stream;
+        callDiagnostic('local_tracks', { count: stream.getTracks().length });
+        currentCallType = call.call_type;
+        await loadCallIceServers();
+        if (generation !== callGeneration) return;
         const data = await queueCallMutation(async () => {
             if (generation !== callGeneration) return null;
             return postCall(`/api/messaging/calls/${id}/accept/`);

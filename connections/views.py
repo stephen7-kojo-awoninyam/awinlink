@@ -1,3 +1,5 @@
+from .services import ConnectionResponseError, respond_to_connection
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.shortcuts import (
     get_object_or_404,
     redirect,
@@ -327,72 +329,34 @@ def send_connection_request(request, user_id):
 # ACCEPT CONNECTION REQUEST
 # =========================================================
 
+def _respond_connection(request, connection_id, new_status):
+    try:
+        connection = respond_to_connection(connection_id, request.user, new_status)
+    except ConnectionResponseError as exc:
+        return JsonResponse({"detail": exc.detail}, status=exc.status_code)
+    if (request.headers.get("x-requested-with") == "XMLHttpRequest"
+            or "application/json" in request.headers.get("accept", "").lower()):
+        return JsonResponse({
+            "status": "success", "connection_id": connection.pk,
+            "state": "connected" if new_status == "ACCEPTED" else "rejected",
+            "detail": "Connection accepted." if new_status == "ACCEPTED" else "Request declined.",
+        })
+    target = request.META.get("HTTP_REFERER", "")
+    if target and url_has_allowed_host_and_scheme(target, {request.get_host()}, require_https=request.is_secure()):
+        return redirect(target)
+    return redirect("connections:connections_list")
+
+
 @login_required
 @require_POST
 def accept_connection_request(request, connection_id):
+    return _respond_connection(request, connection_id, "ACCEPTED")
 
-    connection = get_object_or_404(
-        Connection,
-        id=connection_id,
-        receiver=request.user,
-        status="PENDING"
-    )
-
-    connection.status = "ACCEPTED"
-
-    connection.save()
-
-    # -----------------------------------------------------
-    # NOTIFY THE SENDER
-    # -----------------------------------------------------
-
-    Notification.objects.create(
-        user=connection.sender,
-        sender=request.user,
-        notification_type="CONNECTION",
-        message=(
-            f"{request.user.get_full_name() or request.user.username} "
-            f"accepted your connection request."
-        )
-    )
-
-    if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({
-            "status": "success",
-            "state": "connected",
-            "detail": "Connection accepted.",
-        })
-
-    return redirect(request.META.get("HTTP_REFERER", "/"))
-
-
-# =========================================================
-# REJECT CONNECTION REQUEST
-# =========================================================
 
 @login_required
 @require_POST
 def reject_connection_request(request, connection_id):
-
-    connection = get_object_or_404(
-        Connection,
-        id=connection_id,
-        receiver=request.user,
-        status="PENDING"
-    )
-
-    connection.status = "REJECTED"
-
-    connection.save()
-
-    if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({
-            "status": "success",
-            "state": "rejected",
-            "detail": "Request declined.",
-        })
-
-    return redirect(request.META.get("HTTP_REFERER", "/"))
+    return _respond_connection(request, connection_id, "REJECTED")
 
 
 # =========================================================

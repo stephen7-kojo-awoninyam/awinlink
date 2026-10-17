@@ -33,9 +33,12 @@ SECRET_KEY = os.environ.get(
 )
 
 # Optional coturn REST API credentials. Configure the same secret on coturn with
-# use-auth-secret; the API returns one-hour credentials to authenticated users.
+# use-auth-secret; the API returns expiring credentials to authenticated users.
 TURN_SERVER_URLS = os.environ.get("TURN_SERVER_URLS", "")
 TURN_SHARED_SECRET = os.environ.get("TURN_SHARED_SECRET", "")
+TURN_REQUIRED = os.environ.get("TURN_REQUIRED", "false").strip().lower() in {"1", "true", "yes", "on"}
+TURN_CREDENTIAL_TTL_SECONDS = os.environ.get("TURN_CREDENTIAL_TTL_SECONDS", "3600")
+CALL_ICE_TRANSPORT_POLICY = os.environ.get("CALL_ICE_TRANSPORT_POLICY", "all").strip().lower()
 EXPO_PUSH_ACCESS_TOKEN = os.environ.get("EXPO_PUSH_ACCESS_TOKEN", "").strip()
 MOBILE_APNS_TEAM_ID = os.environ.get('MOBILE_APNS_TEAM_ID', '')
 MOBILE_APNS_KEY_ID = os.environ.get('MOBILE_APNS_KEY_ID', '')
