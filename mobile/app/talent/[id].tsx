@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useRouter } from 'expo-router';
 
 import { apiRequest } from '@/src/api/client';
@@ -23,7 +23,7 @@ type Follow = {
   following_id: number;
 };
 
-type RelationshipStatus = 'none' | 'following' | 'pending' | 'connected' | 'incoming';
+type RelationshipStatus = 'none' | 'pending' | 'connected' | 'incoming';
 type PortfolioItem = { id: number; title: string; description: string; item_type: string; image: string | null; file: string | null; link: string };
 
 export default function TalentProfileScreen() {
@@ -34,6 +34,7 @@ export default function TalentProfileScreen() {
   const [profile, setProfile] = useState<TalentProfile | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [relationship, setRelationship] = useState<RelationshipStatus>('none');
+  const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [working, setWorking] = useState(false);
@@ -42,6 +43,7 @@ export default function TalentProfileScreen() {
   const dataRevision = useRef(0);
   const loadGeneration = useRef(0);
   const viewedTalentId = useRef<number | null>(null);
+  const relationshipMutation = useRef(false);
   viewedTalentId.current = Number.isInteger(talentId) ? talentId : null;
 
   const loadProfile = useCallback(async () => {
@@ -68,14 +70,13 @@ export default function TalentProfileScreen() {
       setProfile(talent);
       setPortfolio(portfolioItems);
       const targetUserId = talent.user.id;
+      setIsFollowing(following.some((item) => item.following_id === targetUserId));
       if (connections.some((item) => item.sender_id === targetUserId || item.receiver_id === targetUserId)) {
         setRelationship('connected');
       } else if (incoming.some((item) => item.sender_id === targetUserId)) {
         setRelationship('incoming');
       } else if (outgoing.some((item) => item.receiver_id === targetUserId)) {
         setRelationship('pending');
-      } else if (following.some((item) => item.following_id === targetUserId)) {
-        setRelationship('following');
       } else {
         setRelationship('none');
       }
@@ -91,8 +92,12 @@ export default function TalentProfileScreen() {
     }
   }, [talentId]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     void loadProfile();
+    return () => { loadGeneration.current += 1; };
+  }, [loadProfile]));
+
+  useEffect(() => {
     if (user?.role === 'SCOUT' || user?.role === 'COACH') {
       const prefix = user.role === 'SCOUT' ? 'scouts' : 'coaches';
       void apiRequest(`${prefix}/talents/${talentId}/view/`, { method: 'POST' }).catch(() => undefined);
@@ -114,9 +119,10 @@ export default function TalentProfileScreen() {
   }
 
   async function toggleFollow() {
-    if (!profile) return;
-    const wasFollowing = relationship === 'following';
-    const talentId = profile.id;
+    if (!profile || profile.id !== talentId || working || relationshipMutation.current) return;
+    relationshipMutation.current = true;
+    const wasFollowing = isFollowing;
+    const targetId = profile.id;
     const userId = profile.user.id;
     setWorking(true);
     setActionError('');
@@ -130,37 +136,46 @@ export default function TalentProfileScreen() {
           body: { user_id: userId },
         });
       }
-      if (viewedTalentId.current === talentId) {
+      if (viewedTalentId.current === targetId) {
         dataRevision.current += 1;
-        setRelationship(wasFollowing ? 'none' : 'following');
-        setProfile((current) => current?.id === talentId
+        setIsFollowing(!wasFollowing);
+        setProfile((current) => current?.id === targetId
           ? { ...current, followers_count: result.followers_count, following_count: result.following_count }
           : current);
       }
     } catch (followError) {
       setActionError(followError instanceof Error ? followError.message : 'Unable to update follow.');
     } finally {
+      relationshipMutation.current = false;
       setWorking(false);
     }
   }
 
   async function sendConnectionRequest() {
-    if (!profile) return;
+    if (!profile || profile.id !== talentId || working || relationshipMutation.current || relationship !== 'none') return;
+    relationshipMutation.current = true;
+    const targetId = profile.id;
     setWorking(true);
     setActionError('');
     try {
-      await apiRequest('connections/create/', {
+      const connection = await apiRequest<Connection>('connections/create/', {
         method: 'POST',
         body: { receiver: profile.user.id },
       });
-      setRelationship('pending');
+      if (viewedTalentId.current === targetId) {
+        dataRevision.current += 1;
+        setRelationship(connection.status === 'ACCEPTED' ? 'connected' : 'pending');
+      }
     } catch (connectionError) {
+      if (viewedTalentId.current !== targetId) return;
+      await loadProfile();
       setActionError(
         connectionError instanceof Error
           ? connectionError.message
           : 'Unable to send a connection request.',
       );
     } finally {
+      relationshipMutation.current = false;
       setWorking(false);
     }
   }
@@ -269,31 +284,31 @@ export default function TalentProfileScreen() {
                     style={({ pressed }) => [
                       ui.primaryButton,
                       styles.actionButton,
-                      relationship === 'following' && styles.secondaryButton,
+                      isFollowing && styles.secondaryButton,
                       pressed && styles.pressed,
                     ]}
                   >
                     {working ? (
-                      <ActivityIndicator color={relationship === 'following' ? colors.primary : '#fff'} />
+                      <ActivityIndicator color={isFollowing ? colors.primary : '#fff'} />
                     ) : (
                       <Text
                         style={[
                           ui.primaryButtonText,
-                          relationship === 'following' && styles.secondaryButtonText,
+                          isFollowing && styles.secondaryButtonText,
                         ]}
                       >
-                        {relationship === 'following' ? 'Following' : 'Follow'}
+                        {isFollowing ? 'Following' : 'Follow'}
                       </Text>
                     )}
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
-                    disabled={working || relationship !== 'none'}
-                    onPress={() => void sendConnectionRequest()}
+                    disabled={working || relationship === 'pending' || relationship === 'connected'}
+                    onPress={() => relationship === 'incoming' ? router.push('/connections') : void sendConnectionRequest()}
                     style={({ pressed }) => [
                       styles.connectionButton,
-                      (working || relationship !== 'none') && styles.connectionButtonDisabled,
-                      pressed && relationship === 'none' && styles.pressed,
+                      (working || relationship === 'pending' || relationship === 'connected') && styles.connectionButtonDisabled,
+                      pressed && styles.pressed,
                     ]}
                   >
                     <Text style={styles.connectionButtonText}>

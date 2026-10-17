@@ -41,6 +41,8 @@ MOBILE_APNS_TEAM_ID = os.environ.get('MOBILE_APNS_TEAM_ID', '')
 MOBILE_APNS_KEY_ID = os.environ.get('MOBILE_APNS_KEY_ID', '')
 MOBILE_APNS_PRIVATE_KEY = os.environ.get('MOBILE_APNS_PRIVATE_KEY', '').replace('\\n', '\n')
 MOBILE_IOS_BUNDLE_ID = os.environ.get('MOBILE_IOS_BUNDLE_ID', 'com.awinlink.app')
+AWINLINK_SUPPORT_EMAIL = os.environ.get('AWINLINK_SUPPORT_EMAIL', '').strip()
+AWINLINK_LEGAL_OPERATOR = os.environ.get('AWINLINK_LEGAL_OPERATOR', '').strip()
 
 # The new unified ranking pipeline remains opt-in until explicitly enabled.
 UNIFIED_RECOMMENDATIONS_ENABLED = os.environ.get(

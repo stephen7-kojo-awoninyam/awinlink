@@ -35,6 +35,7 @@ export default function AccountSettings() {
     ['Privacy policy', process.env.EXPO_PUBLIC_PRIVACY_URL],
     ['Terms of use', process.env.EXPO_PUBLIC_TERMS_URL],
     ['Support', process.env.EXPO_PUBLIC_SUPPORT_URL],
+    ['Delete account in browser', process.env.EXPO_PUBLIC_DELETE_ACCOUNT_URL],
   ];
   return <><Stack.Screen options={{ headerShown: true, title: 'Account and safety' }} /><Page title="Account and safety">
     <Pressable accessibilityRole="button" onPress={() => { void Linking.openSettings().catch(() => setError('Unable to open device settings.')); }}><Text>Notification and device permissions</Text></Pressable>

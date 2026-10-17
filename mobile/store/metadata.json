@@ -10,5 +10,12 @@
   "description": "Awinlink connects talent, organizations, scouts, and coaches. Share updates and portfolio work, discover people and opportunities, send messages, and join voice calls, video calls, courses, and live classrooms. Organizations can manage team invitations and member access. Account and safety tools let you report content, block accounts, reset your password, and delete your account.",
   "releaseNotes": "Initial mobile release with community feed, messaging, calling, learning, opportunities, organization teams, and account safety tools.",
   "reviewNotes": "Requires a configured test account and an online backend. Camera and microphone permissions are used for calls, classrooms, voice messages, and attachments. Purchases are unavailable in this build. Provide separate test accounts for talent and organization-owner review. Do not put review credentials in this file.",
-  "status": "draft-requires-owner-review"
+  "status": "draft-requires-owner-review",
+  "plannedPublicUrls": {
+    "status": "requires-backend-deployment-and-owner-policy-review",
+    "privacy": "https://awinlink-production.up.railway.app/privacy/",
+    "terms": "https://awinlink-production.up.railway.app/terms/",
+    "support": "https://awinlink-production.up.railway.app/support/",
+    "accountDeletion": "https://awinlink-production.up.railway.app/delete-account/"
+  }
 }

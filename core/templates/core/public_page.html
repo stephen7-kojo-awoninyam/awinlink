@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Awinlink — {{ page|title }}</title>
+<style>body{font:17px/1.65 system-ui,sans-serif;color:#172542;max-width:780px;margin:40px auto;padding:0 22px}a{color:#2458d3}nav{display:flex;gap:18px;flex-wrap:wrap}input,button{font:inherit;padding:10px}label{display:block;margin:16px 0}button{cursor:pointer}aside{padding:16px;background:#fff3cd}h1,h2{line-height:1.25}</style></head>
+<body><nav aria-label="Public information"><a href="/">Awinlink</a><a href="{% url 'privacy' %}">Privacy</a><a href="{% url 'terms' %}">Terms</a><a href="{% url 'support' %}">Support</a><a href="{% url 'delete_account' %}">Delete account</a></nav>
+{% if not operator or not support_email %}<aside>Release information is awaiting completion by the Awinlink operator. Contact information and the privacy policy require final review before store release.</aside>{% endif %}
+{% if page == 'privacy' %}
+<h1>Awinlink privacy policy</h1><p>Last updated: October 17, 2026.</p>
+<p>Awinlink connects talent, organizations, scouts and coaches. {% if operator %}The service operator is {{ operator }}.{% endif %}</p>
+<h2>Information used by the service</h2><p>We process account details such as your username, email and password credentials, profile information you supply, community posts, portfolio and learning content, applications, messages, uploaded files, and safety reports. Some profile fields, including phone and country, depend on the information you provide. Your chosen audience and the service's visibility rules determine who can access community content.</p>
+<p>Camera, microphone and screen sharing are used when you choose calling, voice messaging or classroom features. Device permissions can be changed in your device settings. Notification tokens and device platform information enable alerts and incoming calls.</p>
+<h2>Purpose and service providers</h2><p>Information supports authentication, community discovery and recommendations, messaging, learning, team administration, security and moderation. Hosting and storage services process service data. Expo, Apple APNs and Google FCM process push delivery information. Calls use WebRTC peers and configured relay servers. Messages are stored by the service; do not assume they are end-to-end encrypted.</p>
+<h2>Deletion and retention</h2><p>You can <a href="{% url 'delete_account' %}">delete your account using a browser</a> or use Account and safety in the app. Organization owners must transfer ownership first. Account deletion removes your account and related database content. Moderation reports can remain with the reporter account link removed. Uploaded objects and backups may persist separately; storage cleanup and backup retention periods must be confirmed by the operator before release.</p>
+<h2>Your choices and questions</h2><p>Edit your profile, control device permissions, block accounts, report content, or request account deletion. For access, correction, retention or privacy questions, use <a href="{% url 'support' %}">Awinlink support</a>.</p>
+{% elif page == 'terms' %}
+<h1>Awinlink terms of use</h1><p>Use accurate account information and protect your password. Only share material you have permission to use. Do not post unlawful content, child sexual abuse material, threats, harassment, hateful abuse, scams, or content that infringes others' rights. Do not misuse calling, messaging or personal information.</p>
+<p>You retain rights to your content and permit Awinlink to store, process and display it to deliver the service according to visibility settings. Report abusive content or accounts in the app and block unwanted contacts. Moderators may review reports and restrict accounts or remove content.</p>
+<p>The mobile launch is free and purchases are unavailable. Availability of opportunities and user content does not guarantee employment, selection or results. You can end your use and <a href="{% url 'delete_account' %}">delete your account</a>. Contact <a href="{% url 'support' %}">support</a> for questions.</p>
+{% elif page == 'support' %}
+<h1>Awinlink support</h1><p>For sign-in problems, use <a href="{% url 'password_reset' %}">password recovery</a>. You can <a href="{% url 'delete_account' %}">delete your account here without reinstalling the app</a>.</p>
+<p>For abuse, use Report on the relevant profile, post or message. Block accounts under Account and safety to manage unwanted contact.</p>
+{% if support_email %}<p>Contact: <a href="mailto:{{ support_email }}">{{ support_email }}</a>. Include the issue, device and app version. Never send your password or authentication tokens.</p>{% else %}<p>A public support email has not yet been configured by the operator.</p>{% endif %}
+{% elif page == 'delete-account' %}
+<h1>Delete your Awinlink account</h1><p>This permanently deletes your account and related database content, including your profile and owned posts. Moderation reports may remain with your reporter account link removed. Uploaded files and backups can have separate retention; contact support for details. Organization owners must transfer ownership first in the organization's team settings.</p>
+{% if deleted %}<p role="status">Your Awinlink account has been deleted.</p>{% elif request.user.is_authenticated %}
+<p>Signed in as {{ request.user.username }}.</p>{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+<form method="post">{% csrf_token %}<label>Current password <input name="password" type="password" autocomplete="current-password" required></label><label><input type="checkbox" name="confirm" value="yes" required> I understand this permanently deletes my account.</label><button type="submit">Permanently delete account</button></form>
+{% else %}<p><a href="{% url 'deletion_login' %}">Sign in to delete your account</a>. If you have forgotten your password, <a href="{% url 'password_reset' %}">reset it first</a>.</p>{% endif %}
+<p>You can also delete your account in the mobile app under Account and safety.</p>
+{% endif %}
+</body></html>

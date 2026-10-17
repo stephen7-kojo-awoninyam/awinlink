@@ -2799,6 +2799,11 @@ class ConnectionCreateAPIView(APIView):
             receiver=receiver
         ).first()
 
+        if existing and existing.status == 'REJECTED':
+            existing.status = 'PENDING'
+            existing.save(update_fields=['status', 'updated_at'])
+            return Response(ConnectionSerializer(existing).data, status=status.HTTP_200_OK)
+
         if existing:
 
             return Response(

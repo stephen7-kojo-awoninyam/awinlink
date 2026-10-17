@@ -9,6 +9,8 @@ This is a code inventory, not a submitted privacy declaration. Confirm backend/s
 | Messages and uploaded files/voice | Conversations, read state | Server access, media retention, backups |
 | Camera/microphone streams and screen sharing | Calls and classrooms | WebRTC peer/TURN transport; verify any recording policy |
 | Expo push token and device platform | Incoming-call notifications | Expo/APNs/FCM sharing, logout/deletion cleanup |
+| VoIP device token, call identifiers and participant state | PushKit/CallKit and native incoming calls | APNs transport, token retention, expired-call cleanup |
+| Interests, recommendations, impressions and dismissals | Discovery and ranking | Verify enabled production flags, profiling disclosures and retention |
 | Blocks and content reports | Safety and moderation | Report handling, retained evidence, operator response process |
 | Credentials | SecureStore and backend authentication | Token revocation and access controls |
 

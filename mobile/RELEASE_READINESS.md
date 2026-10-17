@@ -1,5 +1,17 @@
 # Awinlink mobile release audit
 
+## Store readiness continuation — October 17, 2026
+
+See [store/RELEASE_HANDOFF.md](store/RELEASE_HANDOFF.md) for required accounts, build-only commands and current store compliance gates. This section supersedes earlier statements that public pages have no implementation; deployment remains outstanding.
+
+- Added public privacy, terms, support and account-deletion pages, with a browser sign-in/deletion flow. Password, CSRF, confirmation and organization-owner safeguards are tested. Configure backend `AWINLINK_SUPPORT_EMAIL` and `AWINLINK_LEGAL_OPERATOR`; operator review of retention, storage cleanup and policy accuracy remains required. Pages flag incomplete operator/contact settings.
+- Added planned URLs to the environment example and draft metadata, and the browser deletion link to mobile settings. URL validation now includes external account deletion, public HTML/app identity and incomplete operator configuration. No production environment file was created.
+- Live read-only verification: web origin 200; incoming calls/feed JSON 401; login GET JSON 405. Privacy, terms, support and deletion URLs all return 404. Local URL repairs require an authorized backend rollout before release. Authenticated production behavior, migrations and service integrations were not verified.
+- Current checks: 30 isolated backend tests passed (public pages, browser deletion, mobile account/safety and notification tests); 13 targeted Node tests passed (API client, dependency compatibility, native-call interfaces, release configuration); TypeScript, Django system check, migration drift and Git whitespace checks passed. No physical-device or signed-native verification is implied.
+- EAS authentication check returned `Not logged in`. Attempted production build for both platforms with `--non-interactive --no-wait --freeze-credentials`; stopped with `An Expo user account is required to proceed.` No build ID, signed AAB or IPA was produced. Release preflight continues to reject absent production environment configuration.
+- Nothing was deployed, submitted or published.
+- Fresh online production dependency audit reports **19 high**, zero critical/moderate/low findings; raw evidence is in [store/SECURITY_AUDIT.json](store/SECURITY_AUDIT.json). These remain release risks. Suggested automated fixes include incompatible Expo/React Native downgrades and were not applied.
+
 Audit date: 2026-10-17, continued release setup. No deployment, publication, store submission, or production data mutation was performed. An authorized EAS production build was attempted but stopped at authentication before upload/build creation. This is not a release certification.
 
 Launch decision: free at launch; paid features deferred. Both platforms default to `com.awinlink.app`. Availability/ownership is unverified until the owner's Apple and Google developer accounts can check/register it.

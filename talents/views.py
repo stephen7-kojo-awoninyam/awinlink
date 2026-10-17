@@ -21,7 +21,7 @@ from analytics.models import RecommendationHistory
 from .models import Experience
 from .models import Certification,Achievement
 from .forms import AchievementForm,TalentCategoryForm,ExperienceForm,CertificationForm,TalentProfileForm,VerificationRequestForm
-from connections.models import Follow
+from connections.models import Follow, Connection
 from competitions.models import CompetitionResult
 from science_technology.models import ScienceTechnologyTalentProfile
 from sports.models import SportsTalentProfile
@@ -358,6 +358,17 @@ def talent_profile(request, talent_id):
         following=talent.user
     ).exists()
 
+    connection = Connection.objects.filter(
+        Q(sender=request.user, receiver=talent.user)
+        | Q(sender=talent.user, receiver=request.user),
+        status__in=['ACCEPTED', 'PENDING'],
+    ).order_by('status', 'id').first()
+    connection_state = 'none'
+    if connection:
+        connection_state = ('connected' if connection.status == 'ACCEPTED'
+                            else 'pending' if connection.sender_id == request.user.id
+                            else 'incoming')
+
     competition_results = (
         CompetitionResult.objects.filter(
             participant__talent=talent,
@@ -445,6 +456,7 @@ def talent_profile(request, talent_id):
             "following_count": following_count,
 
             "following": following,
+            "connection_state": connection_state,
 
             "competition_results": competition_results,
 

@@ -7,7 +7,7 @@ const checks = [
   ['API incoming calls', api && new URL('/api/messaging/calls/incoming/', api).href, [200, 401, 403]],
   ['API feed', api && new URL('/api/feed/posts/', api).href, [200, 401, 403]],
   ['API login route (GET must not create a session)', api && new URL('/api/auth/login/', api).href, [405]],
-  ...['WEB', 'PRIVACY', 'TERMS', 'SUPPORT'].map(key => [key, process.env[`EXPO_PUBLIC_${key}_URL`], [200]]),
+  ...['WEB', 'PRIVACY', 'TERMS', 'SUPPORT', 'DELETE_ACCOUNT'].map(key => [key, process.env[`EXPO_PUBLIC_${key}_URL`], [200]]),
 ];
 (async () => {
   let failures = 0;
@@ -21,6 +21,12 @@ const checks = [
       const contentType = response.headers.get('content-type') || '';
       if (name.startsWith('API') && !contentType.includes('json')) throw new Error(`Expected API JSON, received ${response.status} ${contentType}`);
       if (!expected.includes(response.status)) throw new Error(`HTTP ${response.status}, expected ${expected.join('/')}`);
+      if (['PRIVACY', 'TERMS', 'SUPPORT', 'DELETE_ACCOUNT'].includes(name)) {
+        if (!contentType.includes('text/html')) throw new Error('Expected a public HTML page');
+        const body = await response.text();
+        if (!body.includes('Awinlink')) throw new Error('Public page must identify Awinlink');
+        if (body.includes('Release information is awaiting completion')) throw new Error('Operator/contact configuration is incomplete');
+      }
       console.log(`PASS ${name}: ${response.status} ${response.url}`);
       await response.body?.cancel();
     } catch (error) { failures++; console.log(`BLOCKED ${name}: ${error.message}`); }

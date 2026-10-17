@@ -1,0 +1,2 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in — Awinlink account deletion</title></head><body>
+<main><h1>Sign in to delete your Awinlink account</h1><form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Sign in</button></form><p><a href="{% url 'password_reset' %}">Forgot your password?</a></p><a href="{% url 'delete_account' %}">Back to deletion information</a></main></body></html>

@@ -1,0 +1,11 @@
+{% if connection_state == 'connected' %}
+<button type="button" class="btn btn-light" disabled>Connected</button>
+{% elif connection_state == 'pending' %}
+<button type="button" class="btn btn-light" disabled>Request sent</button>
+{% elif connection_state == 'incoming' %}
+<a href="{% url 'connections:connections_list' %}" class="btn btn-outline-primary">Request received</a>
+{% else %}
+<form method="post" action="{% url 'connections:send_connection_request' talent.user.id %}" class="d-inline">
+    {% csrf_token %}<button type="submit" class="btn btn-outline-primary">Connect</button>
+</form>
+{% endif %}

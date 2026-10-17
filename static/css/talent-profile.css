@@ -21,6 +21,8 @@
 .talent-headline { margin: 12px 0 7px; color: #465c78; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
 .talent-location { display: flex; align-items: center; gap: 4px; margin: 7px 0 0; color: var(--talent-muted); font-size: 11px; }
 .talent-profile-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; max-width: 320px; }
+.talent-relationship-actions { display: inline-flex; align-items: center; gap: 8px; }
+.talent-relationship-actions .btn { white-space: nowrap; }
 .talent-surface .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 10px 14px; border-radius: 10px; font-size: 11px; font-weight: 600; }
 .talent-surface .btn-primary { background: var(--talent-blue); border-color: var(--talent-blue); color: #fff; }
 .talent-surface .btn-primary:hover { background: #125acc; border-color: #125acc; }
