@@ -51,3 +51,24 @@ class DeploymentSettingsTests(SimpleTestCase):
         self.assertTrue(configured['TURN_REQUIRED'])
         self.assertEqual(configured['CALL_ICE_TRANSPORT_POLICY'], 'relay')
         self.assertEqual(configured['TURN_CREDENTIAL_TTL_SECONDS'], '1800')
+
+    def test_recovery_defaults_use_canonical_origin_and_shared_redis(self):
+        configured = self.load_settings(RAILWAY_ENVIRONMENT_NAME='production',
+            RAILWAY_PUBLIC_DOMAIN='app.example.com', REDIS_URL='redis://127.0.0.1:6379/0')
+        self.assertEqual(configured['PASSWORD_RESET_BASE_URL'], 'https://app.example.com')
+        self.assertEqual(configured['PASSWORD_RESET_TIMEOUT'], 3600)
+        self.assertEqual(configured['PASSWORD_RESET_CACHE_ALIAS'], 'password_reset')
+        self.assertEqual(configured['PASSWORD_RESET_TRUSTED_IP_HEADER'], 'HTTP_X_REAL_IP')
+
+    def test_smtp_ssl_uses_465_and_disables_starttls_by_default(self):
+        configured = self.load_settings(EMAIL_USE_SSL='true')
+        self.assertEqual(configured['EMAIL_PORT'], 465)
+        self.assertTrue(configured['EMAIL_USE_SSL'])
+        self.assertFalse(configured['EMAIL_USE_TLS'])
+        self.assertEqual(configured['EMAIL_TIMEOUT'], 10)
+
+    def test_railway_can_explicitly_select_resend_https_without_smtp(self):
+        configured = self.load_settings(RAILWAY_ENVIRONMENT_NAME='production', EMAIL_PROVIDER='resend', RESEND_API_KEY='re_synthetic_key')
+        self.assertEqual(configured['EMAIL_BACKEND'], 'accounts.email_backends.resend.EmailBackend')
+        self.assertEqual(configured['RESEND_TIMEOUT'], 10)
+        self.assertNotIn('EMAIL_HOST_PASSWORD', configured)

@@ -12,7 +12,7 @@ from feed.models import Post
 from messaging.models import Conversation, ConversationParticipant, Message, Call
 
 
-@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend', PASSWORD_RESET_BASE_URL='https://accounts.example.com')
 class MobileAccountFlows(APITestCase):
     def setUp(self):
         cache.clear()

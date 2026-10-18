@@ -1,0 +1,70 @@
+{
+  "postgresql": "17.11",
+  "scope": "Disposable workspace cluster only; no deployed data inspected",
+  "probes": [
+    {
+      "probe": "market_clean",
+      "migration": "passed",
+      "verification": {
+        "listings": 1,
+        "offers": 1
+      },
+      "model_migration_drift": []
+    },
+    {
+      "probe": "market_duplicate_personal",
+      "migration": "failed",
+      "error_type": "IntegrityError",
+      "error": "could not create unique index \"market_pending_personal_offer\"\nDETAIL:  Key (listing_id, sender_id)=(1, 2) is duplicated.\n"
+    },
+    {
+      "probe": "market_duplicate_organization",
+      "migration": "failed",
+      "error_type": "IntegrityError",
+      "error": "could not create unique index \"market_pending_org_offer\"\nDETAIL:  Key (listing_id, organization_id)=(1, 1) is duplicated.\n"
+    },
+    {
+      "probe": "market_missing_consent",
+      "migration": "failed",
+      "error_type": "IntegrityError",
+      "error": "check constraint \"market_listing_publication_consent\" of relation \"marketplace_listing\" is violated by some row\n"
+    },
+    {
+      "probe": "messaging_participants",
+      "migration": "passed",
+      "verification": {
+        "participants": [],
+        "expected_participants": [
+          1,
+          2
+        ],
+        "message_count": 1,
+        "data_loss": true
+      }
+    },
+    {
+      "probe": "messaging_calls",
+      "migration": "passed",
+      "verification": {
+        "statuses": [
+          "ACCEPTED",
+          "REJECTED",
+          "ENDED",
+          "RINGING"
+        ],
+        "invalid_statuses": [
+          "ACCEPTED",
+          "REJECTED"
+        ],
+        "participants": 8
+      }
+    },
+    {
+      "probe": "messaging_read_history",
+      "migration": "passed",
+      "verification": {
+        "read_history_preserved": true
+      }
+    }
+  ]
+}

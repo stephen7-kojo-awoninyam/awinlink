@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Talent Market · Awinlink{% endblock %}
+{% block content %}
+<main class="container py-4" style="max-width:1000px">
+<h1>Talent Market</h1><p>Find talent across ecosystems. Every listing and agreement stays in the talent's control.</p>
+<div id="notice" role="status" class="text-danger"></div>
+<nav class="d-flex gap-2 mb-3 flex-wrap"><button class="btn btn-primary" id="browse">Explore markets</button><button class="btn btn-outline-primary" id="mine">My listings</button><button class="btn btn-outline-primary" id="deals">My deal rooms</button></nav>
+<form id="search" class="d-flex gap-2 flex-wrap mb-3">
+<input aria-label="Search" name="q" placeholder="Search talent and listings" class="form-control">
+<select aria-label="Ecosystem" name="ecosystem" class="form-select"></select><select aria-label="Subecosystem" name="subecosystem" class="form-select"></select>
+<input aria-label="Country" name="country" placeholder="Country" class="form-control"><input aria-label="Skill" name="skill" placeholder="Skill" class="form-control">
+<select name="work_type" aria-label="Work type" class="form-select"><option value="">Any work type</option><option>REMOTE</option><option>ONSITE</option><option>HYBRID</option></select>
+<select name="experience" aria-label="Experience" class="form-select"><option value="">Any experience</option><option>BEGINNER</option><option>INTERMEDIATE</option><option>EXPERT</option></select><button class="btn btn-primary">Search</button></form>
+<details class="card p-3 mb-3"><summary>Create or edit my listing</summary><form id="listing" class="d-grid gap-2 mt-3">
+<input name="id" aria-label="Listing ID to edit" placeholder="Listing ID (leave empty to create)" class="form-control">
+<input name="title" aria-label="Title" placeholder="Title" required maxlength="200" class="form-control"><textarea name="description" aria-label="Description" placeholder="What do you offer?" required maxlength="5000" class="form-control"></textarea>
+<select name="ecosystem" aria-label="Listing ecosystem" required class="form-select"></select><select name="subecosystem" aria-label="Listing subecosystem" required class="form-select"></select>
+<select name="status" aria-label="Listing status" class="form-select"><option>DRAFT</option><option>PUBLISHED</option><option>PAUSED</option></select>
+<label><input type="checkbox" name="consent"> I consent to publishing these listing details to the market.</label><button class="btn btn-primary">Save listing</button></form></details>
+<div id="results" class="d-grid gap-3"></div><button id="next" class="btn btn-outline-primary mt-3" hidden>Next page</button>
+<section id="room" class="card p-3 mt-3" hidden><h2>Deal room</h2><div id="terms"></div><div id="messages"></div>
+<form id="message" class="d-flex gap-2"><input name="body" aria-label="Message" required maxlength="3000" class="form-control"><button class="btn btn-primary">Send</button></form>
+<label><input id="accept-consent" type="checkbox"> I have read and explicitly agree to these exact offer terms.</label>
+<div class="d-flex gap-2 flex-wrap"><button data-action="ACCEPT" class="btn btn-success">Accept terms</button><button data-action="DECLINE" class="btn btn-outline-danger">Decline</button><button data-action="WITHDRAW" class="btn btn-outline-secondary">Withdraw my offer</button></div></section>
+<section class="card p-3 mt-3"><h2>Send an offer</h2><form id="offer" class="d-grid gap-2"><input name="listing" aria-label="Listing ID" placeholder="Listing ID" type="number" min="1" required class="form-control"><input name="organization" aria-label="Organization ID" placeholder="Organization ID (optional for verified scouts/coaches)" type="number" min="1" class="form-control"><textarea name="terms" aria-label="Offer terms" placeholder="Describe the opportunity and exact terms" required maxlength="5000" class="form-control"></textarea><button class="btn btn-primary">Send offer</button></form></section>
+</main>
+{{ request.user.pk|json_script:'market-user' }}
+<script>
+(() => {
+const $=id=>document.getElementById(id), base='/api/marketplace/'; let roomId=null,next=null;
+const csrf=()=>document.cookie.split('; ').find(x=>x.startsWith('csrftoken='))?.split('=')[1];
+// Render a CSRF token even on installations using session-backed CSRF storage.
+const token='{{ csrf_token }}';
+async function api(path,method='GET',body){const r=await fetch(base+path,{method,headers:{'Content-Type':'application/json','X-CSRFToken':csrf()||token},...(body?{body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Error(JSON.stringify(data));return data;}
+function run(fn){return async e=>{e?.preventDefault();$('notice').textContent='';try{await fn(e);}catch(err){$('notice').textContent=err.message;}};}
+function text(parent,tag,value){const el=document.createElement(tag);el.textContent=value;parent.append(el);return el;}
+async function listings(path='listings/'){const d=await api(path);$('results').replaceChildren();$('room').hidden=true;next=d.next?d.next.split('/api/marketplace/')[1]:null;$('next').hidden=!next;for(const x of d.results){const card=text($('results'),'article','');card.className='card p-3';text(card,'h2',x.title);text(card,'p',`${x.talent_name} · ${x.ecosystem} · ${x.country} · ${x.work_type}`);text(card,'p',x.description);text(card,'small',`Listing #${x.id} · ${x.status}`);if(x.talent===undefined)continue;const b=text(card,'button','Use listing');b.className='btn btn-outline-primary mt-2';b.onclick=()=>{$('offer').elements.listing.value=x.id;};}if(!d.results.length)text($('results'),'p','No listings found. Try another market or publish your own.');}
+async function deals(){const d=await api('offers/');$('results').replaceChildren();$('next').hidden=true;for(const x of d.results){const b=text($('results'),'button',`Offer #${x.id} · ${x.status}`);b.className='btn btn-outline-primary';b.onclick=run(()=>openRoom(x.id));}if(!d.results.length)text($('results'),'p','No deal rooms yet.');}
+async function openRoom(id){roomId=id;const d=await api(`deals/${id}/`);$('room').hidden=false;$('terms').textContent=d.offer.terms+' · '+d.offer.status;$('accept-consent').checked=false;$('messages').replaceChildren();for(const m of d.messages)text($('messages'),'p',`${m.author}: ${m.body}`);}
+$('browse').onclick=run(()=>listings());$('mine').onclick=run(()=>listings('listings/?mine=1'));$('deals').onclick=run(deals);$('next').onclick=run(()=>listings(next));
+$('search').onsubmit=run(()=>listings('listings/?'+new URLSearchParams(new FormData($('search')))));
+$('listing').onsubmit=run(async()=>{const d=Object.fromEntries(new FormData($('listing')));const id=d.id;delete d.id;d.consent=$('listing').elements.consent.checked;await api(id?`listings/${id}/`:'listings/',id?'PATCH':'POST',d);await listings('listings/?mine=1');});
+$('offer').onsubmit=run(async()=>{const d=Object.fromEntries(new FormData($('offer')));if(!d.organization)delete d.organization;const x=await api('offers/','POST',d);await openRoom(x.id);});
+$('message').onsubmit=run(async()=>{await api(`deals/${roomId}/messages/`,'POST',{body:$('message').elements.body.value});$('message').reset();await openRoom(roomId);});
+document.querySelectorAll('[data-action]').forEach(b=>b.onclick=run(async()=>{await api(`deals/${roomId}/`,'POST',{action:b.dataset.action,consent:$('accept-consent').checked});await openRoom(roomId);}));
+run(async()=>{const d=await api('markets/');for(const name of ['ecosystem','subecosystem'])for(const form of [$('search'),$('listing')]){const select=form.elements[name];select.replaceChildren(new Option('Choose '+name,''));for(const x of d[name==='ecosystem'?'ecosystems':'subecosystems'])select.add(new Option(x.name,x.id));}await listings();})();
+})();
+</script>
+{% endblock %}

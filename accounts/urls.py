@@ -2,6 +2,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 
 from . import views
+from . import recovery_views
 
 
 urlpatterns = [
@@ -14,12 +15,7 @@ path("logout/", views.user_logout, name="logout"),
 # Password reset
 path(
     "password-reset/",
-    auth_views.PasswordResetView.as_view(
-        template_name="accounts/password_reset.html",
-        email_template_name="accounts/password_reset_email.html",
-        subject_template_name="accounts/password_reset_subject.txt",
-        success_url="/accounts/password-reset/done/",
-    ),
+    recovery_views.PasswordResetView.as_view(),
     name="password_reset",
 ),
 
@@ -33,10 +29,7 @@ path(
 
 path(
     "reset/<uidb64>/<token>/",
-    auth_views.PasswordResetConfirmView.as_view(
-        template_name="accounts/password_reset_confirm.html",
-        success_url="/accounts/reset/done/",
-    ),
+    recovery_views.PasswordResetConfirmView.as_view(),
     name="password_reset_confirm",
 ),
 

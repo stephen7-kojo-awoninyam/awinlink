@@ -1,14 +1,18 @@
 from unittest.mock import patch
 from asgiref.sync import async_to_sync
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 from rest_framework.test import APIClient
 from notifications.models import Notification
 from .consumers import CallConsumer, UserConsumer
 from .models import Call, CallParticipant, Conversation, ConversationParticipant
 
 
-class CallCancellationTests(TestCase):
+class CallCancellationTests(TransactionTestCase):
+    # Channels closes old connections at async boundaries. TestCase's outer
+    # atomic block makes that close the PostgreSQL connection mid-test.
+    captureOnCommitCallbacks = TestCase.captureOnCommitCallbacks
+
     def setUp(self):
         self.caller = get_user_model().objects.create_user(username='cancel-caller')
         self.recipient = get_user_model().objects.create_user(username='cancel-recipient')

@@ -89,6 +89,7 @@ export default function OpportunitiesScreen() {
     <Page eyebrow="FIND YOUR NEXT STEP" title="Opportunities"
       refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.primary}
         onRefresh={() => { setRefreshing(true); void load(); }} />}>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/marketplace')} style={styles.myApplications}><Text style={styles.open}>Talent Market</Text></Pressable>
       {user?.role === 'ATHLETE' && <Pressable accessibilityRole="button" onPress={() => router.push('/applications')} style={styles.myApplications}><Text style={styles.open}>My applications</Text></Pressable>}
       <TextInput accessibilityLabel="Search opportunities" value={query} onChangeText={setQuery}
         placeholder="Search title, organization, or location" placeholderTextColor={colors.muted}

@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model, logout
-from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from collections.abc import Mapping
 from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -8,50 +8,68 @@ from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 from redis.exceptions import RedisError
 
 from .models import ContentReport, UserBlock
+from .recovery import RecoveryForm, RecoverySetPasswordForm, RecoveryUnavailable, allow_request, allow_confirmation, send_recovery, GENERIC_SENT, INVALID_LINK
+from .recovery_views import PrivateRecoveryResponse
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+from django.views.decorators.debug import sensitive_post_parameters
 
 
-class RecoveryThrottle(SimpleRateThrottle):
-    scope = 'mobile_recovery'
-    rate = '5/hour'
-
-    def get_cache_key(self, request, view):
-        return self.cache_format % {'scope': self.scope, 'ident': self.get_ident(request)}
-
-
-class PasswordResetRequest(APIView):
+@method_decorator([never_cache, sensitive_post_parameters()], name='dispatch')
+class PasswordResetRequest(PrivateRecoveryResponse, APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
-    throttle_classes = [RecoveryThrottle]
-
-    def post(self, request):
-        form = PasswordResetForm(request.data)
-        if not form.is_valid():
-            return Response(form.errors, status=400)
-        form.save(request=request, use_https=request.is_secure(),
-                  email_template_name='accounts/mobile_password_reset_email.txt',
-                  subject_template_name='accounts/password_reset_subject.txt')
-        return Response({'detail': 'If an active account matches, password reset instructions have been sent.'})
-
-
-class PasswordResetConfirm(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
-    throttle_classes = [RecoveryThrottle]
+    throttle_classes = []
 
     def post(self, request):
         try:
-            user = get_user_model().objects.get(pk=force_str(urlsafe_base64_decode(request.data.get('uid', ''))), is_active=True)
+            if not allow_request(request):
+                return Response({'detail': 'Too many requests. Please try again later.'}, status=429, headers={'Retry-After': '3600'})
+        except RecoveryUnavailable:
+            return Response({'detail': 'Password recovery is temporarily unavailable. Please try again later.'}, status=503)
+        if not isinstance(request.data, Mapping):
+            return Response({'detail': 'Enter a valid email address.'}, status=400)
+        form = RecoveryForm(request.data)
+        if not form.is_valid():
+            return Response(form.errors, status=400)
+        try:
+            send_recovery(form, mobile=True)
+        except RecoveryUnavailable:
+            return Response({'detail': 'Password recovery is temporarily unavailable. Please try again later.'}, status=503)
+        return Response({'detail': GENERIC_SENT})
+
+
+@method_decorator([never_cache, sensitive_post_parameters()], name='dispatch')
+class PasswordResetConfirm(PrivateRecoveryResponse, APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = []
+
+    @transaction.atomic
+    def post(self, request):
+        try:
+            if not allow_confirmation(request):
+                return Response({'detail': 'Too many requests. Please try again later.'}, status=429, headers={'Retry-After': '900'})
+        except RecoveryUnavailable:
+            return Response({'detail': 'Password recovery is temporarily unavailable. Please try again later.'}, status=503)
+        if not isinstance(request.data, Mapping):
+            return Response({'detail': INVALID_LINK}, status=400)
+        uid, token = request.data.get('uid'), request.data.get('token')
+        if not isinstance(uid, str) or len(uid) > 64 or not isinstance(token, str) or len(token) > 128:
+            return Response({'detail': INVALID_LINK}, status=400)
+        try:
+            user = get_user_model().objects.select_for_update().get(pk=force_str(urlsafe_base64_decode(uid)), is_active=True)
         except (ValueError, TypeError, OverflowError, UnicodeDecodeError, get_user_model().DoesNotExist):
             user = None
-        token = request.data.get('token')
-        if not user or not isinstance(token, str) or not default_token_generator.check_token(user, token):
-            return Response({'detail': 'This reset link is invalid or expired.'}, status=400)
-        form = SetPasswordForm(user, request.data)
+        if not user or not user.has_usable_password() or not default_token_generator.check_token(user, token):
+            return Response({'detail': INVALID_LINK}, status=400)
+        if any(not isinstance(request.data.get(key), str) or len(request.data[key]) > 4096 for key in ('new_password1', 'new_password2')):
+            return Response({'detail': 'Enter and confirm a valid new password.'}, status=400)
+        form = RecoverySetPasswordForm(user, request.data)
         if not form.is_valid():
             return Response(form.errors, status=400)
         form.save()

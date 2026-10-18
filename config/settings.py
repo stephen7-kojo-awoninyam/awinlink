@@ -134,6 +134,7 @@ INSTALLED_APPS = [
     "others",
     "art",
     "advertising",
+    "marketplace",
     # Third-party
     "rest_framework",
     "channels",
@@ -433,36 +434,30 @@ if not DEBUG or os.environ.get("RENDER"):
 # EMAIL CONFIGURATION
 # =====================================================
 
-if not DEBUG or os.environ.get("RENDER"):
+# Delivery is selected explicitly, never just by the presence of a secret.
+from config.email_settings import email_settings
+globals().update(email_settings(os.environ, production=not DEBUG or bool(os.environ.get("RENDER"))))
 
-    # Production email backend
-    EMAIL_BACKEND = (
-        "django.core.mail.backends.smtp.EmailBackend"
-    )
-
-else:
-
-    # Local development: print emails in terminal
-    EMAIL_BACKEND = (
-        "django.core.mail.backends.console.EmailBackend"
-    )
-
-
-# SMTP configuration (provided through environment variables)
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-
-EMAIL_USE_TLS = (
-    os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
+# Recovery links never trust a caller-supplied Host or forwarded host header.
+PASSWORD_RESET_TIMEOUT = int(os.environ.get("PASSWORD_RESET_TIMEOUT", "3600"))
+PASSWORD_RESET_BASE_URL = os.environ.get(
+    "PASSWORD_RESET_BASE_URL",
+    "http://localhost:8000" if DEBUG else "https://" + os.environ.get(
+        "RAILWAY_PUBLIC_DOMAIN", os.environ.get("RENDER_EXTERNAL_HOSTNAME", "awinlink-production.up.railway.app")),
+).rstrip("/")
+PASSWORD_RESET_TRUSTED_PROXY_COUNT = int(os.environ.get("PASSWORD_RESET_TRUSTED_PROXY_COUNT", "0"))
+PASSWORD_RESET_TRUSTED_IP_HEADER = os.environ.get(
+    "PASSWORD_RESET_TRUSTED_IP_HEADER",
+    "HTTP_X_REAL_IP" if os.environ.get("RAILWAY_ENVIRONMENT_NAME") or os.environ.get("RAILWAY_ENVIRONMENT") else "",
 )
-
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-
-DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL",
-    "Awinlink <noreply@awinlink.com>"
-)                        
+# Shared atomic counters across web/API workers. Local development uses default cache.
+PASSWORD_RESET_CACHE_ALIAS = "default"
+if os.environ.get("REDIS_URL"):
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+              "password_reset": {"BACKEND": "django.core.cache.backends.redis.RedisCache",
+                                 "LOCATION": os.environ["REDIS_URL"], "KEY_PREFIX": "awinlink-recovery",
+                                 "OPTIONS": {"socket_connect_timeout": 2, "socket_timeout": 2}}}
+    PASSWORD_RESET_CACHE_ALIAS = "password_reset"
 
 CSRF_TRUSTED_ORIGINS = [
     "https://awinlink-production.up.railway.app",

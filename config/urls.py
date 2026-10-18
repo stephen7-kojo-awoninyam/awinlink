@@ -24,6 +24,8 @@ from django.views.static import serve
 from notifications.views import service_worker
 
 urlpatterns = [
+    path("marketplace/", include("marketplace.urls")),
+    path("api/marketplace/", include("marketplace.api_urls")),
     # Preserve POST bodies from older clients using the capitalized prefix.
     path("Connections/connection/<int:connection_id>/accept/", connection_views.accept_connection_request),
     path("Connections/connection/<int:connection_id>/reject/", connection_views.reject_connection_request),
