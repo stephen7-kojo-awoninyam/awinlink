@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  AppState,
   Image,
   Linking,
   KeyboardAvoidingView,
@@ -17,6 +16,7 @@ import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 
+import { useMessaging } from '@/src/messaging/useMessaging';
 import { apiRequest } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { waitForCallEndRequests } from '@/src/calls/callLifecycle';
@@ -70,15 +70,10 @@ export default function ConversationScreen() {
     }
   }, [conversationId]);
 
+  const { typing, sendTyping } = useMessaging(loadMessages, conversationId);
   useFocusEffect(useCallback(() => {
     void loadMessages();
-    const timer = setInterval(() => {
-      if (AppState.currentState === 'active') void loadMessages();
-    }, 5000);
-    const subscription = AppState.addEventListener('change', state => {
-      if (state === 'active') void loadMessages();
-    });
-    return () => { clearInterval(timer); subscription.remove(); loadGeneration.current += 1; };
+    return () => { loadGeneration.current += 1; };
   }, [loadMessages]));
 
   function appendMessage(message: Message) {
@@ -124,6 +119,7 @@ export default function ConversationScreen() {
       );
       appendMessage(message);
       setDraft('');
+      sendTyping('');
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : 'Unable to send this message.');
     } finally {
@@ -194,6 +190,7 @@ export default function ConversationScreen() {
                   <Text style={styles.callButtonText}>Video</Text>
                 </Pressable>
               </View>
+              {typing ? <Text accessibilityLiveRegion="polite">{typing}</Text> : null}
               <ScrollView
                 contentContainerStyle={styles.messageList}
                 keyboardShouldPersistTaps="handled"
@@ -253,7 +250,7 @@ export default function ConversationScreen() {
                 <TextInput
                   accessibilityLabel="Message"
                   multiline
-                  onChangeText={setDraft}
+                  onChangeText={value => { setDraft(value); sendTyping(value); }}
                   placeholder="Write a message..."
                   placeholderTextColor={colors.muted}
                   style={styles.input}

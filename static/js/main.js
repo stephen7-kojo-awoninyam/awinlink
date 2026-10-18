@@ -2805,6 +2805,7 @@ function connectGlobalUserSocket() {
 
             if (awinlinkUserSocket !== socket) return;
 
+            window.dispatchEvent(new Event("awinlink:reconnected"));
             awinlinkUserSocketRetryDelay = 1000;
             if (awinlinkUserSocketReconnectTimer) {
                 clearTimeout(awinlinkUserSocketReconnectTimer);
@@ -2856,6 +2857,9 @@ function connectGlobalUserSocket() {
 
                 }
 
+                if (['message_created', 'messages_read', 'typing'].includes(data.type)) {
+                    window.dispatchEvent(new CustomEvent('awinlink:messaging', { detail: data }));
+                }
                 if (data.type === 'call_ended') handleCallEnded(data);
                 if (data.type === "notification_created") {
                     window.dispatchEvent(
@@ -2948,3 +2952,24 @@ function stopCallTimer() {
     callTimerInterval = null;
     callConnectedAt = null;
 }
+// Keep message badges consistent across tabs and after reconnecting.
+let messageBadgeTimer;
+function refreshMessageBadges() {
+    clearTimeout(messageBadgeTimer);
+    messageBadgeTimer = setTimeout(async () => {
+        try {
+            const response = await fetch('/api/messaging/conversations/');
+            if (!response.ok) return;
+            const conversations = await response.json();
+            const count = conversations.reduce((sum, conversation) => sum + (conversation.unread_count || 0), 0);
+            document.querySelectorAll('[data-message-unread]').forEach(badge => {
+                badge.textContent = String(count);
+                badge.hidden = count === 0;
+            });
+        } catch { /* Retry with the next live event. */ }
+    }, 100);
+}
+window.addEventListener('awinlink:messaging', event => {
+    if (['message_created', 'messages_read'].includes(event.detail.type)) refreshMessageBadges();
+});
+window.addEventListener('awinlink:reconnected', refreshMessageBadges);

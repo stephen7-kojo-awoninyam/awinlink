@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.views.decorators.http import require_POST
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
@@ -64,6 +65,7 @@ def _message_reply_preview(message):
 # =====================================================
 
 @login_required
+@transaction.atomic
 def conversation(request, conversation_id):
 
 
@@ -84,6 +86,9 @@ def conversation(request, conversation_id):
 
     )
 
+
+    from .realtime import mark_read
+    mark_read(request.user, conversation.pk)
 
     # ==========================================
     # GET MESSAGES
@@ -126,6 +131,8 @@ def conversation(request, conversation_id):
     # ==========================================
 
     if request.method == "POST":
+        from accounts.safety import require_unblocked
+        require_unblocked(request.user, conversation.participants.values_list("user_id", flat=True))
 
         content = request.POST.get(
 
@@ -339,6 +346,7 @@ def conversation(request, conversation_id):
 # =====================================================
 
 @login_required
+@transaction.atomic
 def send_message(request, conversation_id):
 
     # ==========================================
@@ -359,6 +367,8 @@ def send_message(request, conversation_id):
     )
 
     if request.method == "POST":
+        from accounts.safety import require_unblocked
+        require_unblocked(request.user, conversation.participants.values_list("user_id", flat=True))
 
         is_ajax = (
             request.headers.get("x-requested-with") == "XMLHttpRequest"
@@ -644,19 +654,11 @@ def conversation_list(request):
         # UNREAD MESSAGE COUNT
         # ==========================================
 
-        conversation.unread_count = (
-
-            conversation.messages.filter(
-
-                is_read=False
-
-            ).exclude(
-
-                sender=request.user
-
-            ).count()
-
-        )
+        participant = conversation.participants.get(user=request.user)
+        unread = conversation.messages.exclude(sender=request.user)
+        if participant.last_read_at:
+            unread = unread.filter(created_at__gt=participant.last_read_at)
+        conversation.unread_count = unread.count()
 
 
         # ==========================================

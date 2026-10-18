@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import F, Q
 from messaging.models import Message
 
 
@@ -11,12 +11,10 @@ def unread_messages(request):
         }
 
     count = Message.objects.filter(
-        is_read=False
-    ).filter(
-        ~Q(sender=request.user)
-    ).filter(
-        conversation__participants__user=request.user
-    ).distinct().count()
+        Q(conversation__participants__last_read_at__isnull=True) |
+        Q(created_at__gt=F('conversation__participants__last_read_at')),
+        conversation__participants__user=request.user,
+    ).exclude(sender=request.user).distinct().count()
 
     return {
         "unread_message_count": count

@@ -522,7 +522,7 @@
                          MY MESSAGE
                     ================================================== -->
 
-                    <div class="message-row mine">
+                    <div class="message-row mine" data-message-id="{{ message.id }}">
 
                         <div class="message-bubble">
 
@@ -671,7 +671,7 @@
                          RECEIVED MESSAGE
                     ================================================== -->
 
-                    <div class="message-row received">
+                    <div class="message-row received" data-message-id="{{ message.id }}">
 
                         <div class="message-bubble">
 
@@ -2225,18 +2225,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     function appendSentMessage(message) {
+        if (chatBody.querySelector(`[data-message-id="${Number(message.id)}"]`)) return;
+        const own = !message.sender || message.sender.id === Number("{{ request.user.id }}");
+        message = { ...message, image_url: message.image_url || message.image,
+            video_url: message.video_url || message.video, audio_url: message.audio_url || message.audio,
+            file_url: message.file_url || message.file };
         const emptyState = document.getElementById("emptyConversation");
         if (emptyState) emptyState.remove();
 
         const row = document.createElement("div");
-        row.className = "message-row mine";
+        row.className = own ? "message-row mine" : "message-row received";
+        row.dataset.messageId = message.id;
 
         const bubble = document.createElement("div");
         bubble.className = "message-bubble";
 
         const sender = document.createElement("div");
         sender.className = "sender-name";
-        sender.textContent = "You";
+        sender.textContent = own ? "You" : (message.sender.first_name || message.sender.username);
         bubble.appendChild(sender);
 
         if (message.reply_to) {
@@ -2316,16 +2322,58 @@ document.addEventListener("DOMContentLoaded", function () {
         replyButton.type = "button";
         replyButton.className = "reply-message-button";
         replyButton.dataset.replyId = message.id;
-        replyButton.dataset.replyAuthor = "You";
+        replyButton.dataset.replyAuthor = sender.textContent;
         replyButton.dataset.replyContent = message.content || "";
         replyButton.dataset.replyType = message.message_type || "TEXT";
         replyButton.textContent = "Reply";
         bubble.appendChild(replyButton);
 
         row.appendChild(bubble);
-        chatBody.appendChild(row);
+        const nextRow = Array.from(chatBody.querySelectorAll('[data-message-id]'))
+            .find(existing => Number(existing.dataset.messageId) > Number(message.id));
+        chatBody.insertBefore(row, nextRow || null);
         scrollToBottom();
     }
+
+    const conversationId = Number("{{ conversation.id }}");
+    const typingStatus = document.createElement('div');
+    typingStatus.setAttribute('role', 'status');
+    messageForm.before(typingStatus);
+    let typingExpiry, typingStop, lastTyping = 0;
+    function typingSend(active) {
+        if (typeof awinlinkUserSocket !== 'undefined' && awinlinkUserSocket?.readyState === WebSocket.OPEN)
+            awinlinkUserSocket.send(JSON.stringify({type: 'typing', conversation_id: conversationId, is_typing: active}));
+    }
+    messageInput.addEventListener('input', () => {
+        if (Date.now() - lastTyping > 1000) { typingSend(!!messageInput.value.trim()); lastTyping = Date.now(); }
+        clearTimeout(typingStop);
+        typingStop = setTimeout(() => typingSend(false), 2000);
+    });
+    function markRead() {
+        if (document.visibilityState === 'visible')
+            fetch(`/api/messaging/conversations/${conversationId}/read-all/`, {method: 'POST', headers: {'X-CSRFToken': messageForm.querySelector('[name=csrfmiddlewaretoken]').value}}).catch(() => {});
+    }
+    async function catchUp() {
+        try {
+            const response = await fetch(`/api/messaging/conversations/${conversationId}/messages/`);
+            if (!response.ok) return;
+            (await response.json()).forEach(appendSentMessage);
+            markRead();
+        } catch { /* Retry on reconnect. */ }
+    }
+    window.addEventListener('awinlink:messaging', event => {
+        const data = event.detail;
+        if (data.conversation_id !== conversationId) return;
+        if (data.type === 'message_created') { appendSentMessage(data.message); markRead(); }
+        if (data.type === 'typing' && data.user_id !== Number("{{ request.user.id }}")) {
+            clearTimeout(typingExpiry);
+            typingStatus.textContent = data.is_typing ? `${data.username} is typing...` : '';
+            typingExpiry = setTimeout(() => { typingStatus.textContent = ''; }, 4000);
+        }
+    });
+    window.addEventListener('awinlink:reconnected', catchUp);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') catchUp(); else typingSend(false); });
+    catchUp();
 
     messageForm.addEventListener("submit", async function (event) {
         event.preventDefault();
@@ -2379,6 +2427,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             appendSentMessage(data.message);
+            typingSend(false);
             messageForm.reset();
             clearReplyTarget();
             audioBlob = null;

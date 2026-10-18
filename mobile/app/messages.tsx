@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 
+import { useMessaging } from '@/src/messaging/useMessaging';
 import { apiRequest } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { EmptyState } from '@/src/components/EmptyState';
@@ -41,6 +42,8 @@ export default function MessagesScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  useMessaging(loadConversations);
 
   useFocusEffect(
     useCallback(() => {
@@ -167,7 +170,7 @@ export default function MessagesScreen() {
                       : 'Attachment')
               : 'No messages yet. Say hello.';
             const hasUnread =
-              !!lastMessage && lastMessage.sender.id !== user?.id && !lastMessage.is_read;
+              (conversation.unread_count ?? 0) > 0;
 
             return (
               <Pressable

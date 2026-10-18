@@ -91,6 +91,7 @@ export type Message = {
 };
 
 export type Conversation = {
+  unread_count?: number;
   id: number;
   opportunity: number | null;
   is_group: boolean;

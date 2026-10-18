@@ -142,10 +142,10 @@
         const noResults = document.getElementById("conversationNoResults");
         let activeFilter = "all";
 
-        if (!searchInput || rows.length === 0) return;
+
 
         const updateRows = () => {
-            const query = searchInput.value.trim().toLocaleLowerCase();
+            const query = (document.getElementById("conversationSearch")?.value || "").trim().toLocaleLowerCase();
             let visibleCount = 0;
 
             rows.forEach((row) => {
@@ -163,16 +163,52 @@
             if (noResults) noResults.hidden = visibleCount !== 0;
         };
 
-        searchInput.addEventListener("input", updateRows);
-        filterButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                activeFilter = button.dataset.filter;
-                filterButtons.forEach((filter) => {
-                    filter.setAttribute("aria-pressed", String(filter === button));
-                });
-                updateRows();
-            });
+        document.addEventListener('input', event => {
+            if (event.target.id === 'conversationSearch') updateRows();
         });
+        document.addEventListener('click', event => {
+            const button = event.target.closest('[data-filter]');
+            if (!button) return;
+            activeFilter = button.dataset.filter;
+            document.querySelectorAll('[data-filter]').forEach(filter => filter.setAttribute('aria-pressed', String(filter === button)));
+            updateRows();
+        });
+        let refreshing = false, refreshAgain = false;
+        async function refreshInbox() {
+            if (refreshing) { refreshAgain = true; return; }
+            if (document.visibilityState !== 'visible') return;
+            refreshing = true;
+            try {
+                const response = await fetch(window.location.href);
+                if (!response.ok) return;
+                const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+                const next = page.querySelector('.messenger-list-pane');
+                const current = document.querySelector('.messenger-list-pane');
+                if (next && current) {
+                    // Update rows in place so search and filter listeners stay active.
+                    const oldRows = document.getElementById('conversationRows');
+                    const newRows = page.getElementById('conversationRows');
+                    if (oldRows && newRows) {
+                        oldRows.replaceChildren(...newRows.children);
+                        rows.splice(0, rows.length, ...oldRows.querySelectorAll('[data-conversation-row]'));
+                        updateRows();
+                    } else if (!oldRows && newRows) {
+                        current.replaceChildren(...next.children);
+                        rows.splice(0, rows.length, ...current.querySelectorAll("[data-conversation-row]"));
+                        updateRows();
+                    }
+                }
+            } catch { /* Reconnect retries catch-up. */ }
+            finally {
+                refreshing = false;
+                if (refreshAgain) { refreshAgain = false; refreshInbox(); }
+            }
+        }
+        window.addEventListener('awinlink:messaging', event => {
+            if (['message_created', 'messages_read'].includes(event.detail.type)) refreshInbox();
+        });
+        window.addEventListener('awinlink:reconnected', refreshInbox);
+        document.addEventListener('visibilitychange', refreshInbox);
     })();
 </script>
 {% endblock %}

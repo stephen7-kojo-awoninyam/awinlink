@@ -213,7 +213,7 @@ class MyConversationsAPIView(APIView):
 
         serializer = ConversationSerializer(
             conversations,
-            many=True
+            many=True, context={"request": request}
         )
 
         return Response(
@@ -684,6 +684,7 @@ class SendMessageAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, conversation_id):
 
         # ----------------------------------------------------
@@ -723,6 +724,8 @@ class SendMessageAPIView(APIView):
                 },
                 status=status.HTTP_403_FORBIDDEN
             )
+
+        require_unblocked(request.user, conversation.participants.values_list("user_id", flat=True))
 
         # ----------------------------------------------------
         # VALIDATE MESSAGE
@@ -948,6 +951,9 @@ class MessageReadAPIView(APIView):
         # MARK READ
         # ----------------------------------------------------
 
+        from .realtime import mark_read
+        mark_read(request.user, message.conversation_id, message.created_at)
+
         message.is_read = True
 
         message.save(
@@ -1014,6 +1020,9 @@ class ConversationReadAllAPIView(APIView):
         # ----------------------------------------------------
         # MARK OTHER USERS' MESSAGES AS READ
         # ----------------------------------------------------
+
+        from .realtime import mark_read
+        mark_read(request.user, conversation.pk)
 
         updated = (
             Message.objects

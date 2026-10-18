@@ -133,6 +133,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    unread_count = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
 
     class Meta:
@@ -147,6 +148,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             "created_by",
             "participants",
             "last_message",
+            "unread_count",
             "created_at",
             "updated_at",
         ]
@@ -156,9 +158,22 @@ class ConversationSerializer(serializers.ModelSerializer):
             "created_by",
             "participants",
             "last_message",
+            "unread_count",
             "created_at",
             "updated_at",
         ]
+
+    def get_unread_count(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return 0
+        participant = obj.participants.filter(user=request.user).first()
+        if not participant:
+            return 0
+        messages = obj.messages.exclude(sender=request.user)
+        if participant.last_read_at:
+            messages = messages.filter(created_at__gt=participant.last_read_at)
+        return messages.count()
 
     def get_last_message(self, obj):
 

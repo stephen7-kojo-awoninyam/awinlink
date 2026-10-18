@@ -94,6 +94,8 @@ class Conversation(models.Model):
 
 class ConversationParticipant(models.Model):
 
+    last_read_at = models.DateTimeField(null=True, blank=True)
+
     conversation = models.ForeignKey(
         Conversation,
         on_delete=models.CASCADE,

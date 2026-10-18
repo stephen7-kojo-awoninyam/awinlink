@@ -699,13 +699,7 @@
         </span>
 
 
-        {% if unread_message_count > 0 %}
-
-            <span class="sidebar-badge">
-                {{ unread_message_count }}
-            </span>
-
-        {% endif %}
+        <span class="sidebar-badge" data-message-unread {% if not unread_message_count %}hidden{% endif %}>{{ unread_message_count }}</span>
 
     </a>
 
@@ -935,13 +929,7 @@
 
             <i class="bi bi-chat-dots"></i>
 
-            {% if unread_message_count > 0 %}
-
-                <span class="header-badge">
-                    {{ unread_message_count }}
-                </span>
-
-            {% endif %}
+            <span class="header-badge" data-message-unread {% if not unread_message_count %}hidden{% endif %}>{{ unread_message_count }}</span>
 
         </a>
 
@@ -1189,9 +1177,7 @@
     <a href="{% url 'messaging:conversation_list' %}" class="mobile-nav-link">
         <span class="mobile-nav-icon">
             <i class="bi bi-chat-square" aria-hidden="true"></i>
-            {% if unread_message_count > 0 %}
-                <span class="mobile-nav-badge">{{ unread_message_count }}<span class="visually-hidden"> unread messages</span></span>
-            {% endif %}
+            <span class="mobile-nav-badge" data-message-unread {% if not unread_message_count %}hidden{% endif %}>{{ unread_message_count }}</span>
         </span>
         <span>Messages</span>
     </a>

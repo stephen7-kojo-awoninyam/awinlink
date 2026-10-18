@@ -288,6 +288,19 @@ class CallConsumer(AsyncWebsocketConsumer):
 
 
 class UserConsumer(AsyncWebsocketConsumer):
+    @database_sync_to_async
+    def messaging_access(self, conversation_id):
+        from .realtime import can_access
+        return can_access(self.user, conversation_id)
+
+    async def messaging_event(self, event):
+        import time
+        if self.scope.get('jwt_expires_at', float('inf')) <= time.time():
+            await self.close(code=4001)
+            return
+        if await self.messaging_access(event['data']['conversation_id']):
+            await self.send(text_data=json.dumps(event['data']))
+
     async def call_ended(self, event):
         await self.send(text_data=json.dumps({
             'type': 'call_ended', 'call_id': event['call_id'],
@@ -302,7 +315,7 @@ class UserConsumer(AsyncWebsocketConsumer):
         # AUTHENTICATION
         # ---------------------------------------------------------
 
-        if not self.user.is_authenticated:
+        if not self.user.is_authenticated or not self.user.is_active or self.scope.get('jwt_invalid'):
 
             await self.close(code=4001)
 
@@ -362,13 +375,32 @@ class UserConsumer(AsyncWebsocketConsumer):
                     error,
                 )
 
-    async def receive(self, text_data):
-
-        # ---------------------------------------------------------
-        # GLOBAL USER SOCKET IS CURRENTLY RECEIVE-ONLY
-        # ---------------------------------------------------------
-
-        return   
+    async def receive(self, text_data=None, bytes_data=None):
+        import time
+        if self.scope.get('jwt_expires_at', float('inf')) <= time.time():
+            await self.close(code=4001)
+            return
+        try:
+            data = json.loads(text_data)
+            if not isinstance(data, dict) or data.get('type') != 'typing':
+                return
+            conversation_id = int(data['conversation_id'])
+            if type(data.get('is_typing')) is not bool:
+                return
+        except (ValueError, TypeError, KeyError):
+            return
+        if not await self.messaging_access(conversation_id):
+            return
+        now = time.monotonic()
+        if data['is_typing'] and now - getattr(self, '_last_typing', 0) < 0.8:
+            return
+        self._last_typing = now
+        from .realtime import publish
+        await database_sync_to_async(publish)(conversation_id, {
+            'type': 'typing', 'conversation_id': conversation_id,
+            'user_id': self.user.pk, 'username': self.user.get_full_name() or self.user.username,
+            'is_typing': data['is_typing'],
+        })
     
     
     async def incoming_call(self, event):

@@ -438,7 +438,7 @@ class UserConsumerRedisFailureTests(SimpleTestCase):
     def test_redis_timeout_rejects_socket_without_raising(self):
         consumer = UserConsumer()
         consumer.scope = {
-            "user": SimpleNamespace(id=42, is_authenticated=True),
+            "user": SimpleNamespace(id=42, is_authenticated=True, is_active=True),
         }
         consumer.channel_name = "test-channel"
         consumer.channel_layer = SimpleNamespace(
