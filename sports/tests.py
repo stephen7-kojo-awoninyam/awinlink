@@ -10,7 +10,7 @@ from sports.models import Sport, SportCategory
 
 
 class SeedSportCategoriesTests(TestCase):
-    # Independent coverage contract: these 25 extend the original 20 sports.
+    # Independent coverage contract for sports beyond the original domain seed.
     EXTENDED_SPORTS = {
         "Archery": "Field Archery",
         "Wrestling": "Greco-Roman",
@@ -37,6 +37,11 @@ class SeedSportCategoriesTests(TestCase):
         "Bobsleigh": "Monobob",
         "Biathlon": "Pursuit",
         "Equestrian": "Eventing",
+        "Powerlifting": "Deadlift",
+        "Skateboarding": "Street",
+        "Field Hockey": "Defender",
+        "Netball": "Goal Shooter",
+        "Squash": "Singles",
     }
 
     def run_seed(self, **options):
@@ -94,8 +99,8 @@ class SeedSportCategoriesTests(TestCase):
         self.assertIn("Added 0 categories", self.run_seed())
         self.assertEqual(after, list(SportCategory.objects.order_by("pk").values()))
 
-    def test_all_25_extended_sports_have_sport_specific_categories(self):
-        self.assertEqual(len(self.EXTENDED_SPORTS), 25)
+    def test_all_extended_sports_have_sport_specific_categories(self):
+        self.assertEqual(len(self.EXTENDED_SPORTS), 30)
         for name in self.EXTENDED_SPORTS:
             Sport.objects.create(name=name)
         output = self.run_seed()
@@ -108,7 +113,7 @@ class SeedSportCategoriesTests(TestCase):
                     self.assertTrue(category.name.strip())
                     self.assertLessEqual(len(category.name), SportCategory._meta.get_field("name").max_length)
 
-    def test_failure_on_last_extended_sport_rolls_back_all_25_sports(self):
+    def test_failure_on_last_extended_sport_rolls_back_all_sports(self):
         sports = [Sport.objects.create(name=name) for name in self.EXTENDED_SPORTS]
         SportCategory.objects.create(sport=sports[0], name="Custom", description="Preserve")
         before = list(SportCategory.objects.values())
@@ -118,16 +123,43 @@ class SeedSportCategoriesTests(TestCase):
         def fail_last_batch(*args, **kwargs):
             nonlocal calls
             calls += 1
-            if calls == 25:
+            if calls == len(self.EXTENDED_SPORTS):
                 raise RuntimeError("Last sport failed")
             return original(*args, **kwargs)
 
         with patch.object(SportCategory.objects, "bulk_create", side_effect=fail_last_batch):
             with self.assertRaisesMessage(RuntimeError, "Last sport failed"):
                 self.run_seed()
-        self.assertEqual(calls, 25)
+        self.assertEqual(calls, len(self.EXTENDED_SPORTS))
         self.assertEqual(before, list(SportCategory.objects.values()))
-        self.assertEqual(Sport.objects.count(), 25)
+        self.assertEqual(Sport.objects.count(), len(self.EXTENDED_SPORTS))
+
+    def test_seven_railway_sport_names_and_correct_spelling_are_supported(self):
+        expected = {
+            "Powerlifting": ("Squat", "Bench Press", "Deadlift", "Total"),
+            "sakteboarding": ("Street", "Park", "Vert", "Freestyle", "Downhill"),
+            "Skateboarding": ("Street", "Park", "Vert", "Freestyle", "Downhill"),
+            "Field Hockey": ("Goalkeeper", "Defender", "Midfielder", "Forward"),
+            "Netball": ("Goal Shooter", "Goal Attack", "Wing Attack", "Centre", "Wing Defence", "Goal Defence", "Goal Keeper"),
+            "squash": ("Singles", "Doubles", "Mixed Doubles"),
+            "Motorsport": SPORT_CATEGORIES["Motorsports"],
+            "Equestrian sports": SPORT_CATEGORIES["Equestrian"],
+        }
+        for name in expected:
+            Sport.objects.create(name=name)
+        before = list(Sport.objects.order_by("pk").values())
+        missing = sum(len(categories) for categories in expected.values())
+        self.assertIn(
+            f"Dry run: would add {missing} categories; 0 unsupported sports skipped.",
+            self.run_seed(dry_run=True),
+        )
+        self.assertFalse(SportCategory.objects.exists())
+        self.assertIn(f"Added {missing} categories; 0 unsupported sports skipped.", self.run_seed())
+        for sport in Sport.objects.all():
+            with self.subTest(sport=sport.name):
+                self.assertSetEqual(set(sport.categories.values_list("name", flat=True)), set(expected[sport.name]))
+        self.assertIn("Added 0 categories; 0 unsupported sports skipped.", self.run_seed())
+        self.assertEqual(before, list(Sport.objects.order_by("pk").values()))
 
     def test_dry_run_has_no_writes_and_reports_same_missing_count(self):
         sport = Sport.objects.create(name="Basketball")

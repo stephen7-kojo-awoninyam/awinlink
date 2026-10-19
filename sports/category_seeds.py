@@ -46,6 +46,11 @@ SPORT_CATEGORIES = {
     "Bobsleigh": ("Monobob", "Two-person Bobsleigh", "Four-person Bobsleigh"),
     "Biathlon": ("Individual", "Short Individual", "Sprint", "Pursuit", "Mass Start", "Relay", "Mixed Relay", "Single Mixed Relay"),
     "Equestrian": ("Dressage", "Jumping", "Eventing", "Driving", "Endurance", "Vaulting", "Para Dressage", "Para Driving"),
+    "Powerlifting": ("Squat", "Bench Press", "Deadlift", "Total"),
+    "Skateboarding": ("Street", "Park", "Vert", "Freestyle", "Downhill"),
+    "Field Hockey": ("Goalkeeper", "Defender", "Midfielder", "Forward"),
+    "Netball": ("Goal Shooter", "Goal Attack", "Wing Attack", "Centre", "Wing Defence", "Goal Defence", "Goal Keeper"),
+    "Squash": ("Singles", "Doubles", "Mixed Doubles"),
 }
 
 
@@ -60,6 +65,9 @@ SPORT_ALIASES = {
     "mixed martial arts": "MMA",
     "e-sports": "Esports",
     "motor sports": "Motorsports",
+    "motorsport": "Motorsports",
+    "sakteboarding": "Skateboarding",
+    "equestrian sports": "Equestrian",
     "table-tennis": "Table Tennis",
     "ping pong": "Table Tennis",
 }
