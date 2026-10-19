@@ -5,6 +5,8 @@ Create Account | Awinlink
 {% endblock %}
 
 {% block content %}
+<form method="post" action="{% url 'google_start' %}" class="text-center my-3">{% csrf_token %}<button type="submit" class="btn btn-outline-primary">Continue with Google</button></form>
+
 
 <div class="auth-card register-card">
 
@@ -689,6 +691,15 @@ Create Account | Awinlink
     <!-- =================================================
          SUBMIT
     ================================================== -->
+
+    <div class="mb-3">
+        {{ form.terms_version }}{{ form.terms_version.errors }}
+        <label for="{{ form.terms_accepted.id_for_label }}">
+            {{ form.terms_accepted }} I accept the <a href="{% url 'terms' %}" target="_blank" rel="noopener">Terms of Use</a>.
+        </label>
+        {{ form.terms_accepted.errors }}
+        <p>Read our <a href="{% url 'privacy' %}" target="_blank" rel="noopener">Privacy Policy</a> and <a href="{% url 'community_guidelines' %}" target="_blank" rel="noopener">Community Guidelines</a>.</p>
+    </div>
 
     <button
         type="submit"

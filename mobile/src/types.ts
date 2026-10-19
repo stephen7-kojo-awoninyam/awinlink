@@ -16,6 +16,8 @@ export type AuthResponse = {
 };
 
 export type RegistrationData = {
+  terms_accepted: boolean;
+  terms_version: string;
   first_name: string;
   last_name: string;
   username: string;

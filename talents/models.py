@@ -4,6 +4,14 @@ from django.conf import settings
 
 class TalentProfile(models.Model):
 
+    def clean(self):
+        super().clean()
+        from django.core.exceptions import ValidationError
+        self.talent_area = (self.talent_area or "").strip()
+        if self.talent_category == "OTHERS" and self.talent_area.casefold() in {"", "other", "others", "talent", "other talent"}:
+            raise ValidationError({"talent_area": "Enter your specific talent, such as Public Speaking or Entrepreneurship."})
+
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -194,6 +202,9 @@ class TalentProfile(models.Model):
                 self.talent_category,
                 "Talent Scout"
             )
+
+        if self.talent_category == "OTHERS" and self.talent_area:
+            return self.talent_area
 
         # Normal talent identities
         identities = {

@@ -7,6 +7,7 @@ urlpatterns = [
     path('delete-account/sign-in/', LoginView.as_view(template_name='core/deletion_login.html', next_page='/delete-account/'), name='deletion_login'),
     path('privacy/', public_page, {'page': 'privacy'}, name='privacy'),
     path('terms/', public_page, {'page': 'terms'}, name='terms'),
+    path('community-guidelines/', public_page, {'page': 'community-guidelines'}, name='community_guidelines'),
     path('support/', public_page, {'page': 'support'}, name='support'),
     path('delete-account/', public_page, {'page': 'delete-account'}, name='delete_account'),
     path("", views.home, name="home"),

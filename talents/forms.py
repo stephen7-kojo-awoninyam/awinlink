@@ -22,6 +22,12 @@ from sports.models import Sport
 
 class TalentProfileForm(forms.ModelForm):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["talent_area"].label = "Specific talent"
+        self.fields["talent_area"].help_text = "Required for Others. Enter your specific talent, such as Public Speaking or Entrepreneurship."
+
+
     class Meta:
 
         model = TalentProfile

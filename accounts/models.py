@@ -10,6 +10,9 @@ from django.db.models.functions import Lower
 
 class User(AbstractUser):
 
+    terms_accepted_version = models.CharField(max_length=64, blank=True, default="", editable=False)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True, editable=False)
+
     ROLE_CHOICES = (
         ("ATHLETE", "Athlete"),
         ("ORGANIZATION", "Organization"),
@@ -63,6 +66,24 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} - {self.role}"
+
+
+class GoogleIdentity(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="google_identity")
+    subject = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class GoogleAuthAttempt(models.Model):
+    state = models.CharField(max_length=64, unique=True)
+    nonce = models.CharField(max_length=64)
+    verifier = models.CharField(max_length=128)
+    mobile_secret_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    mobile_handoff_hash = models.CharField(max_length=64, blank=True)
+    link_user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
+    status = models.CharField(max_length=16, default="PENDING")
+    claims = models.JSONField(default=dict)
+    expires_at = models.DateTimeField(db_index=True)
 
 
 class UserBlock(models.Model):

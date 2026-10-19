@@ -95,6 +95,7 @@ export default function LoginScreen() {
             </Text>
           )}
 
+          <Pressable accessibilityRole="button" onPress={() => router.push('/google-auth')}><Text>Continue with Google</Text></Pressable>
           <Pressable
             accessibilityRole="button"
             disabled={submitting || !username || !password}

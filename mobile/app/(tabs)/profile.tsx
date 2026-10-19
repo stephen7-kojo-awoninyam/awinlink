@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 
 import { useAuth } from '@/src/auth/AuthProvider';
 import { Page, ui } from '@/src/components/Page';
+import { apiRequest } from '@/src/api/client';
 import { colors } from '@/src/theme';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -18,6 +19,16 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+  const [talentArea, setTalentArea] = useState('');
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    if (user?.role === 'ATHLETE') {
+      void apiRequest<{ talent_area?: string }>('talents/me/').then((profile) => {
+        if (active) setTalentArea(profile.talent_area || '');
+      }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [user]));
   if (!user) return <Redirect href="/login" />;
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username;
 
@@ -48,6 +59,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.details}>
+        {user.role === 'ATHLETE' && <Detail label="Specific talent" value={talentArea || 'Not provided; edit your profile'} />}
         <Detail label="Email" value={user.email || 'Not provided'} />
         <Detail label="Country" value={user.country || 'Not set'} />
         <Detail label="Ecosystem" value="Managed by your Awinlink profile" />

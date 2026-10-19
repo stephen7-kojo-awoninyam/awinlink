@@ -1,0 +1,20 @@
+{% extends 'accounts/base_auth.html' %}
+{% block content %}
+<div class="auth-card p-4">
+<h1>Continue with Google</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if linking_start %}
+<p>Link Google to the account you are signed in to. Confirm your Awinlink password, then choose your Google account. Email matches do not link accounts automatically.</p>
+<form method="post" action="{% url 'google_start' %}">{% csrf_token %}
+<input type="hidden" name="link" value="true">
+<label>Current Awinlink password <input type="password" name="password" autocomplete="current-password" required></label>
+<button type="submit">Link Google</button></form>
+{% elif ready %}
+<form method="post">{% csrf_token %}
+{% if form %}<p>Choose your account type and complete your profile details.</p>{{ form.as_p }}
+<p>By checking the acceptance box you accept the <a href="{% url 'terms' %}" target="_blank" rel="noopener">Terms of Use</a>. Read the <a href="{% url 'privacy' %}" target="_blank" rel="noopener">Privacy Policy</a> and <a href="{% url 'community_guidelines' %}" target="_blank" rel="noopener">Community Guidelines</a>.</p>{% endif %}
+<button type="submit">{% if linking %}Confirm Google linking{% elif form %}Create account{% else %}Sign in{% endif %}</button></form>
+{% endif %}
+<p><a href="{% url 'login' %}">Use existing sign-in</a> · <a href="{% url 'google_link' %}">Link Google to your account</a></p>
+</div>
+{% endblock %}

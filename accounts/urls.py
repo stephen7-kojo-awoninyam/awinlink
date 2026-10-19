@@ -3,9 +3,14 @@ from django.contrib.auth import views as auth_views
 
 from . import views
 from . import recovery_views
+from . import google_views
 
 
 urlpatterns = [
+path("google/start/", google_views.google_start, name="google_start"),
+path("google/callback/", google_views.google_callback, name="google_callback"),
+path("google/complete/", google_views.google_complete, name="google_complete"),
+path("google/link/", google_views.google_link, name="google_link"),
 # Registration, login and logout
 path("register/", views.register, name="register"),
 path("login/", views.user_login, name="login"),

@@ -2,6 +2,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.db import IntegrityError, transaction
 
+from accounts.legal import TERMS_VERSION
 from accounts.forms import UserRegistrationForm
 from accounts.models import User
 from coaches.models import CoachProfile
@@ -22,6 +23,8 @@ class UserRegistrationRoleTests(TestCase):
                 "country": "GH",
                 "password1": "StrongPass123!",
                 "password2": "StrongPass123!",
+                "terms_accepted": True,
+                "terms_version": TERMS_VERSION,
             }
         )
 
@@ -40,6 +43,8 @@ class UserRegistrationRoleTests(TestCase):
                 "role": "COACH",
                 "password1": "StrongPass123!",
                 "password2": "StrongPass123!",
+                "terms_accepted": True,
+                "terms_version": TERMS_VERSION,
             }
         )
 
@@ -58,6 +63,8 @@ class UserRegistrationRoleTests(TestCase):
                 "role": "COACH",
                 "password1": "StrongPass123!",
                 "password2": "StrongPass123!",
+                "terms_accepted": True,
+                "terms_version": TERMS_VERSION,
             }
         )
 
@@ -127,6 +134,8 @@ class RegistrationProfileTests(TestCase):
             "role": role,
             "password1": "StrongPass123!",
             "password2": "StrongPass123!",
+            "terms_accepted": True,
+            "terms_version": TERMS_VERSION,
         }
 
     def test_public_registration_choices_exclude_admin(self):

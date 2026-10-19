@@ -264,6 +264,7 @@ export default function TalentProfileScreen() {
               <Text style={styles.headline}>
                 {profile.headline || profile.talent_category || 'Awinlink talent'}
               </Text>
+              {!!profile.talent_area && <Text style={styles.headline}>{profile.talent_area}</Text>}
               <Text style={styles.location}>
                 {[profile.city, profile.country || profile.user.country].filter(Boolean).join(', ') ||
                   'Location not set'}

@@ -20,6 +20,7 @@ import {
   onSessionCleared,
 } from '@/src/api/client';
 import type { RegistrationData, User } from '@/src/types';
+import { exchangeGoogle, type GoogleResult, type GoogleExchange } from '@/src/google';
 
 const USER_KEY = 'awinlink.user';
 
@@ -29,6 +30,7 @@ type AuthContextValue = {
   sessionError: string | null;
   signIn: (username: string, password: string) => Promise<void>;
   signUp: (data: RegistrationData) => Promise<void>;
+  signInGoogle: (exchange: GoogleExchange, signup?: Record<string, unknown>, link?: boolean) => Promise<GoogleResult>;
   signOut: () => Promise<void>;
 };
 
@@ -113,6 +115,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setSessionError(null);
   }, []);
 
+  const signInGoogle = useCallback(async (exchange: GoogleExchange, signup?: Record<string, unknown>, link = false) => {
+    const response = await exchangeGoogle(exchange, signup, link);
+    if ('access' in response) {
+      await storeTokens(response.access, response.refresh);
+      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(response.user));
+      setUser(response.user);
+      setSessionError(null);
+    }
+    return response;
+  }, []);
+
   const signOut = useCallback(async () => {
     const voipToken = await SecureStore.getItemAsync('awinlink.voip-token');
     if (voipToken) {
@@ -137,8 +150,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, isLoading, sessionError, signIn, signUp, signOut }),
-    [user, isLoading, sessionError, signIn, signUp, signOut],
+    () => ({ user, isLoading, sessionError, signIn, signUp, signInGoogle, signOut }),
+    [user, isLoading, sessionError, signIn, signUp, signInGoogle, signOut],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

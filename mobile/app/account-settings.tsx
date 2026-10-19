@@ -3,6 +3,7 @@ import { Alert, Linking, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, useFocusEffect, router } from 'expo-router';
 import { apiRequest } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthProvider';
+import { policyUrl } from '@/src/legal';
 import { Page, ui } from '@/src/components/Page';
 import { openNativeCallSettings } from '@/src/calls/nativeCallUI';
 
@@ -32,12 +33,14 @@ export default function AccountSettings() {
     finally { setPassword(''); setBusy(false); }
   }
   const links = [
-    ['Privacy policy', process.env.EXPO_PUBLIC_PRIVACY_URL],
-    ['Terms of use', process.env.EXPO_PUBLIC_TERMS_URL],
+    ['Privacy policy', process.env.EXPO_PUBLIC_PRIVACY_URL || (process.env.EXPO_PUBLIC_API_URL ? policyUrl('privacy') : undefined)],
+    ['Terms of use', process.env.EXPO_PUBLIC_TERMS_URL || (process.env.EXPO_PUBLIC_API_URL ? policyUrl('terms') : undefined)],
+    ['Community Guidelines', process.env.EXPO_PUBLIC_API_URL ? policyUrl('community-guidelines') : undefined],
     ['Support', process.env.EXPO_PUBLIC_SUPPORT_URL],
     ['Delete account in browser', process.env.EXPO_PUBLIC_DELETE_ACCOUNT_URL],
   ];
   return <><Stack.Screen options={{ headerShown: true, title: 'Account and safety' }} /><Page title="Account and safety">
+    <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/google-auth', params: { link: '1' } })}><Text>Link Google to this account</Text></Pressable>
     <Pressable accessibilityRole="button" onPress={() => { void Linking.openSettings().catch(() => setError('Unable to open device settings.')); }}><Text>Notification and device permissions</Text></Pressable>
     <Pressable accessibilityRole="button" onPress={() => openNativeCallSettings()}><Text>Native calling account settings (Android)</Text></Pressable>
     {links.filter(([, url]) => url).map(([label, url]) => <Pressable key={label} accessibilityRole="link" onPress={() => { void Linking.openURL(url!).catch(() => setError('Unable to open link.')); }}><Text>{label}</Text></Pressable>)}

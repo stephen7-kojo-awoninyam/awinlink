@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,6 +15,7 @@ import { Redirect, Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/src/auth/AuthProvider';
+import { policyUrl, TERMS_VERSION } from '@/src/legal';
 import { colors } from '@/src/theme';
 import type { RegistrationData } from '@/src/types';
 
@@ -44,6 +46,7 @@ export default function RegisterScreen() {
     password1: '',
     password2: '',
   });
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -54,11 +57,22 @@ export default function RegisterScreen() {
     setValues((current) => ({ ...current, [field]: value }));
   }
 
+  async function openPolicy(path: 'terms' | 'privacy' | 'community-guidelines') {
+    try { await Linking.openURL(policyUrl(path)); }
+    catch { setError('Unable to open policy. Please try again before accepting the Terms.'); }
+  }
+
   async function submit() {
+    if (!termsAccepted) {
+      setError('You must explicitly accept the Terms of Use to register.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
       const data: RegistrationData = {
+        terms_accepted: termsAccepted,
+        terms_version: TERMS_VERSION,
         first_name: values.first_name.trim(),
         last_name: values.last_name.trim(),
         username: values.username.trim().replace(/^@/, ''),
@@ -111,6 +125,7 @@ export default function RegisterScreen() {
               Join your ecosystem and build your Awinlink profile.
             </Text>
 
+            <Pressable accessibilityRole="button" onPress={() => router.push('/google-auth')}><Text>Continue with Google</Text></Pressable>
             <View style={styles.form}>
               <Text style={styles.label}>I am joining as</Text>
               <View style={styles.roles}>
@@ -155,6 +170,16 @@ export default function RegisterScreen() {
                 Use the two-letter ISO country code (for example GH or US); phone numbers are validated for that country.
               </Text>
 
+              <Pressable accessibilityRole="checkbox" accessibilityLabel="I accept the Terms of Use"
+                accessibilityState={{ checked: termsAccepted }} disabled={submitting}
+                onPress={() => setTermsAccepted((current) => !current)}>
+                <Text>{termsAccepted ? '[x]' : '[ ]'} I accept the Terms of Use</Text>
+              </Pressable>
+              {(['terms', 'privacy', 'community-guidelines'] as const).map((path) => (
+                <Pressable key={path} accessibilityRole="link" onPress={() => void openPolicy(path)}>
+                  <Text style={styles.countryNote}>{path === 'terms' ? 'Read Terms of Use' : path === 'privacy' ? 'Read Privacy Policy' : 'Read Community Guidelines'}</Text>
+                </Pressable>
+              ))}
               {!!error && (
                 <Text accessibilityRole="alert" style={styles.error}>
                   {error}

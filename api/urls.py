@@ -1,4 +1,5 @@
 from django.urls import include, path
+from accounts.google_views import GoogleMobileStart, GoogleMobileComplete
 
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -113,6 +114,8 @@ app_name = "api"
 
 
 urlpatterns = [
+    path("auth/google/start/", GoogleMobileStart.as_view()),
+    path("auth/google/complete/", GoogleMobileComplete.as_view()),
     path('notifications/voip-push/', VoipPushTokenAPIView.as_view(), name='voip_push_token'),
     path('auth/password-reset/', PasswordResetRequest.as_view(), name='mobile_password_reset'),
     path('auth/password-reset/confirm/', PasswordResetConfirm.as_view(), name='mobile_password_reset_confirm'),

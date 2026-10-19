@@ -506,6 +506,7 @@ def talent_search(request):
 
         talents = talents.filter(
 
+            Q(talent_area__icontains=query) |
             Q(headline__icontains=query) |
 
             Q(biography__icontains=query) |
@@ -1629,7 +1630,7 @@ def select_talent_category(request):
     
     # If the user has already selected a talent category,
     # they already have a profile and should use Edit Profile.
-    if talent.talent_category:
+    if talent.talent_category and not (talent.talent_category == "OTHERS" and not (talent.talent_area or "").strip()):
         return redirect("talent_dashboard")
     
 

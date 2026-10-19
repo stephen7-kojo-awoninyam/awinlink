@@ -8,7 +8,7 @@ import { EmptyState } from '@/src/components/EmptyState';
 import { colors } from '@/src/theme';
 
 type Values = Record<string, string>;
-const TALENT_FIELDS = [['talent_area', 'Specialty'], ['headline', 'Headline'], ['biography', 'About'], ['country', 'Country'], ['city', 'City']] as const;
+const TALENT_FIELDS = [['talent_area', 'Specific talent (required for Others)'], ['headline', 'Headline'], ['biography', 'About'], ['country', 'Country'], ['city', 'City']] as const;
 const ORGANIZATION_FIELDS = [['name', 'Organization name'], ['country', 'Country'], ['city', 'City'], ['website', 'Website'], ['email', 'Contact email'], ['phone', 'Phone'], ['description', 'About']] as const;
 
 export default function EditProfileScreen() {

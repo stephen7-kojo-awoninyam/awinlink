@@ -249,7 +249,7 @@
 
     </div>
 
-    {% if request.resolver_match and request.resolver_match.url_name == 'home_feed' or request.resolver_match.url_name == 'conversation_list' %}
+    {% if request.resolver_match.url_name == 'home_feed' or request.resolver_match.url_name == 'conversation_list' or request.resolver_match.url_name == 'user_search' or request.resolver_match.url_name == 'talent_search' or request.resolver_match.url_name == 'opportunity_search' %}
     <div class="header-search mobile-header-search" data-feed-search>
         <i class="bi bi-search" aria-hidden="true"></i>
         <input
@@ -893,7 +893,7 @@
 
     <!-- GLOBAL SEARCH -->
 
-    {% if request.resolver_match and request.resolver_match.url_name == 'home_feed' %}
+    {% if request.resolver_match.url_name == 'home_feed' or request.resolver_match.url_name == 'user_search' or request.resolver_match.url_name == 'talent_search' or request.resolver_match.url_name == 'opportunity_search' %}
     <div class="header-search" data-feed-search>
 
         <i class="bi bi-search"></i>
@@ -1155,6 +1155,7 @@
 
     <div>
         Discover. Connect. Grow.
+        <nav aria-label="Policies"><a href="{% url 'google_link' %}">Link Google</a> <a href="{% url 'terms' %}">Terms</a> <a href="{% url 'privacy' %}">Privacy</a> <a href="{% url 'community_guidelines' %}">Community Guidelines</a></nav>
     </div>
 
 </footer>

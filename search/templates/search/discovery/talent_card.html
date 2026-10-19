@@ -6,7 +6,7 @@
     <div class="discovery-card-content">
         <div class="discovery-card-identity"><span class="discovery-avatar">{% if talent.profile_photo %}<img src="{{ talent.profile_photo.url }}" alt="" loading="lazy">{% elif talent.user.profile_picture %}<img src="{{ talent.user.profile_picture.url }}" alt="" loading="lazy">{% else %}<i class="bi bi-person" aria-hidden="true"></i>{% endif %}</span>{% if talent.verified %}<span class="discovery-verified"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Verified</span>{% endif %}</div>
         <h3 id="discovery-talent-{{ talent.id }}"><a href="{% url 'talent_profile' talent.id %}">{{ talent.user.get_full_name|default:talent.user.username }}</a></h3><p class="discovery-identity">{{ talent.display_identity|default:talent.user.get_role_display }} · @{{ talent.user.username }}</p>
-        {% if talent.headline %}<p class="discovery-headline">{{ talent.headline }}</p>{% endif %}
+        {% if talent.talent_area %}<p class="discovery-headline">{{ talent.talent_area }}</p>{% endif %}{% if talent.headline %}<p class="discovery-headline">{{ talent.headline }}</p>{% endif %}
         {% if talent.city or talent.country %}<p class="discovery-location"><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ talent.city }}{% if talent.city and talent.country %}, {% endif %}{{ talent.country }}</p>{% endif %}
         <div class="discovery-skill-tags">{% for skill in talent.skills.all|slice:':5' %}<span>{{ skill.name }}</span>{% endfor %}</div>
         <p class="discovery-experience">{{ talent.get_experience_level_display }}{% if talent.get_availability_status_display %} · {{ talent.get_availability_status_display }}{% endif %}</p>

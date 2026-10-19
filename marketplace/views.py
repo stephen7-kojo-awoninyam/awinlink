@@ -54,7 +54,7 @@ class Listings(Authenticated, generics.ListCreateAPIView):
                     raise ValidationError({key: "Expected a domain ID."})
                 qs = qs.filter(**{field: p[key]})
         if p.get("q"):
-            qs = qs.filter(Q(title__icontains=p["q"]) | Q(description__icontains=p["q"]) | Q(talent__user__username__icontains=p["q"]))
+            qs = qs.filter(Q(talent__talent_area__icontains=p["q"]) | Q(title__icontains=p["q"]) | Q(description__icontains=p["q"]) | Q(talent__user__username__icontains=p["q"]))
         return qs.distinct()
 
     def perform_create(self, serializer):

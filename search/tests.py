@@ -216,3 +216,39 @@ class UsernameSearchTests(TestCase):
         self.assertContains(response, 'id="globalSearch"')
         self.assertContains(response, 'data-search-url="/search/"')
         self.assertContains(response, self.talent_user.username)
+
+    def test_search_pages_include_desktop_and_mobile_search_handlers(self):
+        from html.parser import HTMLParser
+
+        class Inputs(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.headers = []
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == "input" and "data-global-search" in attrs:
+                    self.headers.append(attrs)
+
+        self.client.force_login(self.talent_user)
+        for path, query in (
+            ("/search/", {"search": "talent"}),
+            ("/talents/search/", {"q": "talent"}),
+            ("/search/opportunities/", {"search": "training"}),
+        ):
+            with self.subTest(path=path):
+                response = self.client.get(path, query)
+                self.assertEqual(response.status_code, 200)
+                inputs = Inputs()
+                inputs.feed(response.content.decode())
+                self.assertCountEqual(
+                    [field["id"] for field in inputs.headers],
+                    ["globalSearch", "mobileGlobalSearch"],
+                )
+                for field in inputs.headers:
+                    self.assertEqual(field["data-search-url"], "/search/")
+                    self.assertEqual(field["data-suggestions-url"], "/search/username-suggestions/")
+                    self.assertEqual(field["aria-autocomplete"], "list")
+                    self.assertTrue(field["aria-label"])
+                if path != "/search/opportunities/":
+                    self.assertContains(response, self.talent_user.username)

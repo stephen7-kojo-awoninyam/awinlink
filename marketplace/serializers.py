@@ -3,6 +3,7 @@ from .models import Listing, Offer, DealMessage
 
 
 class ListingSerializer(serializers.ModelSerializer):
+    talent_area = serializers.CharField(source="talent.talent_area", read_only=True)
     talent_user = serializers.IntegerField(source="talent.user_id", read_only=True)
     talent_name = serializers.CharField(source="talent.user.username", read_only=True)
     country = serializers.CharField(source="talent.country", read_only=True)
@@ -12,7 +13,7 @@ class ListingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Listing
-        fields = ["id", "talent", "talent_user", "talent_name", "ecosystem", "subecosystem", "title", "description", "status", "country", "work_type", "experience", "publication_consented_at", "consent"]
+        fields = ["id", "talent", "talent_user", "talent_name", "talent_area", "ecosystem", "subecosystem", "title", "description", "status", "country", "work_type", "experience", "publication_consented_at", "consent"]
         read_only_fields = ["talent", "publication_consented_at"]
 
     def validate(self, data):

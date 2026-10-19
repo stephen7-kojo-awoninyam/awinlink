@@ -9,6 +9,8 @@ from phonenumbers.phonenumberutil import region_code_for_country_code
 from phonenumbers.phonenumberutil import country_code_for_region
 
 from .models import User
+from .legal import TERMS_VERSION
+from django.utils import timezone
 
 
 # ---------------------------------------------------------
@@ -216,6 +218,31 @@ COUNTRIES = [
 
 
 class UserRegistrationForm(UserCreationForm):
+    terms_accepted = forms.BooleanField(
+        required=True, label="I accept the Terms of Use",
+        error_messages={"required": "You must explicitly accept the Terms of Use to register."},
+    )
+    terms_version = forms.CharField(widget=forms.HiddenInput, initial=TERMS_VERSION)
+
+    def clean_terms_accepted(self):
+        value = self.data.get("terms_accepted")
+        if value is not True and (not isinstance(value, str) or value.casefold() not in {"on", "true", "1"}):
+            raise ValidationError("You must explicitly accept the Terms of Use to register.")
+        return True
+
+    def clean_terms_version(self):
+        if self.cleaned_data["terms_version"] != TERMS_VERSION:
+            raise ValidationError("The Terms have changed. Reload registration and review the current Terms.")
+        return TERMS_VERSION
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.terms_accepted_version = self.cleaned_data["terms_version"]
+        user.terms_accepted_at = timezone.now()
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
 
     # Platform administrators are provisioned outside public registration.
     PUBLIC_ROLE_CHOICES = tuple(

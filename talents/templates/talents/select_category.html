@@ -303,6 +303,12 @@ Choose Your Talent Category | Awinlink
                     {% endif %}
 
 
+                    <div class="mt-3">
+                        <label for="id_talent_area">Your specific talent (required for Others)</label>
+                        {{ form.talent_area }}
+                        {{ form.talent_area.errors }}
+                        <p class="text-muted">Enter your talent, for example Public Speaking, Entrepreneurship, or Culinary Arts.</p>
+                    </div>
                     <button
                         type="submit"
                         class="btn btn-primary btn-lg w-100 mt-4"

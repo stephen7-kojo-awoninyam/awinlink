@@ -186,6 +186,19 @@ class OtherTalentProfileSerializer(serializers.ModelSerializer):
 
 class TalentProfileSerializer(serializers.ModelSerializer):
 
+    def validate(self, attrs):
+        from django.core.exceptions import ValidationError
+        category = attrs.get("talent_category", getattr(self.instance, "talent_category", None))
+        area = attrs.get("talent_area", getattr(self.instance, "talent_area", ""))
+        candidate = TalentProfile(talent_category=category, talent_area=area)
+        try:
+            candidate.clean()
+        except ValidationError as exc:
+            raise serializers.ValidationError(exc.message_dict)
+        if "talent_area" in attrs:
+            attrs["talent_area"] = candidate.talent_area
+        return attrs
+
     user = UserSerializer(
         read_only=True
     )
@@ -253,6 +266,7 @@ class TalentProfileSerializer(serializers.ModelSerializer):
             
             # Classification
             "talent_category",
+            "talent_area",
             "profile_visibility",
 
             # Professional
