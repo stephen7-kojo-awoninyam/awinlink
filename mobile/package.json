@@ -45,6 +45,7 @@
     "check:urls": "node scripts/check-production-urls.cjs",
     "eas:whoami": "eas whoami",
     "build:android": "eas build --platform android --profile production --freeze-credentials",
+    "build:android:apk": "eas build --platform android --profile android-apk --freeze-credentials",
     "build:ios": "eas build --platform ios --profile production --freeze-credentials",
     "build:device": "eas build --platform all --profile preview-device",
     "export:android": "expo export --platform android --max-workers 2",

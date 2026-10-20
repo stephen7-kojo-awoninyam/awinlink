@@ -6,6 +6,12 @@ from .models import Post, Comment
 
 class PostForm(forms.ModelForm):
 
+    def clean(self):
+        cleaned = super().clean()
+        if not (cleaned.get("caption", "").strip() or cleaned.get("image") or cleaned.get("video")):
+            raise forms.ValidationError("Add some text, a photo, or a video before posting.")
+        return cleaned
+
 
     class Meta:
 
@@ -146,4 +152,4 @@ class CommentForm(forms.ModelForm):
 
             )
 
-        }        
+        }

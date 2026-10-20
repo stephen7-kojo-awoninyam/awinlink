@@ -39,6 +39,7 @@ function nativeScreen({ incoming = false, media = null, accepting = null, ending
       'expo-router': { Stack: { Screen() {} }, router: { back: () => { back++; } }, useLocalSearchParams: () => ({ id: '42', mode: incoming ? 'incoming' : 'outgoing', autoAccept: incoming ? 'true' : 'false' }) },
       'react-native-webrtc': { MediaStream: Stream, RTCPeerConnection: Peer, mediaDevices: { getUserMedia: () => { captures++; return media?.promise || Promise.resolve(stream); } } },
       '@/src/auth/AuthProvider': { useAuth: () => ({ user: { id: incoming ? 2 : 1 } }) },
+      '@/src/api/socketAuthentication': { socketAccessToken: async () => 'token', maintainSocketAuthentication() {} },
       '@/src/api/client': { getAccessToken: async () => 'token', getWebSocketUrl: value => value,
         apiRequest: async (url, options) => { requests.push(url); if (iceFailure && url.endsWith('/ice-servers/')) throw new Error('Call connectivity is temporarily unavailable.'); if (url.endsWith('/accept/')) return accepting?.promise || { id: 42, participants: [] }; if (url.endsWith('/end/')) return ending?.promise || {}; if (url.endsWith('/incoming/')) return [{ id: 42 }]; return { ice_servers: [], ice_transport_policy: 'relay' }; } },
       '@/src/calls/iceServers': { validatedIceServers: () => [] }, '@/src/theme': { colors: {} },

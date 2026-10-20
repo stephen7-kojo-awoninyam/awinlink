@@ -89,7 +89,11 @@ document.addEventListener("DOMContentLoaded", function () {
         const links = Array.from(navigation.querySelectorAll("a.sidebar-link, a.mobile-nav-link"));
         const path = window.location.pathname;
         const matches = links.filter(function (link) {
-            const href = new URL(link.href, window.location.href).pathname;
+            const target = new URL(link.href, window.location.href);
+            const href = target.pathname;
+            const view = new URL(window.location.href).searchParams.get("view");
+            if (target.searchParams.has("view") && target.searchParams.get("view") !== view) return false;
+            if (!target.searchParams.has("view") && href === path && view === "reels") return false;
             return href === path || (href !== "/" && href.endsWith("/") && path.startsWith(href));
         });
         const longest = Math.max(0, ...matches.map(function (link) { return new URL(link.href).pathname.length; }));

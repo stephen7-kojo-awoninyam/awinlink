@@ -11,6 +11,20 @@
       "extends": "preview",
       "ios": { "simulator": false, "credentialsSource": "remote" }
     },
+    "android-apk": {
+      "extends": "preview",
+      "environment": "preview",
+      "developmentClient": false,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://awinlink-production.up.railway.app",
+        "EXPO_PUBLIC_WEB_URL": "https://awinlink-production.up.railway.app",
+        "EXPO_PUBLIC_PRIVACY_URL": "https://awinlink-production.up.railway.app/privacy/",
+        "EXPO_PUBLIC_TERMS_URL": "https://awinlink-production.up.railway.app/terms/",
+        "EXPO_PUBLIC_SUPPORT_URL": "https://awinlink-production.up.railway.app/support/",
+        "EXPO_PUBLIC_DELETE_ACCOUNT_URL": "https://awinlink-production.up.railway.app/delete-account/"
+      },
+      "android": { "buildType": "apk", "credentialsSource": "remote", "resourceClass": "medium" }
+    },
     "production": {
       "environment": "production",
       "distribution": "store",

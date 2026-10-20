@@ -69,7 +69,7 @@ class NotificationViewTests(TestCase):
 		self.assertFalse(self.notification.is_read)
 
 	def test_push_subscription_requires_valid_keys_and_is_user_scoped(self):
-		endpoint = "https://push.example.test/subscription/123"
+		endpoint = "https://fcm.googleapis.com/fcm/send/test-subscription-123"
 		response = self.client.post(
 			reverse("manage_push_subscription"),
 			data=json.dumps({
@@ -91,7 +91,7 @@ class NotificationViewTests(TestCase):
 		self.assertEqual(invalid_response.status_code, 400)
 
 	def test_push_subscription_cannot_be_claimed_by_another_account(self):
-		endpoint = "https://push.example.test/subscription/shared"
+		endpoint = "https://fcm.googleapis.com/fcm/send/test-subscription-shared"
 		PushSubscription.objects.create(
 			user=self.user,
 			endpoint=endpoint,

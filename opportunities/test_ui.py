@@ -57,7 +57,8 @@ class OpportunityTemplateContracts(SimpleTestCase):
             selected_opportunity_type="TRIAL", selected_experience_level="INTERMEDIATE", selected_work_type="ONSITE")
         for name in ("search", "domain", "opportunity_type", "experience_level", "work_type", "location"):
             self.assertIn(f'name="{name}"', html)
-        self.assertEqual(html.count("selected>"), 4)
+        filters = html.split('aria-label="Search and filter opportunities">', 1)[1].split('</form>', 1)[0]
+        self.assertEqual(filters.count("selected>"), 4)
         self.assertIn(reverse("opportunity_detail", args=[14]), html)
         self.assertNotIn("Match score", html)
 

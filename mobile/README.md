@@ -2,6 +2,8 @@
 
 React Native app for Android and iOS built with Expo Router and TypeScript. Django remains the source of truth for accounts, ecosystem visibility, feed ranking, notifications, messaging, opportunities, and payments.
 
+For the latest Android audit, free EAS APK build procedure and current blockers, see [ANDROID_RELEASE_AUDIT.md](./ANDROID_RELEASE_AUDIT.md). Run `npm run build:android:apk` only after its account, configuration, signing and free-quota prerequisites are met.
+
 ## Run locally
 
 1. Install Node.js LTS and Android Studio / Xcode for native builds.
@@ -43,4 +45,4 @@ The app uses authenticated Django Channels WebSockets for call signaling and ask
 
 Django returns one-hour, per-user TURN credentials through the authenticated `/api/messaging/calls/ice-servers/` endpoint. Never add the coturn shared secret to `EXPO_PUBLIC_*` variables or the mobile bundle. A production deployment also needs a working Channels channel layer (Redis for multiple application workers) and HTTPS/WSS.
 
-Native incoming-call alerts use Expo Push Service, which relays to APNs and FCM. Set `EXPO_PUBLIC_EAS_PROJECT_ID` (or the EAS project ID in Expo config), configure Android FCM V1 and iOS APNs credentials in EAS, and build a new native app. Users must allow notifications. The authenticated `/api/notifications/mobile-push/` endpoint stores each device token. Calls are sent as expiring, high-priority notifications with Answer/Decline actions; tapping Answer opens the call flow. This is notification-based call handling, not a CallKit/Android Telecom full-screen call UI. Configure `EXPO_PUSH_ACCESS_TOKEN` on Django only if Expo Push Security is enabled for the EAS project.
+Native incoming-call alerts use Expo Push Service, which relays to APNs and FCM, plus native CallKit/Android Telecom integration. Set `EXPO_PUBLIC_EAS_PROJECT_ID` (or the EAS project ID in Expo config), configure Android FCM V1 and iOS APNs credentials in EAS, and build a new native app. Users must allow notifications and enable the Android calling account for system call UI. The authenticated `/api/notifications/mobile-push/` endpoint stores each device token. Calls use expiring, high-priority push data, native answer/decline handling and a notification fallback. Real locked/terminated-device behavior still requires validation. Configure `EXPO_PUSH_ACCESS_TOKEN` on Django only if Expo Push Security is enabled for the EAS project; backend configuration changes require separate approval.

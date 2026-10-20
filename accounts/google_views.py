@@ -1,7 +1,6 @@
 from django.contrib.auth import login
 import secrets
 from urllib.parse import urlencode
-from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
@@ -10,12 +9,13 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_GET, require_POST
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
+from .tokens import AccountRefreshToken as RefreshToken
 
 from .google_auth import GoogleAuthError, begin, complete, digest, exchange, private_response
 from .models import GoogleAuthAttempt
+from .security import GoogleThrottle
+from .views import authentication_limit_response
 
 
 def error_page(request, message, status=400):
@@ -26,17 +26,9 @@ def error_page(request, message, status=400):
 @require_POST
 def google_start(request):
     try:
-        key = "google-start:" + digest(request.META.get("REMOTE_ADDR", "unknown"))
-        if cache.add(key, 1, timeout=3600):
-            count = 1
-        else:
-            try:
-                count = cache.incr(key)
-            except ValueError:
-                cache.set(key, 1, timeout=3600)
-                count = 1
-        if count > 30:
-            return error_page(request, "Too many Google sign-in attempts. Try again later.", status=429)
+        limited = authentication_limit_response(request, 'google')
+        if limited is not None:
+            return limited
         link = request.POST.get("link") == "true"
         if link and (not request.user.is_authenticated or not request.user.is_active or not request.user.check_password(request.POST.get("password", ""))):
             raise GoogleAuthError("Sign in and confirm your current Awinlink password before linking Google.")
@@ -127,11 +119,6 @@ def google_link(request):
     if not request.user.is_authenticated:
         return redirect("login")
     return render(request, "accounts/google.html", {"linking_start": True})
-
-
-class GoogleThrottle(AnonRateThrottle):
-    scope = "google"
-    rate = "30/hour"
 
 
 @method_decorator(private_response, name="dispatch")

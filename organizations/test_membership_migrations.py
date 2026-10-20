@@ -29,7 +29,8 @@ class MembershipMigrationTestCase(TransactionTestCase):
     def migrate(self, target):
         executor = MigrationExecutor(connection)
         executor.migrate([target])
-        return executor.loader.project_state([target]).apps
+        # Account migrations remain applied while this app is rolled back.
+        return executor.loader.project_state(list(MigrationRecorder(connection).applied_migrations())).apps
 
     def legacy_owner(self, username, organization_status="ACTIVE", role="ORGANIZATION",
                      is_active=True):

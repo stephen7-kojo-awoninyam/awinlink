@@ -30,6 +30,7 @@ function setup(conversationId = 4) {
       'react-native': { Platform: { OS: 'ios' }, AppState: { currentState: 'active', addEventListener: (_, fn) => { foreground = fn; return { remove() {} }; } } },
       '@/src/auth/AuthProvider': { useAuth: () => ({ user: { id: 1 } }) },
       '@/src/api/client': { getAccessToken: async () => 'fresh-token', getWebSocketUrl: path => path },
+      '@/src/api/socketAuthentication': { socketAccessToken: async () => 'fresh-token', maintainSocketAuthentication() {} },
     })[name],
   });
   const hook = exports.useMessaging(async () => { updates++; }, conversationId);

@@ -1,0 +1,13 @@
+<dialog id="postComposer" class="post-composer-dialog" aria-labelledby="postComposerTitle">
+    <header class="post-composer-header"><div><span>SHARE YOUR TALENT</span><h2 id="postComposerTitle">Create a post</h2></div><button type="button" data-post-composer-close class="post-composer-close" aria-label="Close post composer"><i class="bi bi-x-lg" aria-hidden="true"></i></button></header>
+    <form method="post" action="{% url 'create_post' %}" enctype="multipart/form-data" data-post-form data-post-modal>
+        {% csrf_token %}
+        <div class="post-composer-errors" data-post-errors role="alert" tabindex="-1" hidden></div>
+        <fieldset class="post-composer-fields">
+            <legend class="visually-hidden">Post content and audience</legend>
+            {% include 'feed/post_fields.html' with post_form=composer_form %}
+            <div class="post-media-previews" data-post-previews></div>
+        </fieldset>
+        <footer class="post-composer-footer"><span>Your audience is your choice.</span><button type="submit" class="post-submit-button" data-post-submit><i class="bi bi-plus-lg" aria-hidden="true"></i>Post</button></footer>
+    </form>
+</dialog>

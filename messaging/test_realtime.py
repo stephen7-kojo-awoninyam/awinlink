@@ -20,8 +20,12 @@ class RealtimeTests(TransactionTestCase):
             ConversationParticipant.objects.create(conversation=self.conversation, user=user)
 
     def socket(self, user):
+        from rest_framework_simplejwt.tokens import AccessToken
         socket = WebsocketCommunicator(UserConsumer.as_asgi(), '/ws/user/')
         socket.scope['user'] = user
+        if user.is_authenticated:
+            token = AccessToken.for_user(user)
+            socket.scope.update(jwt_authenticated=True, jwt_claims=dict(token.payload), jwt_expires_at=token['exp'])
         return socket
 
     def test_committed_message_and_typing_reach_only_participants(self):

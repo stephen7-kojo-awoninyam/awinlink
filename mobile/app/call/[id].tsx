@@ -11,6 +11,7 @@ import {
 } from 'react-native-webrtc';
 
 import { apiRequest, getAccessToken, getWebSocketUrl } from '@/src/api/client';
+import { socketAccessToken, maintainSocketAuthentication } from '@/src/api/socketAuthentication';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { validatedIceServers, type CallIceServer } from '@/src/calls/iceServers';
 import { colors } from '@/src/theme';
@@ -37,7 +38,9 @@ function socketWithToken(url: string, token: string) {
     protocols: string[],
     options: { headers: Record<string, string> },
   ) => WebSocket;
-  return new Socket(url, [], { headers: { Authorization: `Bearer ${token}` } });
+  const socket = new Socket(url, [], { headers: { Authorization: `Bearer ${token}` } });
+  maintainSocketAuthentication(socket);
+  return socket;
 }
 
 export default function CallScreen() {
@@ -244,7 +247,7 @@ export default function CallScreen() {
   }, [makePeer, sendSignal]);
 
   const connectSignaling = useCallback(async (call: CallInfo) => {
-    const token = await getAccessToken();
+    const token = await socketAccessToken();
     if (leavingRef.current) return;
     if (!token) throw new Error('Your session expired. Sign in again to call.');
     const socket = socketWithToken(getWebSocketUrl(`ws/calls/${callId}/`), token);

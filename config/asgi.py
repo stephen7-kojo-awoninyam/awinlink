@@ -25,7 +25,7 @@ from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.db import database_sync_to_async
 from channels.security.websocket import AllowedHostsOriginValidator
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from accounts.authentication import RevocableJWTAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
@@ -37,7 +37,7 @@ from learning.routing import websocket_urlpatterns as classroom_websocket_urlpat
 def _user_from_jwt(token):
     """Resolve a Channels user from the same JWT used by the mobile REST API."""
     try:
-        authentication = JWTAuthentication()
+        authentication = RevocableJWTAuthentication()
         validated_token = authentication.get_validated_token(token)
         return authentication.get_user(validated_token)
     except (AuthenticationFailed, InvalidToken, TokenError):
@@ -74,7 +74,7 @@ def JWTAuthMiddlewareStack(inner):
 @database_sync_to_async
 def _jwt_socket_identity(token):
     try:
-        authentication = JWTAuthentication()
+        authentication = RevocableJWTAuthentication()
         validated = authentication.get_validated_token(token)
         user = authentication.get_user(validated)
         return user, dict(validated.payload)

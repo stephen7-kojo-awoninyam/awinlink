@@ -2,6 +2,10 @@ from django.db.models import Q
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
+from datetime import timedelta
+from django.utils import timezone
+from accounts.safety import blocked_user_ids
+from talents.visibility import visible_talent_profiles_for
 
 from connections.models import (
     Follow,
@@ -54,6 +58,15 @@ def home(request):
 
 @login_required
 def home_feed(request):
+    return render_home_feed(request)
+
+
+def render_home_feed(request, *, dashboard_context=None):
+    """Shared social surface; callers retain their existing login/profile guards."""
+    feed_view = request.GET.get("view", "for-you")
+    if feed_view not in {"for-you", "following", "reels"}:
+        feed_view = "for-you"
+    blocked_ids = blocked_user_ids(request.user)
     _, ecosystem_details = get_ecosystem_details(request.user)
     ecosystem_user_ids = get_ecosystem_user_ids(request.user)
 
@@ -191,14 +204,14 @@ def home_feed(request):
             visibility="PUBLIC"
         )
 
-    ).select_related(
+    ).exclude(author_id__in=blocked_ids).select_related(
 
         "author",
         "talent",
         "organization",
         "event"
 
-    ).distinct().order_by(
+    ).prefetch_related("comments__user", "likes", "shares").distinct().order_by(
 
         "-created_at"
 
@@ -282,7 +295,14 @@ def home_feed(request):
 
         my_shared_posts
 
-    ).distinct().order_by(
+    ).filter(
+        Q(post__author=request.user)
+        | Q(post__visibility="PUBLIC")
+        | Q(post__author_id__in=following_users, post__visibility="FOLLOWERS")
+        | Q(post__author_id__in=following_organizations, post__visibility="ORGANIZATIONS")
+    ).exclude(user_id__in=blocked_ids).exclude(
+        post__author_id__in=blocked_ids,
+    ).prefetch_related("post__comments__user", "post__likes", "post__shares").distinct().order_by(
 
         "-created_at"
 
@@ -369,6 +389,32 @@ def home_feed(request):
             reverse=True
         )
 
+    # Stories are a presentation of authorized recent posts, not a new audience
+    # or a new publication type. The underlying posts keep their normal lifetime.
+    story_posts = []
+    story_authors = set()
+    since = timezone.now() - timedelta(hours=24)
+    story_candidates = [item["object"] for item in feed_items if item["type"] == "POST"]
+    for post in sorted(story_candidates, key=lambda post: post.created_at, reverse=True):
+        if post.created_at >= since and post.author_id not in story_authors:
+            story_posts.append(post)
+            story_authors.add(post.author_id)
+        if len(story_posts) == 10:
+            break
+
+    if feed_view == "following":
+        followed_ids = set(following_users) | set(following_organizations)
+        feed_items = [item for item in feed_items if (
+            item["object"].author_id in followed_ids if item["type"] == "POST"
+            else item["object"].user_id in followed_ids
+        )]
+    elif feed_view == "reels":
+        feed_items = [item for item in feed_items if (
+            item["object"].video if item["type"] == "POST" else item["object"].post.video
+        )]
+
+    visible_post_ids = {post.pk for post in posts} | {shared.post_id for shared in shared_posts}
+
     feed_items = insert_ads_into_feed(
         feed_items,
         get_ads_for_user(
@@ -429,7 +475,7 @@ def home_feed(request):
 
             user=request.user,
 
-            post__in=posts
+            post_id__in=visible_post_ids
 
         ).values_list(
 
@@ -447,7 +493,7 @@ def home_feed(request):
 
             user=request.user,
 
-            post__in=posts
+            post_id__in=visible_post_ids
 
         ).values_list(
 
@@ -599,7 +645,7 @@ def home_feed(request):
     # TALENT CANDIDATES
     # ==================================
 
-    talent_candidates = TalentProfile.objects.exclude(
+    talent_candidates = visible_talent_profiles_for(request.user).exclude(
         user=request.user
     ).exclude(
         user_id__in=followed_talent_ids
@@ -766,14 +812,22 @@ def home_feed(request):
 
         "liked_course_ids": liked_course_ids,
 
+        "story_posts": story_posts,
+        "feed_view": feed_view,
+        "feed_base_url": reverse("talent_dashboard" if dashboard_context is not None else "home_feed"),
+
     }
 
+
+    if dashboard_context is not None:
+        context.update(dashboard_context)
+        context["is_talent_dashboard"] = True
 
     return render(
 
         request,
 
-        "core/home_feed.html",
+        "talents/dashboard.html" if dashboard_context is not None else "core/home_feed.html",
 
         context
 

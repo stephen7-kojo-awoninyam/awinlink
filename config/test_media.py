@@ -29,6 +29,10 @@ class CloudMediaTests(SimpleTestCase):
                                  f'{folder}/original_id')
                 self.assertEqual(upload.call_args.kwargs['resource_type'], kind)
                 self.assertTrue(upload.call_args.kwargs['folder'].endswith(folder))
+                if folder.startswith(('messages/', 'feed/')):
+                    self.assertEqual(upload.call_args.kwargs['type'], 'authenticated')
+                else:
+                    self.assertNotIn('type', upload.call_args.kwargs)
 
     @patch('cloudinary.uploader.destroy', return_value={'result': 'ok'})
     def test_delete_uses_same_video_namespace(self, destroy):
@@ -41,23 +45,27 @@ class CloudMediaTests(SimpleTestCase):
             storage = PlaybackMediaStorage()
             audio = storage.url('messages/audio/existing_id')
             video = storage.url('feed/videos/existing_id')
-            self.assertIn('/video/upload/', audio)
-            self.assertTrue(audio.endswith('messages/audio/existing_id.mp3'))
-            self.assertIn('vc_h264', video)
-            self.assertIn('ac_aac', video)
-            self.assertTrue(video.startswith('https://'))
+            self.assertEqual(audio, '/media/messages/audio/existing_id?playback=mp3')
+            self.assertEqual(video, '/media/feed/videos/existing_id?playback=mp4')
             prefixed = storage.url('media/messages/audio/existing_id')
-            self.assertIn('/video/upload/', prefixed)
-            self.assertTrue(prefixed.endswith('/media/messages/audio/existing_id.mp3'))
+            self.assertEqual(prefixed, '/media/messages/audio/existing_id?playback=mp3')
             local = FileSystemStorage()
             name = local.save('messages/audio/legacy.webm', ContentFile(b'unchanged'))
             self.assertEqual(storage.url(name), '/media/messages/audio/legacy.webm?playback=mp3')
             with local.open(name) as original:
                 self.assertEqual(original.read(), b'unchanged')
 
+    def test_private_cloud_urls_are_application_routes_and_public_profile_media_stays_public(self):
+        import cloudinary
+        with tempfile.TemporaryDirectory() as directory, override_settings(MEDIA_ROOT=directory), patch.dict(cloudinary.config().__dict__, {'cloud_name': 'media-tests', 'secure': True}):
+            storage = PlaybackMediaStorage()
+            self.assertEqual(storage.url('feed/images/private'), '/media/feed/images/private')
+            self.assertEqual(storage.url('messages/files/private.pdf'), '/media/messages/files/private.pdf')
+            self.assertTrue(storage.url('talents/profile/public.jpg').startswith('https://'))
+
     def test_railway_and_local_storage_selection(self):
         for cloud in (False, True):
-            environment = {'RAILWAY_ENVIRONMENT_NAME': 'production', 'SECRET_KEY': 'test-key'}
+            environment = {'RAILWAY_ENVIRONMENT_NAME': 'production', 'SECRET_KEY': 'fixture-only-0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ-abcdefgh'}
             if cloud:
                 environment.update(CLOUDINARY_CLOUD_NAME='test', CLOUDINARY_API_KEY='key', CLOUDINARY_API_SECRET='secret')
             with patch.dict(os.environ, environment, clear=True), patch('dotenv.load_dotenv'):
@@ -67,7 +75,7 @@ class CloudMediaTests(SimpleTestCase):
                              'config.media_storage.PlaybackMediaStorage' if cloud else 'config.media_storage.LocalPlaybackStorage')
 
     def test_railway_cloudinary_url(self):
-        with patch.dict(os.environ, {'RAILWAY_ENVIRONMENT_NAME': 'production', 'CLOUDINARY_URL': 'cloudinary://key:secret@media-test'}, clear=True), patch('dotenv.load_dotenv'):
+        with patch.dict(os.environ, {'RAILWAY_ENVIRONMENT_NAME': 'production', 'SECRET_KEY': 'fixture-only-0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ-abcdefgh', 'CLOUDINARY_URL': 'cloudinary://key:secret@media-test'}, clear=True), patch('dotenv.load_dotenv'):
             configured = runpy.run_path(str(Path(__file__).with_name('settings.py')))
         self.assertEqual(configured['CLOUDINARY_CLOUD_NAME'], 'media-test')
         self.assertEqual(configured['STORAGES']['default']['BACKEND'], 'config.media_storage.PlaybackMediaStorage')
@@ -122,10 +130,11 @@ class LocalPlaybackTests(TestCase):
         self.api.force_authenticate(self.other)
         self.assertEqual(self.api.get(url).status_code, 404)
         self.api.force_authenticate(None)
-        self.assertIn(self.api.get(url).status_code, (401, 403))
+        self.assertEqual(self.api.get(url).status_code, 404)
 
     def test_feed_upload_serializer_and_private_video_permissions(self):
-        serializer = PostSerializer(data={'caption': 'video', 'video': SimpleUploadedFile('clip.mp4', b'original-video', 'video/mp4')})
+        from types import SimpleNamespace
+        serializer = PostSerializer(data={'caption': 'video', 'video': SimpleUploadedFile('clip.mp4', b'original-video', 'video/mp4')}, context={'request': SimpleNamespace(user=self.user)})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         post = serializer.save(author=self.user, visibility='PRIVATE')
         url = post.video.url
@@ -137,6 +146,51 @@ class LocalPlaybackTests(TestCase):
         post.visibility = 'PUBLIC'
         post.save(update_fields=['visibility'])
         self.assertEqual(self.api.head(url).status_code, 200)
+
+    def test_private_post_image_uses_post_visibility_for_streaming(self):
+        post = Post.objects.create(author=self.user, visibility='PRIVATE',
+            image=SimpleUploadedFile('private.jpg', b'private-image', 'image/jpeg'))
+        url = post.image.url
+        owner_response = self.api.get(url)
+        self.assertEqual(owner_response.status_code, 200)
+        self.assertEqual(b''.join(owner_response.streaming_content), b'private-image')
+        owner_response.close()
+        self.api.force_authenticate(self.other)
+        self.assertEqual(self.api.get(url).status_code, 404)
+        self.api.force_authenticate(None)
+        self.assertIn(self.api.get(url).status_code, (401, 403, 404))
+        post.visibility = 'PUBLIC'
+        post.save(update_fields=['visibility'])
+        public_response = self.api.get(url)
+        self.assertEqual(public_response.status_code, 200)
+        self.assertEqual(b''.join(public_response.streaming_content), b'private-image')
+        public_response.close()
+
+    def test_private_cloudinary_asset_is_streamed_only_after_database_acl(self):
+        from config.media_views import _cloud_url
+        post = Post.objects.create(author=self.user, visibility='PRIVATE', image='feed/images/private-cloud')
+        remote = type('RemoteResponse', (), {
+            'status_code': 200,
+            'headers': {'Content-Type': 'image/jpeg', 'Content-Length': '12'},
+            'iter_content': lambda self, chunk_size: iter([b'private-cloud']),
+            'close': lambda self: None,
+        })()
+        settings_override = override_settings(STORAGES={
+            'default': {'BACKEND': 'config.media_storage.PlaybackMediaStorage'},
+            'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+        })
+        settings_override.enable()
+        self.addCleanup(settings_override.disable)
+        with patch('config.media_views._cloud_url', return_value='https://cloudinary.invalid/private-signature') as signed_url, \
+             patch('requests.Session.get', return_value=remote) as fetch:
+            response = self.api.get('/media/feed/images/private-cloud')
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(b''.join(response.streaming_content), b'private-cloud')
+            self.assertEqual(signed_url.call_args.kwargs['authenticated'], True)
+            self.assertNotIn('cloudinary.invalid', response.get('Location', ''))
+            self.api.force_authenticate(self.other)
+            self.assertEqual(self.api.get('/media/feed/images/private-cloud').status_code, 404)
+            self.assertEqual(fetch.call_count, 1)
 
     def test_jwt_media_auth_and_absolute_message_list_urls(self):
         from rest_framework_simplejwt.tokens import AccessToken

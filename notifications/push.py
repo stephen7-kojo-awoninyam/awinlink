@@ -7,6 +7,7 @@ from django.conf import settings
 from django.urls import reverse
 
 from .models import MobilePushToken, Notification, PushSubscription
+from .push_security import SafePushSession, validate_push_endpoint
 
 
 logger = logging.getLogger(__name__)
@@ -55,27 +56,33 @@ def send_push_notification(notification):
 
     for subscription in subscriptions.iterator():
         try:
-            webpush(
-                subscription_info={
-                    "endpoint": subscription.endpoint,
-                    "keys": subscription.keys,
-                },
-                data=payload,
-                vapid_private_key=settings.WEB_PUSH_PRIVATE_KEY,
-                vapid_claims={"sub": settings.WEB_PUSH_SUBJECT},
-            )
+            validate_push_endpoint(subscription.endpoint)
+            with SafePushSession() as session:
+                webpush(
+                    subscription_info={
+                        "endpoint": subscription.endpoint,
+                        "keys": subscription.keys,
+                    },
+                    data=payload,
+                    vapid_private_key=settings.WEB_PUSH_PRIVATE_KEY,
+                    vapid_claims={"sub": settings.WEB_PUSH_SUBJECT},
+                    requests_session=session,
+                    timeout=5,
+                )
+        except ValueError:
+            logger.warning('Skipped unsupported Web Push destination for subscription %s.', subscription.pk)
         except WebPushException as error:
             response = getattr(error, "response", None)
             if getattr(response, "status_code", None) in (404, 410):
                 subscription.delete()
                 continue
             logger.warning(
-                "Web Push delivery failed for subscription %s: %s",
+                "Web Push delivery failed for subscription %s (HTTP %s).",
                 subscription.pk,
-                error,
+                getattr(response, 'status_code', None),
             )
         except Exception:
-            logger.exception(
+            logger.warning(
                 "Unexpected Web Push failure for subscription %s.",
                 subscription.pk,
             )

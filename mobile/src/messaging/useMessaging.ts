@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getAccessToken, getWebSocketUrl } from '@/src/api/client';
+import { socketAccessToken, maintainSocketAuthentication } from '@/src/api/socketAuthentication';
 import { useAuth } from '@/src/auth/AuthProvider';
 
 // A focused inbox or conversation owns its subscription and disposes all retries.
@@ -29,10 +30,11 @@ export function useMessaging(onUpdate: () => void | Promise<void>, conversationI
       connecting = true;
       try {
         await update.current();
-        const token = await getAccessToken();
+        const token = await socketAccessToken();
         if (disposed || !token || isBackground()) return;
         const Socket = WebSocket as unknown as new (url: string, protocols: string[], options?: { headers: Record<string, string> }) => WebSocket;
         const socket = new Socket(getWebSocketUrl('ws/user/'), [], Platform.OS === 'web' ? undefined : { headers: { Authorization: `Bearer ${token}` } });
+        if (Platform.OS !== 'web') maintainSocketAuthentication(socket);
         socketRef.current = socket;
         socket.onopen = () => { delay = 1000; void update.current(); };
         socket.onmessage = event => {

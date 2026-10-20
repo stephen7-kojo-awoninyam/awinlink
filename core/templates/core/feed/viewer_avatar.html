@@ -1,0 +1,1 @@
+<span class="feed-avatar">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% elif user.talent_profile.profile_photo %}<img src="{{ user.talent_profile.profile_photo.url }}" alt="">{% else %}<span aria-hidden="true">{{ user.username|first|upper }}</span>{% endif %}</span>

@@ -233,13 +233,10 @@ def talent_dashboard(request):
     # DASHBOARD
     # =====================================
 
-    return render(
-
+    from core.views import render_home_feed
+    return render_home_feed(
         request,
-
-        "talents/dashboard.html",
-
-        {
+        dashboard_context={
 
             "talent": talent,
 

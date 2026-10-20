@@ -1,9 +1,7 @@
 from django.urls import include, path
 from accounts.google_views import GoogleMobileStart, GoogleMobileComplete
 
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-)
+from accounts.tokens import AccountTokenBlacklistView, AccountTokenRefreshView as TokenRefreshView
 from notifications.api_views import MobilePushTokenAPIView, VoipPushTokenAPIView
 from accounts.mobile_api import PasswordResetRequest, PasswordResetConfirm, DeleteAccount, BlockAccounts, ReportContent
 from recommendations.api_views import (
@@ -169,6 +167,7 @@ urlpatterns = [
         TokenRefreshView.as_view(),
         name="api_token_refresh"
     ),
+    path("auth/logout/", AccountTokenBlacklistView.as_view(), name="api_token_logout"),
 
     path(
         "auth/me/",

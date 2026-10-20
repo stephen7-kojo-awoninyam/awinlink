@@ -152,13 +152,20 @@ def push_config(request):
 @login_required
 @require_POST
 def manage_push_subscription(request):
+    from accounts.views import authentication_limit_response
+    from .push_security import validate_push_endpoint
+    limited = authentication_limit_response(request, 'push')
+    if limited is not None:
+        return limited
     try:
         data = json.loads(request.body or b"{}")
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({"detail": "Invalid JSON."}, status=400)
 
     endpoint = data.get("endpoint") if isinstance(data, dict) else None
-    if not isinstance(endpoint, str) or not endpoint.startswith("https://"):
+    try:
+        validate_push_endpoint(endpoint)
+    except ValueError:
         return JsonResponse(
             {"detail": "A valid push endpoint is required."},
             status=400,
@@ -173,7 +180,7 @@ def manage_push_subscription(request):
 
     keys = data.get("keys")
     if not isinstance(keys, dict) or not all(
-        isinstance(keys.get(key), str) and keys[key]
+        isinstance(keys.get(key), str) and 0 < len(keys[key]) <= 256
         for key in ("p256dh", "auth")
     ):
         return JsonResponse(

@@ -1,62 +1,29 @@
 {% extends "base.html" %}
 {% load static %}
-
-{% block title %}Your feed · Awinlink{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/home-feed.css' %}">{% endblock %}
-
+{% block body_class %}social-shell{% endblock %}
+{% block title %}{% if is_talent_dashboard %}Your dashboard{% elif feed_view == 'reels' %}Reels{% else %}Your feed{% endif %} Â· Awinlink{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/home-feed.css' %}"><link rel="stylesheet" href="{% static 'css/social-dashboard.css' %}">{% endblock %}
 {% block content %}
-<div class="home-feed">
-    <header class="feed-page-heading">
-        <div><span class="feed-eyebrow">DISCOVER. CONNECT. GROW.</span><h1>Your community, in focus.</h1><p>Fresh perspectives. Real talent. Your next connection.</p></div>
-        <a href="{% url 'create_post' %}" class="feed-create-button"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Create post</span></a>
-    </header>
-
+<div class="home-feed social-dashboard" data-view="{{ feed_view }}">
+    <header class="social-heading"><div><span class="social-kicker"><span></span> YOUR WORLD OF TALENT</span><h1>{% if is_talent_dashboard %}Welcome back, {{ user.first_name|default:user.username }}.{% else %}Good things start here.{% endif %}</h1><p>A little inspiration. Your people. A world of possibility.</p></div><a href="{% url 'create_post' %}" class="feed-create-button"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Create a post</span></a></header>
     <div class="feed-layout">
         <div class="feed-timeline">
-            <a href="{% url 'create_post' %}" class="feed-composer">
-                <span class="feed-avatar">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% elif user.talent_profile.profile_photo %}<img src="{{ user.talent_profile.profile_photo.url }}" alt="">{% else %}<i class="bi bi-person" aria-hidden="true"></i>{% endif %}</span>
-                <span class="feed-composer-copy"><strong>What have you been working on?</strong><small>Share a moment, a milestone, or a fresh idea.</small></span>
-                <span class="feed-composer-icon"><i class="bi bi-image" aria-hidden="true"></i></span>
-            </a>
-
-            {% if sub_ecosystems %}
-                <section class="feed-communities" aria-labelledby="sub-ecosystems-title">
-                    <div class="feed-section-heading"><h2 id="sub-ecosystems-title">Your sub-ecosystems</h2><span>Find your people</span></div>
-                    <div class="feed-community-list" tabindex="0" aria-label="Your sub-ecosystems, scroll to explore">
-                        {% for group in sub_ecosystems %}<article class="feed-community"><span class="feed-community-icon"><i class="bi bi-people" aria-hidden="true"></i></span><strong>{{ group.name }}</strong><span>{{ group.member_count }} members · {{ group.score }} match</span><p>{{ group.reason }}</p><div class="feed-community-tags">{% for member_type in group.member_types %}<small>{{ member_type }}</small>{% endfor %}</div></article>{% endfor %}
-                    </div>
-                </section>
-            {% endif %}
-
-            <section class="feed-stream" aria-labelledby="feed-stream-title">
-                <div class="feed-section-heading"><h2 id="feed-stream-title">Your feed</h2><span>From your community</span></div>
+            {% include 'core/feed/stories.html' %}
+            <a href="{% url 'create_post' %}" class="feed-composer">{% include 'core/feed/viewer_avatar.html' %}<span class="feed-composer-copy"><strong>Got something worth sharing?</strong><small>A work in progress. A proud moment. A new idea.</small></span><span class="feed-composer-icon"><i class="bi bi-image" aria-hidden="true"></i></span></a>
+            <nav class="feed-tabs" aria-label="Feed views"><a href="{{ feed_base_url }}" {% if feed_view == 'for-you' %}aria-current="page"{% endif %}><i class="bi bi-grid-1x2" aria-hidden="true"></i>For you</a><a href="{{ feed_base_url }}?view=following" {% if feed_view == 'following' %}aria-current="page"{% endif %}><i class="bi bi-people" aria-hidden="true"></i>Following</a><a href="{{ feed_base_url }}?view=reels" {% if feed_view == 'reels' %}aria-current="page"{% endif %}><i class="bi bi-play-btn" aria-hidden="true"></i>Reels</a></nav>
+            <section class="feed-stream" aria-label="{% if feed_view == 'reels' %}Video reels{% elif feed_view == 'following' %}Posts from people you follow{% else %}Your personalized feed{% endif %}">
                 {% for item in feed_items %}
-                    {% if item.type == 'POST' %}
-                        {% include 'core/feed/post_card.html' with post=item.object shared=None card_prefix='post' entry_id=item.object.id %}
-                    {% elif item.type == 'SHARE' %}
-                        {% include 'core/feed/post_card.html' with post=item.object.post shared=item.object card_prefix='share' entry_id=item.object.id %}
-                    {% elif item.type == 'ADVERTISEMENT' %}
-                        {% with advertisement=item.object tracking_token=item.tracking_token %}{% include 'advertising/ad_card.html' %}{% endwith %}
-                    {% endif %}
-                {% empty %}
-                    <div class="feed-empty-state"><span class="feed-empty-icon"><i class="bi bi-camera" aria-hidden="true"></i></span><h3>Make this feed your own.</h3><p>Follow talents and organizations to see their latest moments. Or share the first of your own.</p><a href="{% url 'talent_search' %}" class="feed-create-button">Discover talent <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
-                {% endfor %}
+                    {% if item.type == 'POST' %}{% include 'core/feed/post_card.html' with post=item.object shared=None card_prefix='post' entry_id=item.object.id %}
+                    {% elif item.type == 'SHARE' %}{% include 'core/feed/post_card.html' with post=item.object.post shared=item.object card_prefix='share' entry_id=item.object.id %}
+                    {% elif item.type == 'ADVERTISEMENT' %}{% with advertisement=item.object tracking_token=item.tracking_token %}{% include 'advertising/ad_card.html' %}{% endwith %}{% endif %}
+                {% empty %}<div class="feed-empty-state"><span class="feed-empty-icon"><i class="bi {% if feed_view == 'reels' %}bi-play-btn{% elif feed_view == 'following' %}bi-people{% else %}bi-camera{% endif %}" aria-hidden="true"></i></span><h2>{% if feed_view == 'reels' %}Your next big moment starts here.{% elif feed_view == 'following' %}Find your people.{% else %}Make this space your own.{% endif %}</h2><p>{% if feed_view == 'reels' %}No videos in your feed yet. Share a clip of your talent, or discover someone new.{% elif feed_view == 'following' %}Follow talents and organizations to keep up with what they're creating.{% else %}Share your first moment or discover talents who inspire you.{% endif %}</p><a href="{% url 'talent_search' %}" class="feed-create-button">Discover talent <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>{% endfor %}
             </section>
-
-            <section class="feed-resource-section" aria-labelledby="feed-events-title">
-                <div class="feed-section-heading"><h2 id="feed-events-title">Around your community</h2><a href="{% url 'event_list' %}" class="feed-text-link">All events <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
-                {% for event in events %}{% include 'core/feed/activity_card.html' with activity=event kind='event' liked_ids=liked_event_ids %}{% empty %}<p class="feed-empty-copy feed-resource-empty">No upcoming events. Check back for what's next.</p>{% endfor %}
-            </section>
-
-            <section class="feed-resource-section" aria-labelledby="feed-learning-title">
-                <div class="feed-section-heading"><h2 id="feed-learning-title">Learn &amp; grow</h2><a href="{% url 'courses' %}" class="feed-text-link">Explore learning <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
-                {% for lesson in learning_content %}{% include 'core/feed/activity_card.html' with activity=lesson kind='course' liked_ids=liked_course_ids %}{% empty %}<p class="feed-empty-copy feed-resource-empty">No learning materials available right now.</p>{% endfor %}
-            </section>
+            {% if sub_ecosystems %}<details class="feed-community-disclosure"><summary><i class="bi bi-people" aria-hidden="true"></i>Your communities <span>{{ sub_ecosystems|length }} to explore</span></summary><section class="feed-communities" aria-label="Your sub-ecosystems"><div class="feed-community-list" tabindex="0" aria-label="Scroll through your communities">{% for group in sub_ecosystems %}<article class="feed-community"><span class="feed-community-icon"><i class="bi bi-people" aria-hidden="true"></i></span><strong>{{ group.name }}</strong><span>{{ group.member_count }} members Â· {{ group.score }} match</span><p>{{ group.reason }}</p><div class="feed-community-tags">{% for member_type in group.member_types %}<small>{{ member_type }}</small>{% endfor %}</div></article>{% endfor %}</div></section></details>{% endif %}
+            <section class="feed-resource-section" aria-labelledby="feed-events-title"><div class="feed-section-heading"><h2 id="feed-events-title">Meet. Learn. Make something happen.</h2><a href="{% url 'event_list' %}" class="feed-text-link">Events <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>{% for event in events %}{% include 'core/feed/activity_card.html' with activity=event kind='event' liked_ids=liked_event_ids %}{% empty %}<p class="feed-empty-copy feed-resource-empty">Your community's next event could be just around the corner. <a href="{% url 'event_list' %}">Explore events</a>.</p>{% endfor %}</section>
+            <section class="feed-resource-section" aria-labelledby="feed-learning-title"><div class="feed-section-heading"><h2 id="feed-learning-title">Keep your curiosity going.</h2><a href="{% url 'courses' %}" class="feed-text-link">Learning <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>{% for lesson in learning_content %}{% include 'core/feed/activity_card.html' with activity=lesson kind='course' liked_ids=liked_course_ids %}{% empty %}<p class="feed-empty-copy feed-resource-empty">There's always something new to learn. <a href="{% url 'courses' %}">Find your next course</a>.</p>{% endfor %}</section>
         </div>
-
-        {% include 'core/feed/discovery.html' %}
+        <aside class="social-rail" aria-label="Your dashboard and recommendations"><section class="social-profile feed-panel" aria-label="Your profile"><div class="social-profile-person">{% include 'core/feed/viewer_avatar.html' %}<div><strong>{{ user.get_full_name|default:user.username }}</strong><span>@{{ user.username }}</span></div><a href="{% url 'dashboard' %}" class="social-icon-link" aria-label="Your dashboard"><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div><p>{% if user.talent_profile.headline %}{{ user.talent_profile.headline }}{% else %}A little more you. A lot more possibility.{% endif %}</p><a href="{% url 'dashboard' %}" class="feed-text-link">Your space <i class="bi bi-arrow-right" aria-hidden="true"></i></a></section>{% include 'core/feed/discovery.html' with talents_only=True %}{% block dashboard_summary %}{% endblock %}{% include 'core/feed/discovery.html' with resources_only=True %}<div class="social-rail-footer"><a href="{% url 'support' %}">Help</a><span>Â·</span><a href="{% url 'privacy' %}">Privacy</a><span>Â·</span><a href="{% url 'terms' %}">Terms</a><p>Â© {% now 'Y' %} Awinlink. Made for possibility.</p></div></aside>
     </div>
 </div>
 {% endblock %}
-
-{% block extra_js %}<script src="{% static 'js/home-feed.js' %}"></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/home-feed.js' %}"></script><script src="{% static 'js/social-dashboard.js' %}"></script>{% endblock %}

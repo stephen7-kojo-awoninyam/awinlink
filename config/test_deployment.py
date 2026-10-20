@@ -8,6 +8,8 @@ from django.test import SimpleTestCase
 
 class DeploymentSettingsTests(SimpleTestCase):
     def load_settings(self, **environment):
+        if any(environment.get(key) for key in ('RAILWAY_ENVIRONMENT_NAME', 'RAILWAY_ENVIRONMENT', 'RENDER')) or environment.get('DEBUG', '').lower() == 'false':
+            environment.setdefault('SECRET_KEY', 'fixture-only-0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ-abcdefgh')
         with patch.dict(os.environ, environment, clear=True), patch('dotenv.load_dotenv'):
             return runpy.run_path(str(Path(__file__).with_name('settings.py')))
 
@@ -15,7 +17,7 @@ class DeploymentSettingsTests(SimpleTestCase):
         configured = self.load_settings(
             RAILWAY_ENVIRONMENT_NAME='production',
             RAILWAY_PUBLIC_DOMAIN='preview.up.railway.app',
-            SECRET_KEY='test-only-production-key',
+            SECRET_KEY='fixture-only-0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ-abcdefgh',
         )
         self.assertFalse(configured['DEBUG'])
         for key in ('SECURE_SSL_REDIRECT', 'SESSION_COOKIE_SECURE', 'CSRF_COOKIE_SECURE'):

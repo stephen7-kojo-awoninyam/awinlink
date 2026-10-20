@@ -51,8 +51,8 @@ class HomeFeedTests(TestCase):
 		self.assertContains(response, 'class="awinlink-sidebar"', count=1)
 		self.assertContains(response, 'class="mobile-bottom-nav d-lg-none"', count=1)
 
-	def test_global_search_is_absent_outside_feed_without_losing_navigation(self):
-		response = self.client.get(reverse("talent_search"))
+	def test_learning_keeps_navigation_without_global_search(self):
+		response = self.client.get(reverse("courses"))
 
 		self.assertEqual(response.status_code, 200)
 		self.assertNotContains(response, 'id="globalSearch"')

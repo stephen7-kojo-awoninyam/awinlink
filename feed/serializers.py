@@ -1,5 +1,5 @@
-from organizations.permissions import require_active_organization
 from rest_framework import serializers
+from .permissions import authorize_post_associations
 
 from .models import (
 Post,
@@ -104,9 +104,14 @@ class PostSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
-        if self.instance is not None:
-            require_active_organization(self.instance.organization)
-        require_active_organization(attrs.get("organization"))
+        request = self.context.get('request')
+        if request is None:
+            raise serializers.ValidationError('An authenticated posting context is required.')
+        effective = {key: attrs.get(key, getattr(self.instance, key, None)) for key in ('talent', 'organization', 'event')}
+        authorize_post_associations(request.user, effective, instance=self.instance)
+        get = lambda key, default=None: attrs.get(key, getattr(self.instance, key, default))
+        if not (get('caption', '').strip() or get('image') or get('video')):
+            raise serializers.ValidationError('Add text, a photo, or a video before posting.')
         return attrs
 
     # --------------------------------------------------------

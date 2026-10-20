@@ -125,6 +125,9 @@ class LearningTemplateContracts(SimpleTestCase):
             form.cleaned_data={}
             form.add_error(None,"Please correct the submitted fields.")
             html=self.render(template,form=form,course=self.course,lesson=self.lessons[0],quiz=self.quiz)
+            # The global post composer also has an upload form. Check only the
+            # learning form so this contract does not depend on shared navigation.
+            html=html.split('<form class="lc-card"',1)[1].split('</form>',1)[0]
             for name in form.fields: self.assertIn(f'name="{name}"',html)
             self.assertEqual('enctype="multipart/form-data"' in html,uploads)
             self.assertIn("Please correct the submitted fields.",html)

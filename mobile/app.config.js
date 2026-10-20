@@ -16,6 +16,21 @@ module.exports = () => {
   const androidPackage = process.env.AWINLINK_ANDROID_PACKAGE || expo.android.package;
   const iosBundle = process.env.AWINLINK_IOS_BUNDLE_IDENTIFIER || expo.ios.bundleIdentifier;
   const googleServicesFile = process.env.AWINLINK_GOOGLE_SERVICES_FILE;
+  const androidApk = process.env.EAS_BUILD_PROFILE === 'android-apk';
+  // Test APKs must exercise the deployed API and native push, not a dev-only setup.
+  // Keep these checks separate from the existing production profile.
+  if (androidApk) {
+    for (const key of ['EXPO_PUBLIC_API_URL', 'EXPO_PUBLIC_WEB_URL']) {
+      const url = httpsUrl(process.env[key], key, true);
+      if (/^(localhost|127\.|0\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[::1\]$)/i.test(url.hostname) || url.hostname.endsWith('.local')) {
+        throw new Error(`${key} must use a public HTTPS origin for the Android test APK.`);
+      }
+    }
+    for (const key of ['EXPO_PUBLIC_PRIVACY_URL', 'EXPO_PUBLIC_TERMS_URL', 'EXPO_PUBLIC_SUPPORT_URL', 'EXPO_PUBLIC_DELETE_ACCOUNT_URL']) httpsUrl(process.env[key], key);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId || '')) throw new Error('Set EXPO_PUBLIC_EAS_PROJECT_ID to your owned EAS project UUID before building the Android APK.');
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(androidPackage || '')) throw new Error('Set a valid owned AWINLINK_ANDROID_PACKAGE.');
+    if (!googleServicesFile) throw new Error('Set AWINLINK_GOOGLE_SERVICES_FILE for Android APK notification testing.');
+  }
   if (production) {
     httpsUrl(process.env.EXPO_PUBLIC_API_URL, 'EXPO_PUBLIC_API_URL', true);
     httpsUrl(process.env.EXPO_PUBLIC_WEB_URL, 'EXPO_PUBLIC_WEB_URL', true);
@@ -33,7 +48,7 @@ module.exports = () => {
     extra: { ...expo.extra, launch: { free: true, purchasesEnabled: false }, ...(projectId ? { eas: { projectId } } : {}) },
     android: {
       ...expo.android,
-      blockedPermissions: ['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', ...(production ? ['android.permission.SYSTEM_ALERT_WINDOW'] : [])],
+      blockedPermissions: ['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', ...(production || androidApk ? ['android.permission.SYSTEM_ALERT_WINDOW'] : [])],
       ...(googleServicesFile ? { googleServicesFile } : {}),
       ...(androidPackage ? { package: androidPackage } : {}),
     },

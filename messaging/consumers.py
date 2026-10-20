@@ -10,12 +10,16 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .models import Call, CallParticipant
 from .call_lifecycle import finish_call
+from .socket_security import SecureSocketMixin
 
 
 logger = logging.getLogger(__name__)
 
 
-class CallConsumer(AsyncWebsocketConsumer):
+class CallConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
+
+    async def delivery_allowed(self):
+        return await self.check_participant()
 
     async def connect(self):
 
@@ -26,7 +30,7 @@ class CallConsumer(AsyncWebsocketConsumer):
         # AUTHENTICATION
         # ---------------------------------------------------------
 
-        if not self.user.is_authenticated:
+        if not await self.ensure_credentials():
             await self.close(code=4001)
             return
 
@@ -52,6 +56,7 @@ class CallConsumer(AsyncWebsocketConsumer):
         )
 
         await self.accept()
+        self.start_security_watchdog()
 
         # ---------------------------------------------------------
         # CONFIRM CONNECTION
@@ -60,6 +65,7 @@ class CallConsumer(AsyncWebsocketConsumer):
         await self.send(
             text_data=json.dumps({
                 "type": "connection",
+                "reauthentication": True,
                 "message": "Connected to call signaling server.",
                 "call_id": self.call_id,
                 "user_id": self.user.id,
@@ -81,6 +87,8 @@ class CallConsumer(AsyncWebsocketConsumer):
         )
 
     async def disconnect(self, close_code):
+
+        self.stop_security_watchdog()
 
         if hasattr(self, "room_group_name"):
 
@@ -114,6 +122,9 @@ class CallConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data=None, bytes_data=None):
 
+        if not await self.bounded_frame(text_data, bytes_data) or not await self.ensure_credentials():
+            return
+
         if not await self.check_participant():
             await self.close(code=4003)
             return
@@ -121,7 +132,7 @@ class CallConsumer(AsyncWebsocketConsumer):
         try:
             data = json.loads(text_data)
 
-        except (json.JSONDecodeError, TypeError):
+        except (json.JSONDecodeError, TypeError, RecursionError):
 
             await self.send(
                 text_data=json.dumps({
@@ -136,6 +147,9 @@ class CallConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({
                 "type": "error", "message": "Signaling messages must be JSON objects."
             }))
+            return
+
+        if await self.reauthenticate(data):
             return
 
 
@@ -287,7 +301,7 @@ class CallConsumer(AsyncWebsocketConsumer):
                 finish_call(call, self.user.pk)
 
 
-class UserConsumer(AsyncWebsocketConsumer):
+class UserConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
     @database_sync_to_async
     def messaging_access(self, conversation_id):
         from .realtime import can_access
@@ -315,7 +329,7 @@ class UserConsumer(AsyncWebsocketConsumer):
         # AUTHENTICATION
         # ---------------------------------------------------------
 
-        if not self.user.is_authenticated or not self.user.is_active or self.scope.get('jwt_invalid'):
+        if not await self.ensure_credentials():
 
             await self.close(code=4001)
 
@@ -334,9 +348,8 @@ class UserConsumer(AsyncWebsocketConsumer):
             )
         except RedisError as error:
             logger.warning(
-            "Unable to register user WebSocket group for user %s: %s",
+                "Unable to register user WebSocket group for user %s.",
                 self.user.id,
-            error,
             )
             await self.close(code=1013)
             return
@@ -346,6 +359,7 @@ class UserConsumer(AsyncWebsocketConsumer):
         # ---------------------------------------------------------
 
         await self.accept()
+        self.start_security_watchdog()
 
         # ---------------------------------------------------------
         # CONFIRM CONNECTION
@@ -354,12 +368,15 @@ class UserConsumer(AsyncWebsocketConsumer):
         await self.send(
             text_data=json.dumps({
                 "type": "user_connection",
+                "reauthentication": True,
                 "message": "Connected to Awinlink global event server.",
                 "user_id": self.user.id,
             })
         )
 
     async def disconnect(self, close_code):
+
+        self.stop_security_watchdog()
 
         if hasattr(self, "user_group_name"):
 
@@ -370,24 +387,27 @@ class UserConsumer(AsyncWebsocketConsumer):
                 )
             except RedisError as error:
                 logger.warning(
-                    "Unable to remove user WebSocket group for user %s: %s",
+                    "Unable to remove user WebSocket group for user %s.",
                     self.user.id,
-                    error,
                 )
 
     async def receive(self, text_data=None, bytes_data=None):
+        if not await self.bounded_frame(text_data, bytes_data) or not await self.ensure_credentials():
+            return
         import time
         if self.scope.get('jwt_expires_at', float('inf')) <= time.time():
             await self.close(code=4001)
             return
         try:
             data = json.loads(text_data)
+            if await self.reauthenticate(data):
+                return
             if not isinstance(data, dict) or data.get('type') != 'typing':
                 return
             conversation_id = int(data['conversation_id'])
             if type(data.get('is_typing')) is not bool:
                 return
-        except (ValueError, TypeError, KeyError):
+        except (ValueError, TypeError, KeyError, RecursionError):
             return
         if not await self.messaging_access(conversation_id):
             return

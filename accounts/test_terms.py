@@ -9,7 +9,7 @@ from organizations.models import Organization
 from talents.models import TalentProfile
 
 
-@override_settings(STORAGES={
+@override_settings(AUTH_RATE_LIMITS={'registration': {'ip': (200, 3600)}, 'login': {'ip': (60, 900), 'identity': (10, 900)}}, STORAGES={
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 })

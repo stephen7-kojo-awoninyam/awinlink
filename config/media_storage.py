@@ -2,6 +2,7 @@
 from cloudinary.utils import cloudinary_url
 from cloudinary_storage.storage import MediaCloudinaryStorage
 from django.core.files.storage import FileSystemStorage
+import os
 
 
 class LocalPlaybackStorage(FileSystemStorage):
@@ -18,6 +19,11 @@ class PlaybackMediaStorage(MediaCloudinaryStorage):
     # Use upload folders, since Cloudinary public IDs normally have no extension.
     AUDIO_PREFIX = "messages/audio/"
     VIDEO_PREFIXES = ("feed/videos/", "messages/videos/")
+    PRIVATE_PREFIXES = (
+        "feed/images/", "feed/videos/", "messages/groups/", "messages/images/",
+        "messages/videos/", "messages/audio/", "messages/files/",
+        "learning/videos/", "learning/notes/",
+    )
 
     def _media_name(self, name):
         name = self._normalise_name(name)
@@ -32,11 +38,30 @@ class PlaybackMediaStorage(MediaCloudinaryStorage):
             return "video"
         return super()._get_resource_type(name)
 
+    def _upload(self, name, content):
+        media_name = self._media_name(name)
+        options = {"use_filename": True, "resource_type": self._get_resource_type(name), "tags": self.TAG}
+        folder = os.path.dirname(name)
+        if folder:
+            options["folder"] = folder
+        if media_name.startswith(self.PRIVATE_PREFIXES):
+            # Private uploads start private; no public delivery window is created.
+            options["type"] = "authenticated"
+            if media_name.startswith(self.AUDIO_PREFIX):
+                options["eager"] = [{"format": "mp3", "audio_codec": "mp3"}]
+            elif media_name.startswith(self.VIDEO_PREFIXES):
+                options["eager"] = [{"format": "mp4", "video_codec": "h264", "audio_codec": "aac"}]
+        from cloudinary import uploader
+        return uploader.upload(content, **options)
+
     def _get_url(self, name):
         local = LocalPlaybackStorage()
         # Retain existing on-disk media when cloud storage is enabled later.
         if local.exists(name):
             return local.url(name)
+        media_name = self._media_name(name)
+        if media_name.startswith(self.PRIVATE_PREFIXES):
+            return local.url(media_name)
         if self._get_resource_type(name) != "video":
             return super()._get_url(name)
         audio = self._media_name(name).startswith(self.AUDIO_PREFIX)
@@ -45,3 +70,8 @@ class PlaybackMediaStorage(MediaCloudinaryStorage):
         if not audio:
             options.update(video_codec="h264", audio_codec="aac")
         return cloudinary_url(self._prepend_prefix(name), **options)[0]
+
+    def url(self, name):
+        if self._media_name(name).startswith(self.PRIVATE_PREFIXES):
+            return self._get_url(name)
+        return super().url(name)

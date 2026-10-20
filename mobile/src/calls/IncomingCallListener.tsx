@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 
 import { apiRequest, getAccessToken, getWebSocketUrl } from '@/src/api/client';
+import { socketAccessToken, maintainSocketAuthentication } from '@/src/api/socketAuthentication';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { enableNativeCallUI, disableNativeCallUI, showNativeIncomingCall, endNativeCall, registerVoipToken } from './nativeCallUI';
 import { callHasEnded, finishCallRequest, notifyCallEnded } from './callLifecycle';
@@ -36,7 +37,9 @@ function socketWithToken(url: string, token: string) {
     protocols: string[],
     options: { headers: Record<string, string> },
   ) => WebSocket;
-  return new Socket(url, [], { headers: { Authorization: `Bearer ${token}` } });
+  const socket = new Socket(url, [], { headers: { Authorization: `Bearer ${token}` } });
+  maintainSocketAuthentication(socket);
+  return socket;
 }
 
 function callFromData(data: Record<string, unknown>): IncomingCall | null {
@@ -215,7 +218,7 @@ export function IncomingCallListener() {
     });
 
     void (async () => {
-      const token = await getAccessToken();
+      const token = await socketAccessToken();
       if (!active || !token) return;
       try {
         socket = socketWithToken(getWebSocketUrl('ws/user/'), token);

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { apiRequest } from '@/src/api/client';
+import { apiRequest, mediaSource } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthProvider';
 
 import type { FeedPost } from '@/src/types';
@@ -23,6 +23,13 @@ export function FeedPostCard({
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
   const [blocked, setBlocked] = useState(false);
+  const [imageSource, setImageSource] = useState<{ uri: string; headers?: Record<string, string> } | null>(null);
+  useEffect(() => {
+    let active = true;
+    setImageSource(null);
+    if (post.image) void mediaSource(post.image).then(source => { if (active) setImageSource(source); });
+    return () => { active = false; };
+  }, [post.image]);
   async function loadComments() {
     setExpanded(true); setWorking(true); setError('');
     try { setComments(await apiRequest(`feed/posts/${post.id}/comments/`)); }
@@ -73,7 +80,7 @@ export function FeedPostCard({
       </View>
 
       {!!post.caption && <Text style={styles.caption}>{post.caption}</Text>}
-      {!!post.image && <Image source={{ uri: post.image }} style={styles.postImage} />}
+      {!!post.image && imageSource && <Image source={imageSource} style={styles.postImage} />}
       {!!post.video && (
         <VideoPlayer uri={post.video} />
       )}

@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.shortcuts import render, redirect,get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.urls import reverse
 from .models import (
     Post,
     PostLike,
@@ -12,6 +13,7 @@ from .models import (
 )
 from .forms import PostForm
 from .forms import CommentForm
+from .permissions import authorize_post_associations
 from notifications.models import Notification
 # Create your views here.
 
@@ -64,8 +66,12 @@ def create_post(request):
                 post.organization = require_active_organization(request.user.organization_profile)
 
 
+            authorize_post_associations(request.user, {}, instance=post)
             post.save()
 
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"status": "success", "post_id": post.pk,
+                                     "redirect_url": reverse("home_feed")}, status=201)
 
             return redirect(
 
@@ -74,6 +80,9 @@ def create_post(request):
             )
 
 
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"status": "error", "errors": form.errors.get_json_data()}, status=400)
 
     else:
 

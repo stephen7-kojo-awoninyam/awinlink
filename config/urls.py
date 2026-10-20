@@ -77,7 +77,7 @@ urlpatterns = [
 
 urlpatterns += [
     re_path(
-        r"^media/(?P<path>(?:feed/videos|messages/(?:audio|videos))/.+)$",
+        r"^media/(?P<path>(?:feed/(?:images|videos)|messages/(?:groups|images|audio|videos|files)|learning/(?:videos|notes))/.+)$",
         playback_media,
         name="playback_media",
     ),

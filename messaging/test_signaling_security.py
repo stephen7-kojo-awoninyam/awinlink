@@ -1,6 +1,6 @@
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from asgiref.sync import async_to_sync
 from channels.testing import WebsocketCommunicator
@@ -13,6 +13,13 @@ from .consumers import CallConsumer
 
 
 class SignalingPayloadTests(SimpleTestCase):
+    def setUp(self):
+        # These tests isolate signal payload handling; credential integration is
+        # exercised independently by real ASGI communicators below.
+        guard = patch('messaging.socket_security.SecureSocketMixin.ensure_credentials', new=AsyncMock(return_value=True))
+        guard.start()
+        self.addCleanup(guard.stop)
+
     def test_non_object_json_does_not_crash_or_relay(self):
         for payload in ('[]', 'null', '42', '"offer"'):
             consumer = CallConsumer()
@@ -49,8 +56,10 @@ class SignalingPayloadTests(SimpleTestCase):
         consumer = CallConsumer()
         consumer.check_participant = AsyncMock(return_value=True)
         consumer.send = AsyncMock()
+        consumer.close = AsyncMock()
         async_to_sync(consumer.receive)(bytes_data=b'not a text signal')
-        self.assertEqual(json.loads(consumer.send.call_args.kwargs['text_data'])['type'], 'error')
+        consumer.close.assert_awaited_once_with(code=1003)
+        consumer.send.assert_not_awaited()
 
     def test_legacy_web_payloads_are_normalized_for_mobile(self):
         for payload in (

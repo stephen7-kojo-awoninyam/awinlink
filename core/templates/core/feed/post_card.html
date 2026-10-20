@@ -1,4 +1,4 @@
-<article class="feed-post" aria-labelledby="creator-{{ card_prefix }}-{{ entry_id }}" data-feed-card data-kind="post" data-post-id="{{ post.id }}">
+<article class="feed-post{% if post.video %} feed-video-post{% endif %}" id="{{ card_prefix }}-{{ entry_id }}" aria-labelledby="creator-{{ card_prefix }}-{{ entry_id }}" data-feed-card data-kind="post" data-post-id="{{ post.id }}">
     {% if shared %}
         <div class="feed-repost-note">
             <i class="bi bi-repeat" aria-hidden="true"></i>
@@ -37,6 +37,9 @@
         <time class="feed-post-time" datetime="{{ post.created_at|date:'c' }}" title="{{ post.created_at|date:'M j, Y, H:i' }}">{{ post.created_at|timesince }} ago</time>
     </header>
 
+    {% if post.image %}<div class="feed-media"><img src="{{ post.image.url }}" alt="{{ post.get_post_type_display }} shared by {% if post.organization %}{{ post.organization.name }}{% else %}{{ post.author.get_full_name|default:post.author.username }}{% endif %}" loading="lazy" decoding="async"></div>{% endif %}
+    {% if post.video %}<div class="feed-media"><video controls playsinline preload="metadata" aria-label="Video shared by {{ post.author.get_full_name|default:post.author.username }}"><source src="{{ post.video.url }}">Your browser does not support video. <a href="{{ post.video.url }}">Download the video</a>.</video></div>{% endif %}
+
     <div class="feed-post-copy">
         <span class="feed-category">{{ post.get_post_type_display }}</span>
         {% if post.caption %}<div class="feed-caption">{{ post.caption|linebreaks }}</div>{% endif %}
@@ -48,9 +51,6 @@
             </a>
         {% endif %}
     </div>
-
-    {% if post.image %}<div class="feed-media"><img src="{{ post.image.url }}" alt="{{ post.get_post_type_display }} shared by {% if post.organization %}{{ post.organization.name }}{% else %}{{ post.author.get_full_name|default:post.author.username }}{% endif %}" loading="lazy" decoding="async"></div>{% endif %}
-    {% if post.video %}<div class="feed-media"><video controls playsinline preload="metadata" aria-label="Video shared by {{ post.author.get_full_name|default:post.author.username }}"><source src="{{ post.video.url }}">Your browser does not support video. <a href="{{ post.video.url }}">Download the video</a>.</video></div>{% endif %}
 
     <div class="feed-post-footer">
         <div class="feed-actions" aria-label="Post actions">

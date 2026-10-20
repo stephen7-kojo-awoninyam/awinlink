@@ -20,6 +20,9 @@ from talents.services import FollowerAnalyticsService
 from .serializers import EventRecommendationSerializer, RoleModelAssignmentSerializer
 from accounts.models import User
 from accounts.forms import UserRegistrationForm
+from accounts.security import AuthenticationThrottle, RegistrationThrottle
+from accounts.tokens import AccountRefreshToken as RefreshToken
+from collections.abc import Mapping
 from organizations.models import Organization
 from opportunities.models import Opportunity
 from talents.models import TalentProfile
@@ -51,7 +54,6 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import (
     UserSerializer,
@@ -90,8 +92,12 @@ from .serializers import (
 class LoginAPIView(APIView):
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthenticationThrottle]
 
     def post(self, request):
+
+        if not isinstance(request.data, Mapping):
+            return Response({'detail': 'Enter valid login details.'}, status=400)
 
         username = request.data.get("username")
         password = request.data.get("password")
@@ -104,6 +110,9 @@ class LoginAPIView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        if not isinstance(username, str) or len(username) > 150 or not isinstance(password, str) or len(password) > 4096:
+            return Response({'detail': 'Enter valid login details.'}, status=400)
 
         user = authenticate(
             username=username,
@@ -147,8 +156,12 @@ class LoginAPIView(APIView):
 class RegisterAPIView(APIView):
 
     permission_classes = [AllowAny]
+    throttle_classes = [RegistrationThrottle]
 
     def post(self, request):
+
+        if not isinstance(request.data, Mapping):
+            return Response({'detail': 'Enter valid registration details.'}, status=400)
 
         if request.data.get("role") == "ADMIN":
             return Response(

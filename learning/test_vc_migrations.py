@@ -5,6 +5,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
+from django.db.migrations.recorder import MigrationRecorder
 from django.test import TransactionTestCase
 from django.utils import timezone
 
@@ -14,7 +15,9 @@ class VCMigrationChainTests(TransactionTestCase):
         executor = MigrationExecutor(connection)
         target = [('learning', name)]
         executor.migrate(target)
-        return executor.loader.project_state(target).apps
+        # Other apps remain migrated; model their actual schema as well as the
+        # selected historical learning state (not just its old dependencies).
+        return executor.loader.project_state(list(MigrationRecorder(connection).applied_migrations())).apps
 
     def test_incremental_0008_to_0013_preserves_legacy_attendance_and_constraints(self):
         latest = MigrationExecutor(connection).loader.graph.leaf_nodes('learning')

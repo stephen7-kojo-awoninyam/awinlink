@@ -12,6 +12,8 @@ from .serializers import PostSerializer,PostLike,PostLikeSerializer,Comment,Comm
 from connections.models import Connection, Follow, OrganizationFollow
 from recommendations.ecosystems import get_ecosystem_user_ids
 from accounts.safety import blocked_user_ids
+from organizations.permissions import OrganizationCapability, require_organization_capability
+from .permissions import authorize_post_associations
 
 # ============================================================
 
@@ -27,6 +29,9 @@ class PostCreateAPIView(APIView):
     def post(self, request):
         if request.user.role == "ORGANIZATION":
             require_user_organization_active(request.user)
+            organization = getattr(request.user, 'organization_profile', None)
+            if organization is not None:
+                require_organization_capability(request.user, organization, OrganizationCapability.MANAGE_POSTS)
 
         serializer = PostSerializer(
             data=request.data,
@@ -421,7 +426,7 @@ class PostDeleteAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        require_active_organization(post.organization)
+        authorize_post_associations(request.user, {}, instance=post)
         post.delete()
 
         return Response(

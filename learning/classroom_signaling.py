@@ -17,7 +17,8 @@ from django.db.models import Exists, F, OuterRef, Q
 from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from accounts.authentication import RevocableJWTAuthentication
+from accounts.token_revocation import refresh_session_revoked
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 from . import classroom_services as services
@@ -54,7 +55,9 @@ def credential_valid(user_id, *, claims=None, session_key=None):
         try:
             if float(claims["exp"]) <= time.time():
                 return False
-            return JWTAuthentication().get_user(claims).pk == user_id
+            if refresh_session_revoked(claims.get('sid')):
+                return False
+            return RevocableJWTAuthentication().get_user(claims).pk == user_id
         except (AuthenticationFailed, InvalidToken, TokenError, KeyError, ValueError, TypeError):
             return False
     if not session_key:

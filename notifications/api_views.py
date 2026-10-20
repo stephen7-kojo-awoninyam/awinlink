@@ -5,10 +5,12 @@ from rest_framework.views import APIView
 
 from .models import MobilePushToken, VoipPushToken
 import re
+from accounts.security import PushThrottle
 
 
 class MobilePushTokenAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [PushThrottle]
 
     def post(self, request):
         token = request.data.get("token")
@@ -50,6 +52,7 @@ class MobilePushTokenAPIView(APIView):
 
 class VoipPushTokenAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [PushThrottle]
 
     def post(self, request):
         token = request.data.get('token')

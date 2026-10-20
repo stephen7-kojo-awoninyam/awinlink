@@ -13,6 +13,7 @@ import {
   ApiError,
   apiRequest,
   clearTokens,
+  revokeCurrentSession,
   loadCurrentUser,
   signInRequest,
   signUpRequest,
@@ -143,6 +144,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // Signing out should still complete if the device is offline.
       }
       await SecureStore.deleteItemAsync('awinlink.push-token');
+    }
+    try {
+      await revokeCurrentSession();
+    } catch {
+      // Clear local credentials even when offline; server refresh revocation needs a connection.
     }
     await clearTokens();
     await SecureStore.deleteItemAsync(USER_KEY);

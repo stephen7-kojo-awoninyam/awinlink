@@ -1,0 +1,54 @@
+/* Shared posting controls on every authenticated page. */
+.awinlink-shell .global-post-button { position: fixed; right: 28px; bottom: 26px; z-index: 1040; display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; min-width: 116px; padding: 12px 24px; border-radius: 18px; background: #0866ff; color: #fff; font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 8px 30px #0866ff38; }
+.global-post-button i { font-size: 23px; }
+.awinlink-shell .global-post-button:hover { background: #0051d5; color: #fff; }
+.global-post-button:focus-visible, .post-composer-dialog :focus-visible { outline: 3px solid #0866ff90; outline-offset: 3px; }
+.post-composer-dialog { width: min(570px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid #dfe8f6; border-radius: 22px; background: #fff; color: #172a46; box-shadow: 0 25px 100px #112d5955; overflow-y: auto; overscroll-behavior: contain; }
+.post-composer-dialog::backdrop { background: #0b204099; backdrop-filter: blur(5px); }
+.post-composer-dialog[open] { display: flex; flex-direction: column; }
+.post-composer-dialog > form { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.post-composer-dialog .post-composer-fields { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.post-composer-header, .post-composer-footer { flex-shrink: 0; }
+.post-composer-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 23px 24px; border-bottom: 1px solid #e7edf6; }
+.post-composer-header > div > span { color: #52729a; font-size: 9px; font-weight: 750; letter-spacing: 1.6px; }
+.post-composer-header h2 { margin: 5px 0 0; font-size: 23px; font-weight: 750; letter-spacing: -.6px; color: #172a46; }
+.post-composer-close { flex-shrink: 0; display: grid; place-items: center; width: 42px; height: 42px; border: 0; border-radius: 50%; background: #f2f6fc; color: #516886; }
+.post-composer-fields { min-width: 0; padding: 22px 24px; margin: 0; border: 0; }
+.post-form-field { min-width: 0; margin-bottom: 16px; }
+.post-form-field:last-child { margin-bottom: 0; }
+.post-form-field label { display: block; margin-bottom: 7px; color: #354e70; font-size: 12px; font-weight: 650; }
+.post-form-field label > span { display: block; font-size: 11px; font-weight: 400; color: #718098; margin-top: 4px; }
+.post-form-field :is(input, textarea, select) { width: 100%; min-height: 44px; padding: 11px 12px; border: 1px solid #dce5f2; border-radius: 10px; background: #fbfcff; color: #243d60; font-size: 14px; }
+.post-form-field textarea { min-height: 110px; resize: vertical; }
+.post-form-field input[type=file] { padding: 8px; font-size: 12px; }
+.post-form-field input[type=file]::file-selector-button { margin-right: 12px; padding: 7px 12px; border: 0; border-radius: 7px; background: #eaf2ff; color: #0866ff; }
+.post-form-field .errorlist, .post-form-errors { color: #ab2942; font-size: 12px; }
+.post-composer-errors { margin: 16px 24px 0; padding: 12px; background: #fff2f4; border: 1px solid #ffd8df; border-radius: 10px; color: #a3273e; font-size: 13px; line-height: 1.7; }
+.post-composer-errors[hidden] { display: none; }
+.post-composer-errors ul { margin: 0; padding-left: 18px; }
+.post-composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 24px; border-top: 1px solid #e7edf6; background: #fff; }
+.post-composer-footer > span { color: #74839b; font-size: 11px; }
+.post-submit-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 108px; min-height: 44px; padding: 11px 22px; border: 0; border-radius: 11px; background: #0866ff; color: white; font-size: 14px; font-weight: 700; }
+.post-submit-button:disabled { background: #dce7f8; color: #677d9e; cursor: not-allowed; }
+.post-media-previews { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.post-media-previews figure { min-width: 0; margin: 0; padding: 8px; border: 1px solid #e2e9f4; border-radius: 10px; }
+.post-media-previews :is(img, video) { display: block; width: 100%; max-height: 170px; object-fit: contain; border-radius: 6px; background: #f1f5fb; }
+.post-media-previews figcaption { overflow-wrap: anywhere; font-size: 10px; color: #62738d; margin-top: 7px; }
+.post-creation-page { width: min(620px, 100%); margin: 10px auto; padding: 24px; border: 1px solid #e2e9f5; border-radius: 18px; background: white; }
+.post-creation-page h1 { margin-bottom: 20px; font-size: 25px; color: #18395d; }
+@media (max-width: 991.98px) {
+    .awinlink-shell .global-post-button { display: none; }
+    .awinlink-shell .mobile-nav-create { color: #0866ff; font-weight: 750; }
+    .awinlink-shell .mobile-nav-create > i { display: grid; place-items: center; width: 50px; height: 36px; border-radius: 12px; background: #0866ff; color: #fff; box-shadow: 0 4px 12px #0866ff24; }
+}
+@media (max-width: 575.98px) {
+    .post-composer-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 16px; }
+    .post-composer-header { padding: 18px; }
+    .post-composer-fields { padding: 18px; }
+    .post-composer-header h2 { font-size: 21px; }
+    .post-composer-footer { padding: 14px 18px; }
+    .post-composer-errors { margin-inline: 18px; }
+    .post-form-field :is(input, textarea, select) { font-size: 16px; }
+    .post-form-field input[type=file] { font-size: 12px; }
+    .post-creation-page { padding: 18px; }
+}

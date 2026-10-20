@@ -63,6 +63,14 @@ DEBUG = os.environ.get(
     "False" if os.environ.get("RAILWAY_ENVIRONMENT_NAME") or os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER") else "True"
 ).lower() == "true"
 
+from config.security import validate_production_secret
+from django.core.exceptions import ImproperlyConfigured
+
+HOSTED_PRODUCTION = bool(os.environ.get("RAILWAY_ENVIRONMENT_NAME") or os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER"))
+if HOSTED_PRODUCTION and DEBUG:
+    raise ImproperlyConfigured('DEBUG must be disabled on hosted production services.')
+validate_production_secret(SECRET_KEY, production=HOSTED_PRODUCTION or not DEBUG)
+
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -137,6 +145,7 @@ INSTALLED_APPS = [
     "marketplace",
     # Third-party
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "channels",
     "cloudinary_storage",
 ]
@@ -387,7 +396,7 @@ SIMPLE_JWT = {
 REST_FRAMEWORK = {
 
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "accounts.authentication.RevocableJWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
 
@@ -458,6 +467,24 @@ if os.environ.get("REDIS_URL"):
                                  "LOCATION": os.environ["REDIS_URL"], "KEY_PREFIX": "awinlink-recovery",
                                  "OPTIONS": {"socket_connect_timeout": 2, "socket_timeout": 2}}}
     PASSWORD_RESET_CACHE_ALIAS = "password_reset"
+
+# Authentication counters must be shared by production workers. Redis failure
+# returns a generic 503 on protected authentication actions rather than failing open.
+AUTH_RATE_LIMIT_CACHE_ALIAS = "security" if os.environ.get("REDIS_URL") else "default"
+AUTH_RATE_LIMIT_REQUIRE_SHARED_CACHE = HOSTED_PRODUCTION or not DEBUG
+if os.environ.get("REDIS_URL"):
+    CACHES["security"] = {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ["REDIS_URL"], "KEY_PREFIX": "awinlink-security",
+        "OPTIONS": {"socket_connect_timeout": 2, "socket_timeout": 2},
+    }
+AUTH_RATE_LIMITS = {
+    "login": {"ip": (60, 900), "identity": (10, 900)},
+    "registration": {"ip": (10, 3600)},
+    "refresh": {"ip": (300, 900)},
+    "google": {"ip": (30, 3600), "identity": (10, 900)},
+    "push": {"ip": (120, 900), "identity": (60, 900)},
+}
 
 CSRF_TRUSTED_ORIGINS = [
     "https://awinlink-production.up.railway.app",

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static post_composer %}
 
 <!DOCTYPE html>
 
@@ -53,6 +53,7 @@
 
 
 <link rel="stylesheet" href="{% static 'css/layout.css' %}">
+{% if user.is_authenticated %}<link rel="stylesheet" href="{% static 'css/post-composer.css' %}">{% endif %}
 
 {% block extra_css %}
 {% endblock %}
@@ -175,7 +176,7 @@
 
 </head>
 
-<body data-season="{{ seasonal_theme }}" class="{% if user.is_authenticated %}awinlink-shell{% endif %}">
+<body data-season="{{ seasonal_theme }}" class="{% if user.is_authenticated %}awinlink-shell{% endif %} {% block body_class %}{% endblock %}">
 
 <a class="shell-skip-link" href="#awinlinkContent">Skip to content</a>
 
@@ -249,7 +250,7 @@
 
     </div>
 
-    {% if request.resolver_match.url_name == 'home_feed' or request.resolver_match.url_name == 'conversation_list' or request.resolver_match.url_name == 'user_search' or request.resolver_match.url_name == 'talent_search' or request.resolver_match.url_name == 'opportunity_search' %}
+    {% if request.resolver_match.url_name == 'home_feed' or request.resolver_match.url_name == 'talent_dashboard' or request.resolver_match.url_name == 'conversation_list' or request.resolver_match.url_name == 'user_search' or request.resolver_match.url_name == 'talent_search' or request.resolver_match.url_name == 'opportunity_search' %}
     <div class="header-search mobile-header-search" data-feed-search>
         <i class="bi bi-search" aria-hidden="true"></i>
         <input
@@ -567,6 +568,9 @@
 
     </a>
 
+
+    <a href="{% if feed_base_url %}{{ feed_base_url }}{% else %}{% url 'home_feed' %}{% endif %}?view=reels" class="sidebar-link" title="Reels"><i class="bi bi-play-btn"></i><span>Reels</span></a>
+    <a href="{% url 'create_post' %}" class="sidebar-link" title="Create a post"><i class="bi bi-plus-square"></i><span>Create</span></a>
 
     <!-- Discover -->
 
@@ -893,7 +897,7 @@
 
     <!-- GLOBAL SEARCH -->
 
-    {% if request.resolver_match.url_name == 'home_feed' or request.resolver_match.url_name == 'user_search' or request.resolver_match.url_name == 'talent_search' or request.resolver_match.url_name == 'opportunity_search' %}
+    {% if request.resolver_match.url_name == 'home_feed' or request.resolver_match.url_name == 'talent_dashboard' or request.resolver_match.url_name == 'user_search' or request.resolver_match.url_name == 'talent_search' or request.resolver_match.url_name == 'opportunity_search' %}
     <div class="header-search" data-feed-search>
 
         <i class="bi bi-search"></i>
@@ -1168,13 +1172,13 @@
         <i class="bi bi-house-door" aria-hidden="true"></i>
         <span>Home</span>
     </a>
-    <a href="{% url 'talent_search' %}" class="mobile-nav-link">
-        <i class="bi bi-compass" aria-hidden="true"></i>
-        <span>Discover</span>
-    </a>
     <a href="{% url 'opportunity_list' %}" class="mobile-nav-link">
         <i class="bi bi-briefcase" aria-hidden="true"></i>
         <span>Opportunities</span>
+    </a>
+    <a href="{% url 'create_post' %}" class="mobile-nav-link mobile-nav-create" data-post-composer aria-haspopup="dialog" aria-controls="postComposer" aria-label="Create a post">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <span>Post</span>
     </a>
     <a href="{% url 'messaging:conversation_list' %}" class="mobile-nav-link">
         <span class="mobile-nav-icon">
@@ -1183,11 +1187,11 @@
         </span>
         <span>Messages</span>
     </a>
-    <button type="button" class="mobile-nav-link" id="mobileMoreToggle" aria-controls="awinlinkSidebar" aria-expanded="false">
-        <i class="bi bi-grid" aria-hidden="true"></i>
-        <span>More</span>
-    </button>
+    <button type="button" class="mobile-nav-link" id="mobileMoreToggle" aria-controls="awinlinkSidebar" aria-expanded="false"><i class="bi bi-grid" aria-hidden="true"></i><span>More</span></button>
 </nav>
+
+<a href="{% url 'create_post' %}" class="global-post-button" data-post-composer aria-haspopup="dialog" aria-controls="postComposer"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Post</span></a>
+{% post_composer %}
 
 {% else %}
 
@@ -1223,6 +1227,7 @@
 ></script>
 
 <script src="{% static 'js/layout.js' %}"></script>
+{% if user.is_authenticated %}<script src="{% static 'js/post-composer.js' %}"></script>{% endif %}
 
 <script
     src="{% static 'js/notifications.js' %}"

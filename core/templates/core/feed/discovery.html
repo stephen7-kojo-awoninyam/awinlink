@@ -1,6 +1,7 @@
-<aside class="feed-discovery" aria-label="Discover talent and opportunities" tabindex="0">
+<div class="feed-discovery">
+    {% if not resources_only %}
     <section class="feed-panel" aria-labelledby="feed-talents-title">
-        <div class="feed-panel-heading"><div><span class="feed-eyebrow">MAKE YOUR NEXT CONNECTION</span><h2 id="feed-talents-title">Talent to discover</h2></div><a href="{% url 'talent_search' %}" class="feed-text-link">Explore <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></div>
+        <div class="feed-panel-heading"><div><span class="feed-eyebrow">GOOD PEOPLE. GREAT POSSIBILITIES.</span><h2 id="feed-talents-title">Suggested for you</h2></div><a href="{% url 'talent_search' %}" class="feed-text-link">See all</a></div>
         {% for talent in recommended_talents %}
             <div class="feed-talent-row">
                 <a href="{% url 'talent_profile' talent.id %}" class="feed-suggestion-person">
@@ -32,6 +33,8 @@
         {% empty %}<p class="feed-empty-copy">New connections start with discovery. <a href="{% url 'talent_search' %}">Explore talents</a>.</p>{% endfor %}
     </section>
 
+    {% endif %}
+    {% if not talents_only %}
     <section class="feed-panel" aria-labelledby="feed-opportunities-title">
         <div class="feed-panel-heading"><h2 id="feed-opportunities-title">Your next opportunity</h2><i class="bi bi-briefcase" aria-hidden="true"></i></div>
         {% for opportunity in opportunities %}
@@ -49,4 +52,5 @@
             </a>
         {% empty %}<p class="feed-empty-copy">No organizations available right now.</p>{% endfor %}
     </section>
-</aside>
+    {% endif %}
+</div>

@@ -17,5 +17,10 @@ audit-*.json
 *.pem
 *.mobileprovision
 credentials.json
+**/google-services.json
+**/GoogleService-Info.plist
+*.apk
+*.aab
+*.ipa
 
 # Keep native config plugins, native-call sources and vendor dependencies in the archive.

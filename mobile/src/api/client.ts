@@ -40,6 +40,10 @@ export async function getAccessToken() {
   return SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
 }
 
+export async function revokeCurrentSession() {
+  await apiRequest<void>('auth/logout/', { method: 'POST' });
+}
+
 export class ApiError extends Error {
   status: number;
 
@@ -86,6 +90,13 @@ async function refreshAccessToken() {
     refreshInFlight = performTokenRefresh().finally(() => { refreshInFlight = null; });
   }
   return refreshInFlight;
+}
+
+// Long-lived native sockets must renew the same server-validated credentials as REST.
+export async function refreshSocketAccessToken() {
+  const token = await refreshAccessToken();
+  if (!token) throw new Error('Your session expired. Sign in again.');
+  return token;
 }
 
 async function performTokenRefresh() {

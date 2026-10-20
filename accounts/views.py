@@ -9,6 +9,20 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 from .models import User
+from .security import enforce_auth_limit, AuthenticationUnavailable
+from rest_framework.exceptions import Throttled
+
+
+def authentication_limit_response(request, scope):
+    try:
+        identifier = request.POST.get('username', '') if scope in {'login', 'registration'} else ''
+        enforce_auth_limit(request, scope, identifier)
+    except (Throttled, AuthenticationUnavailable) as error:
+        response = JsonResponse({'detail': str(error.detail)}, status=error.status_code)
+        response['Cache-Control'] = 'no-store'
+        if isinstance(error, Throttled):
+            response['Retry-After'] = str(error.wait)
+        return response
 
 
 # Create your views here.
@@ -22,6 +36,10 @@ def loading_page(request):
 def register(request):
 
     if request.method == "POST":
+
+        limited = authentication_limit_response(request, 'registration')
+        if limited is not None:
+            return limited
 
         form = UserRegistrationForm(request.POST)
 
@@ -103,6 +121,13 @@ def register(request):
 def user_login(request):
 
     if request.method == "POST":
+
+        limited = authentication_limit_response(request, 'login')
+        if limited is not None:
+            return limited
+
+        if len(request.POST.get('password', '')) > 4096:
+            return JsonResponse({'detail': 'Enter valid login details.'}, status=400)
 
         form = AuthenticationForm(request, data=request.POST)
 

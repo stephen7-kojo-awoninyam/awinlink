@@ -447,6 +447,7 @@ class UserConsumerRedisFailureTests(SimpleTestCase):
             ),
         )
         consumer.close = AsyncMock()
+        consumer.credentials_valid = AsyncMock(return_value=True)
         consumer.accept = AsyncMock()
 
         async_to_sync(consumer.connect)()
