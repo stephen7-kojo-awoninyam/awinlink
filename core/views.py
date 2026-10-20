@@ -58,11 +58,7 @@ def home(request):
 
 @login_required
 def home_feed(request):
-    return render_home_feed(request)
-
-
-def render_home_feed(request, *, dashboard_context=None):
-    """Shared social surface; callers retain their existing login/profile guards."""
+    """Render the social Home feed independently of account dashboards."""
     feed_view = request.GET.get("view", "for-you")
     if feed_view not in {"for-you", "following", "reels"}:
         feed_view = "for-you"
@@ -814,20 +810,16 @@ def render_home_feed(request, *, dashboard_context=None):
 
         "story_posts": story_posts,
         "feed_view": feed_view,
-        "feed_base_url": reverse("talent_dashboard" if dashboard_context is not None else "home_feed"),
+        "feed_base_url": reverse("home_feed"),
 
     }
 
-
-    if dashboard_context is not None:
-        context.update(dashboard_context)
-        context["is_talent_dashboard"] = True
 
     return render(
 
         request,
 
-        "talents/dashboard.html" if dashboard_context is not None else "core/home_feed.html",
+        "core/home_feed.html",
 
         context
 

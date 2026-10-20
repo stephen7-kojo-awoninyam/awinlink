@@ -541,7 +541,7 @@
 
     <a
         href="{% url 'dashboard' %}"
-        class="sidebar-link"
+        class="sidebar-link{% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'talent_dashboard' %} active{% endif %}"
     >
 
         <i class="bi bi-grid"></i>
@@ -569,7 +569,7 @@
     </a>
 
 
-    <a href="{% if feed_base_url %}{{ feed_base_url }}{% else %}{% url 'home_feed' %}{% endif %}?view=reels" class="sidebar-link" title="Reels"><i class="bi bi-play-btn"></i><span>Reels</span></a>
+    <a href="{% url 'home_feed' %}?view=reels" class="sidebar-link" title="Reels"><i class="bi bi-play-btn"></i><span>Reels</span></a>
     <a href="{% url 'create_post' %}" class="sidebar-link" title="Create a post"><i class="bi bi-plus-square"></i><span>Create</span></a>
 
     <!-- Discover -->

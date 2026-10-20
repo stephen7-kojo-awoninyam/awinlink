@@ -128,10 +128,13 @@ class SocialDashboardTests(TestCase):
         response = self.client.get(reverse("talent_dashboard"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "talents/dashboard.html")
-        self.assertTemplateUsed(response, "core/home_feed.html")
+        self.assertTemplateNotUsed(response, "core/home_feed.html")
+        self.assertNotIn("feed_items", response.context)
+        self.assertNotContains(response, "Visible illustration")
+        self.assertNotContains(response, 'aria-label="Feed views"')
         for label in ("Profile strength", "Recent applications", "Invitations", "Recent conversations", "Notifications"):
             self.assertContains(response, label)
-        self.assertContains(response, f'action="{reverse("like_post", args=[self.image.pk])}"')
+        self.assertNotContains(response, f'action="{reverse("like_post", args=[self.image.pk])}"')
         self.assertContains(response, reverse("messaging:conversation_list"))
 
     def test_post_actions_still_require_csrf_and_keep_django_fallbacks(self):
@@ -149,3 +152,29 @@ class SocialDashboardTests(TestCase):
         response = self.client.get(reverse("home_feed"), {"view": "<script>"})
         self.assertEqual(response.context["feed_view"], "for-you")
         self.assertNotContains(response, "<script></script>")
+
+    def test_home_and_dashboard_have_independent_routes_templates_and_content(self):
+        from django.urls import resolve
+        from core.views import home_feed
+        from talents.views import talent_dashboard
+
+        self.assertNotEqual(reverse("home_feed"), reverse("talent_dashboard"))
+        self.assertIs(resolve(reverse("home_feed")).func, home_feed)
+        self.assertIs(resolve(reverse("talent_dashboard")).func, talent_dashboard)
+        home = self.client.get(reverse("home_feed"))
+        self.assertTemplateUsed(home, "core/home_feed.html")
+        self.assertTemplateNotUsed(home, "talents/dashboard.html")
+        self.assertContains(home, "Visible illustration")
+        self.assertContains(home, 'aria-label="Feed views"')
+        self.assertNotContains(home, 'id="dashboard-progress-title"')
+        self.assertNotIn("total_applications", home.context)
+        for view in ("following", "reels"):
+            dashboard = self.client.get(reverse("talent_dashboard"), {"view": view})
+            self.assertContains(dashboard, "Profile strength")
+            self.assertNotIn("feed_items", dashboard.context)
+        for name in ("dashboard", "talent_dashboard", "home_feed"):
+            self.assertEqual(Client().get(reverse(name)).status_code, 302)
+        for response in (home, dashboard):
+            self.assertContains(response, f'href="{reverse("dashboard")}"')
+            self.assertContains(response, f'href="{reverse("home_feed")}"')
+            self.assertContains(response, f'href="{reverse("home_feed")}?view=reels"')

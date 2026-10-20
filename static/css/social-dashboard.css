@@ -190,3 +190,9 @@
     .social-story-viewer { padding: 12px; border-radius: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .social-dashboard * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+
+/* Account overview shares the social shell while keeping its own content. */
+.account-dashboard > .feed-panel { margin-bottom: 20px; }
+.account-dashboard .dashboard-snapshot { max-width: 900px; }
+.account-dashboard .dashboard-details summary { font-size: 14px; }
+.account-dashboard .dashboard-snapshot .feed-empty-copy { font-size: 13px; }
