@@ -186,7 +186,7 @@
                         </a>
 
                         <a
-                            href="{% url 'invite_talent' opportunity.id item.talent.id %}"
+                            href="{% url 'invite_talent' talent_id=item.talent.id opportunity_id=opportunity.id %}"
                             class="btn btn-success btn-sm"
                         >
                             Invite Talent

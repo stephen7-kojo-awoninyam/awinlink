@@ -1,9 +1,11 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static roster_tags %}
 {% block title %}{{ talent.user.get_full_name|default:talent.user.username }} · Awinlink{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/talent-profile.css' %}">{% endblock %}
 {% block content %}
 <div class="talent-surface talent-profile-page">
+    {% organization_talent_badges talent_id=talent.id %}
+    {% if request.user == talent.user %}<a href="{% url 'organization_talent_rosters' %}" class="btn btn-light">Manage organization tags</a>{% endif %}
     <header class="talent-hero">
         <div class="talent-cover">{% if talent.cover_photo %}<img src="{{ talent.cover_photo.url }}" alt="" decoding="async">{% else %}<div class="talent-cover-art" aria-hidden="true"></div>{% endif %}<span class="talent-cover-label">THE AWINLINK COMMUNITY</span></div>
         <div class="talent-identity">
