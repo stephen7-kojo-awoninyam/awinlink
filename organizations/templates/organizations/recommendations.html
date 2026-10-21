@@ -1,4 +1,3 @@
-<a href="{% url 'invite_talent' item.talent.id opportunity.id %}"
 {% extends "base.html" %}
 
 
@@ -139,7 +138,7 @@ View Profile
 
 
 
-<a href="{% url 'invite_talent' opportunity.id item.talent.id %}"
+<a href="{% url 'invite_talent' talent_id=item.talent.id opportunity_id=opportunity.id %}"
 class="btn btn-success">
 
 Invite Talent

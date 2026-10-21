@@ -53,3 +53,30 @@ From `mobile/`: `npm run build:classroom-client`, `npm run test:classroom`, `npm
 Apply generated migration `0013_classroom_chat` through the normal release process. The production Channels layer continues to use the existing Redis configuration; the test suite uses in-memory Channels and SQLite, so PostgreSQL concurrency/dedicated Redis tests require their separate test environments. Real microphone/camera capture, TURN traversal, Android projection prompts, iOS playback and multi-device calling have not been verified on physical devices or emulators. Media is the existing peer-to-peer mesh, not a newly introduced SFU.
 
 No commit, push or deployment was performed. Unrelated working-tree changes were preserved.
+
+## Phase 1 management interfaces
+
+The web and native Live classrooms directories now include classroom creation, session scheduling, invitation responses, sent invitation review/revocation, and cohost management. Web entry remains `/learning/classrooms/`; native entry remains `/classrooms` from Learning. Expo web uses the same management components and continues to open media classrooms in Django.
+
+Creators select an owned course and set classroom title/capacity. The creator is the initial host. Creators and assigned hosts select a course lesson and provide a session title and future start/end. Browser datetime inputs use local time; native inputs accept `YYYY-MM-DDTHH:mm` in local time or an explicit offset. Both send timezone-aware ISO timestamps to the existing scheduling endpoint.
+
+Invitations use the existing invitation APIs. A recipient can review and accept/decline from the directory; acceptance explains course enrollment and separate session admission. Managers can send and revoke pending invitations and paginate sent history. Recipient/cohost entry uses a scoped username search and explicit account selection; API writes retain internal numeric IDs. Sent invitations and staff show usernames. Invitation expiry uses the existing seven-day default.
+
+Staff management uses GET/POST `/api/learning/classrooms/{id}/staff/`. GET returns a paginated active host/cohost roster. POST accepts exactly `{ "user": <positive ID>, "role": "COHOST" | "HOST" | "REMOVE" }`. It is restricted to the active authorized course creator; account ADMIN status alone does not bypass ownership. Assignments reuse `assign_classroom_role`. Removing a cohost deactivates their membership and removes scheduled-session admissions; reassigning them restores scheduled staff admissions subject to capacity. Staff changes are blocked while any classroom session is live. A host must be transferred rather than directly demoted or removed. UI confirmations explain that transferring host makes the former host a cohost.
+
+Classroom responses now include read-only `capabilities.manage` and `capabilities.staff`. These guide UI visibility; service permissions remain authoritative. No migration is required.
+
+The shared media controller now validates the ICE endpoint's `ice_transport_policy`, passes it to every browser/native peer, and defaults to `all` only when omitted by an older endpoint. A returned `relay` policy becomes `iceTransportPolicy: 'relay'`. Invalid policies fail before media capture.
+
+Local verification: use `python -u -B scripts/vc_audit.py test learning.test_phase_one learning.test_classroom_api learning.test_classroom_invitations learning.test_classroom_security learning.test_classroom_interfaces --noinput`, plus mobile `npm run typecheck` and `npm run test:classroom`. Set `CLASSROOM_TEST_CHROME` to a Chrome executable for browser fixtures. These browser tests use synthetic APIs/media; they do not prove physical-device media, production TURN traversal, external push delivery, or PostgreSQL concurrency. No deployment was performed.
+
+
+### Username search
+
+GET `/api/learning/classrooms/{id}/users/?purpose=invite&q={username}` provides paginated, case-insensitive username substring search. `purpose=cohost` is restricted to the course creator; invitation search allows the creator or assigned host. Learners, noncreator cohosts, unauthenticated/inactive accounts and unrelated admins cannot use this as a user directory. The endpoint requires 2?150 characters, returns only `id`, `username`, `display_name`, uses a 30/minute per-user throttle, and sends private/no-store cache headers. It excludes inactive users and ineligible existing memberships, while allowing creator-authorized cohost restoration. Writes still recheck service permissions and target status after selection.
+
+Both web and mobile clear the selected account and discard older search responses when query text changes. Results require explicit selection, and pagination preserves the search scope. Search, invitation and cohost paths remain under Learning ? Live classrooms. No schema migration or deployment is required.
+
+Username-search validation: PostgreSQL 17.11 ran all 101 focused search, Phase 1, API, invitation, security and interface tests successfully with no skips. The nine search tests also passed on SQLite. Mobile TypeScript and the headless Chrome management-control test passed, including stale-selection prevention. PostgreSQL used the verified workspace audit cluster on 127.0.0.1:55432 and a disposable test database. Native device UI was not exercised.
+
+The 2026-10-20 real teacher/learner browser audit passed 23 functional checks, including real synthetic-media RTP, invitation acceptance, drawing grants, chat, reconnect, removal and attendance cleanup. Four additional real Daphne socket checks verified invalid-frame closes. See `../docs/learning-vc-e2e-2026-10-20.md` for the exact backend rerun results, close-code correction and remaining verification limits.

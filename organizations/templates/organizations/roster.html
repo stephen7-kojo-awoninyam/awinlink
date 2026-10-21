@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Talent rosters · Awinlink{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/organization-rosters.css' %}">{% endblock %}
+{% block content %}
+<main class="talent-rosters" data-talent-rosters>
+  <h1>Talent tags and rosters</h1>
+  <p><a href="{% url 'organization_agreements' %}">Transfers, sponsorships, ambassador deals and contracts</a></p>
+  <p>Organize talent by team, cohort, or roster. A linked talent must confirm an affiliation before it appears on their public profile.</p>
+  <p role="status" data-feedback></p>
+  <button type="button" class="btn btn-outline-primary" data-refresh>Refresh rosters</button>
+  <h2>Your organization tags</h2><div data-mine></div>
+  <h2>Organization roster</h2>
+  <label for="roster-workspace">Organization</label><select id="roster-workspace" class="form-select" data-workspace><option value="">Choose an organization</option></select>
+  <form data-create class="card p-3 my-3" hidden>{% csrf_token %}
+    <h3>Add talent</h3>
+    <label>Name <input class="form-control" name="name" maxlength="200" required></label>
+    <label>Talent details <input class="form-control" name="talent_details" maxlength="300"></label>
+    <label>Tag, such as Player or Alumni <input class="form-control" name="tag" maxlength="80" required></label>
+    <label>Roster, such as First team or 2026 cohort <input class="form-control" name="roster" maxlength="100"></label>
+    <label>Awinlink username (optional) <input class="form-control" name="username" maxlength="150" autocomplete="off"></label>
+    <p>Leave username empty for an unclaimed entry. Unclaimed entries stay inside the organization workspace.</p>
+    <button class="btn btn-primary" type="submit">Add talent</button>
+  </form>
+  <div data-roster></div>
+  <noscript>Enable JavaScript to manage tags and rosters.</noscript>
+</main>
+<script src="{% static 'js/organization-rosters.js' %}" defer></script>
+{% endblock %}

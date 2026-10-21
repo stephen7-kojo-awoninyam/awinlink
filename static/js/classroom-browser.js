@@ -10,7 +10,7 @@
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '' },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) { const error = new Error(data.error?.detail || data.detail || `Request failed (${response.status}).`); error.status = response.status; throw error; }
+    if (!response.ok) { const error = new Error((data.error?.fields ? Object.entries(data.error.fields).map(([key, value]) => `${key}: ${value}`).join('; ') : data.error?.detail) || data.detail || `Request failed (${response.status}).`); error.status = response.status; throw error; }
     return data;
   }
   const nextPath = value => {
@@ -29,6 +29,7 @@
         for (const room of result.results) {
           const section = element('section'); section.append(element('h2', room.title), element('p', `${room.capacity} seats`));
           const button = element('button', 'View sessions', 'lc-button'); section.append(button); directory.append(section);
+          window.AwinClassroomManagement?.room(section, room);
           let sessionsPath = `learning/classrooms/${room.id}/sessions/?page_size=20`;
           button.onclick = async () => {
             button.disabled = true;
@@ -58,7 +59,7 @@
     socket: async path => new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/${path}`),
     media: constraints => constraints.audio || constraints.video ? navigator.mediaDevices.getUserMedia(constraints) : Promise.resolve(new MediaStream()),
     display: navigator.mediaDevices?.getDisplayMedia ? () => navigator.mediaDevices.getDisplayMedia({ video: true, audio: false }) : undefined,
-    peer: iceServers => new RTCPeerConnection({ iceServers }),
+    peer: (iceServers, iceTransportPolicy) => new RTCPeerConnection({ iceServers, iceTransportPolicy }),
     validateIce: value => Array.isArray(value) && value.length ? value.filter(s => s && (typeof s.urls === 'string' || Array.isArray(s.urls))) : [{ urls: 'stun:stun.l.google.com:19302' }],
     onState: render });
   const run = action => Promise.resolve().then(action).catch(error => { byId('vc-error').textContent = error.message; });

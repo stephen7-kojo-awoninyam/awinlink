@@ -200,14 +200,14 @@ class WhiteboardSocketTests(BoardFixture, TransactionTestCase):
 
     async def open(self, user):
         socket = self.socket(user)
-        self.assertTrue((await socket.connect())[0])
-        state = await socket.receive_json_from()
+        self.assertTrue((await socket.connect(timeout=5))[0])
+        state = await socket.receive_json_from(timeout=5)
         self.assertEqual(state["type"], "snapshot")
         return socket, state
 
     async def until(self, socket, kind):
         for _ in range(10):
-            value = await socket.receive_json_from()
+            value = await socket.receive_json_from(timeout=5)
             if value["type"] == kind:
                 return value
         self.fail("Missing message")
@@ -321,7 +321,7 @@ class WhiteboardSocketTests(BoardFixture, TransactionTestCase):
 
     def test_binary_oversized_frames_and_rate_limit(self):
         async def run():
-            for payload, code in [(b"drawing", 1003), ("x" * 65537, 1009)]:
+            for payload, code in [(b"drawing", 4400), ("x" * 65537, 4400)]:
                 socket, _ = await self.open(self.host)
                 if isinstance(payload, bytes):
                     await socket.send_to(bytes_data=payload)

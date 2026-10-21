@@ -3,9 +3,10 @@
 {% block title %}Live classrooms | Awinlink{% endblock %}
 {% block learning_content %}
 <section class="lc-heading"><div><span class="lc-eyebrow">LEARNING TOGETHER</span><h1>Live classrooms</h1><p>Meet your course hosts and learn together.</p></div></section>
+<div id="classroom-management"></div>
 <div id="classroom-directory" class="vc-directory" aria-live="polite"></div>
 <p id="vc-error" role="alert"></p><button id="vc-more" class="lc-button" hidden>Load more classrooms</button>
 <div hidden>{% csrf_token %}</div>
 {% endblock %}
 {% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/classroom.css' %}">{% endblock %}
-{% block extra_js %}{{ block.super }}<script src="{% static 'js/classroom-client.js' %}" defer></script><script src="{% static 'js/classroom-browser.js' %}" defer></script>{% endblock %}
+{% block extra_js %}{{ block.super }}<script src="{% static 'js/classroom-client.js' %}" defer></script><script src="{% static 'js/classroom-management.js' %}" defer></script><script src="{% static 'js/classroom-browser.js' %}" defer></script>{% endblock %}

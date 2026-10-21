@@ -38,6 +38,7 @@ function screen({ following = false, state = 'none', own = false, fail = false }
     'react-native': { Pressable: 'Pressable', Text: 'Text', View: 'View', StyleSheet: { create: x => x } },
     'expo-router': { Stack: { Screen: 'Screen' }, useLocalSearchParams: () => ({ id: '4' }), useRouter: () => ({ push: url => routes.push(url) }), useFocusEffect: fn => focuses.push(fn) },
     '@/src/api/client': { apiRequest }, '@/src/auth/AuthProvider': { useAuth: () => ({ user: { id: 1 } }) },
+    '@/src/organizations/Badges': { OrganizationBadges: 'OrganizationBadges' },
     '@/src/components/Page': { Page: 'Page', ui: {} }, '@/src/components/EmptyState': {}, '@/src/components/SafetyActions': {}, '@/src/theme': { colors: {} },
   })[name] });
   function nodes(node) { if (!node || typeof node !== 'object') return []; return [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)]; }

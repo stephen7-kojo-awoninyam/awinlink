@@ -87,15 +87,14 @@ signaling only; media remains with the existing WebRTC implementation.
 
 | Close code | Meaning |
 | --- | --- |
-| 4400 | Invalid connection UUID/query |
+| 4400 | Invalid connection UUID/query, binary or oversized frame |
 | 4401 | Authentication expired, invalid or revoked |
 | 4403 | Admission or classroom access denied/revoked |
 | 4404 | Missing session |
 | 4408 | Message rate exceeded |
 | 4409 | Connection replaced, closed, or lease expired |
 | 4410 | Session no longer live |
-| 1003 / 1009 | Binary / oversized frame |
-| 1013 | Channel-layer or database unavailable |
+| 4503 | Channel-layer or database unavailable (retryable) |
 
 The existing `REDIS_URL` configuration selects `channels_redis` for all workers;
 no separate Redis client or authentication system is introduced. Room groups use
@@ -113,3 +112,5 @@ layer. To exercise Redis itself, set `CLASSROOM_TEST_REDIS_URL` to a dedicated t
 Redis instance and run `learning.test_classroom_signaling`; the integration test
 uses a unique key prefix and does not flush Redis. Without that explicit test URL,
 the Redis integration test is skipped.
+
+The application uses private close codes for invalid frames and temporary unavailability because the installed Daphne/Autobahn server rejects reserved application-supplied codes 1003, 1009 and 1013. Clients treat 4400 as terminal and retry 4503 with the existing bounded backoff.

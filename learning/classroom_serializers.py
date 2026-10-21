@@ -61,6 +61,7 @@ class ClassroomInvitationCreateSerializer(StrictInputSerializer):
 
 
 class ClassroomInvitationSerializer(serializers.ModelSerializer):
+    recipient_username = serializers.CharField(source="recipient.username", read_only=True)
     classroom_title = serializers.CharField(source="classroom.title", read_only=True)
     course = serializers.IntegerField(source="classroom.course_id", read_only=True)
     is_expired = serializers.SerializerMethodField()
@@ -68,7 +69,7 @@ class ClassroomInvitationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClassroomInvitation
         fields = ["id", "classroom", "classroom_title", "course", "recipient", "invited_by", "message",
-                  "status", "created_at", "expires_at", "responded_at", "is_expired"]
+                  "status", "created_at", "expires_at", "responded_at", "is_expired", "recipient_username"]
         read_only_fields = fields
 
     def get_is_expired(self, invitation):
@@ -77,9 +78,25 @@ class ClassroomInvitationSerializer(serializers.ModelSerializer):
 
 
 class ClassroomSerializer(serializers.ModelSerializer):
+    capabilities = serializers.SerializerMethodField()
+
+    def get_capabilities(self, classroom):
+        from django.core.exceptions import PermissionDenied
+        from .classroom_permissions import require_classroom_management, require_course_creator
+        request = self.context.get("request")
+        def allowed(check):
+            if request is None:
+                return False
+            try:
+                check(request.user, classroom.course if check == require_course_creator else classroom)
+                return True
+            except PermissionDenied:
+                return False
+        return {"manage": allowed(require_classroom_management), "staff": allowed(require_course_creator)}
+
     class Meta:
         model = Classroom
-        fields = ["id", "course", "title", "created_by", "capacity", "is_active", "created_at", "updated_at"]
+        fields = ["id", "course", "title", "created_by", "capacity", "is_active", "created_at", "updated_at", "capabilities"]
         read_only_fields = fields
 
 
@@ -148,3 +165,36 @@ class AttendanceConnectionSerializer(serializers.ModelSerializer):
         model = AttendanceInterval
         fields = ["id", "participant", "connection_id", "joined_at", "left_at"]
         read_only_fields = fields
+
+
+class ClassroomStaffInputSerializer(StrictInputSerializer):
+    user = serializers.IntegerField(min_value=1)
+    role = serializers.ChoiceField(choices=["COHOST", "HOST", "REMOVE"])
+
+
+class ClassroomStaffSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source="user.username", read_only=True)
+    display_name = serializers.SerializerMethodField()
+
+    def get_display_name(self, member):
+        return member.user.get_full_name() or member.user.username
+
+    class Meta:
+        from .models import ClassroomMembership
+        model = ClassroomMembership
+        fields = ["id", "user", "username", "display_name", "role"]
+        read_only_fields = fields
+
+
+class ClassroomUserSearchInputSerializer(StrictInputSerializer):
+    q = serializers.CharField(min_length=2, max_length=150)
+    purpose = serializers.ChoiceField(choices=["invite", "cohost"])
+
+
+class ClassroomUserSearchSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    display_name = serializers.SerializerMethodField()
+
+    def get_display_name(self, user):
+        return user.get_full_name() or user.username

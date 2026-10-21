@@ -65,6 +65,7 @@ class OrganizationCapabilityPermissionTests(TestCase):
         operational_capabilities = recruitment_capabilities | {
             Capability.EDIT_PROFILE, Capability.MANAGE_EVENTS, Capability.MANAGE_COMPETITIONS,
             Capability.MANAGE_ADVERTISING, Capability.MANAGE_POSTS,
+            Capability.MANAGE_AGREEMENTS,
         }
         expected = {
             "OWNER": set(Capability),

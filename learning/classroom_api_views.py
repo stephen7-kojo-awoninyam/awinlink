@@ -7,6 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist, PermissionDenied as Djang
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError
 from django.db.models import Exists, OuterRef, Prefetch, Q
+from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
 from django.utils.cache import patch_cache_control
 from rest_framework import serializers, status
@@ -16,6 +17,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.throttling import UserRateThrottle
 
 from . import classroom_services as services
 from .classroom_permissions import (
@@ -25,7 +27,8 @@ from .classroom_serializers import (
     AttendanceConnectionSerializer, AttendanceSerializer, ClassroomCreateSerializer, ClassroomSerializer,
     ConnectionActionSerializer, EmptyActionSerializer, LiveSessionSerializer,
     SessionParticipantSerializer, SessionScheduleSerializer,
-    ClassroomInvitationCreateSerializer, ClassroomInvitationSerializer,
+    ClassroomInvitationCreateSerializer, ClassroomInvitationSerializer, ClassroomStaffSerializer, ClassroomStaffInputSerializer,
+    ClassroomUserSearchInputSerializer, ClassroomUserSearchSerializer,
 )
 from .models import AttendanceInterval, Classroom, ClassroomInvitation, ClassroomMembership, ClassroomRole, Course, Enrollment, Lesson, LiveSession, SessionParticipant
 
@@ -134,12 +137,12 @@ class ClassroomListCreateAPIView(ClassroomAPIView):
         host_id = data.pop("host", None)
         host = get_object_or_404(get_user_model(), pk=host_id) if host_id is not None else None
         classroom = services.create_classroom(actor=request.user, course=course, host=host, **data)
-        return Response(ClassroomSerializer(classroom).data, status=status.HTTP_201_CREATED)
+        return Response(ClassroomSerializer(classroom, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
 
 class ClassroomDetailAPIView(ClassroomAPIView):
     def get(self, request, classroom_id):
-        return Response(ClassroomSerializer(self.classroom(request, classroom_id)).data)
+        return Response(ClassroomSerializer(self.classroom(request, classroom_id), context={"request": request}).data)
 
 
 class ClassroomSessionListScheduleAPIView(ClassroomAPIView):
@@ -253,7 +256,7 @@ class ClassroomInvitationListCreateAPIView(ClassroomAPIView):
     def get(self, request, classroom_id):
         classroom = self.classroom(request, classroom_id)
         require_classroom_management(request.user, classroom)
-        return self.page(request, classroom.invitations.select_related("classroom").order_by("-created_at", "-pk"),
+        return self.page(request, classroom.invitations.select_related("classroom", "recipient").order_by("-created_at", "-pk"),
                          ClassroomInvitationSerializer)
 
     def post(self, request, classroom_id):
@@ -267,7 +270,7 @@ class ClassroomInvitationListCreateAPIView(ClassroomAPIView):
 
 class MyClassroomInvitationsAPIView(ClassroomAPIView):
     def get(self, request):
-        return self.page(request, ClassroomInvitation.objects.filter(recipient=request.user).select_related("classroom").order_by("-created_at", "-pk"),
+        return self.page(request, ClassroomInvitation.objects.filter(recipient=request.user).select_related("classroom", "recipient").order_by("-created_at", "-pk"),
                          ClassroomInvitationSerializer)
 
 
@@ -302,3 +305,58 @@ class ClassroomInvitationRevokeAPIView(ClassroomAPIView):
         self.input(request)
         result = services.revoke_classroom_invitation(actor=request.user, invitation=invitation)
         return Response(ClassroomInvitationSerializer(result).data)
+
+
+class ClassroomStaffAPIView(ClassroomAPIView):
+    def get(self, request, classroom_id):
+        classroom = self.classroom(request, classroom_id)
+        require_course_creator(request.user, classroom.course)
+        return self.page(request, classroom.memberships.filter(is_active=True, role__in=[ClassroomRole.HOST, ClassroomRole.COHOST]).select_related("user").order_by("pk"), ClassroomStaffSerializer)
+
+    def post(self, request, classroom_id):
+        classroom = self.classroom(request, classroom_id)
+        require_course_creator(request.user, classroom.course)
+        data = self.input(request, ClassroomStaffInputSerializer)
+        user = get_object_or_404(get_user_model(), pk=data["user"])
+        if data["role"] == "REMOVE":
+            services.remove_classroom_cohost(actor=request.user, classroom=classroom, user=user)
+            return Response(status=204)
+        if data["role"] == "COHOST" and classroom.memberships.filter(user=user, is_active=True, role=ClassroomRole.HOST).exists():
+            raise ValidationError("Transfer the host role before changing the current host.")
+        member = services.assign_classroom_role(actor=request.user, classroom=classroom, user=user, role=data["role"])
+        return Response(ClassroomStaffSerializer(member).data)
+
+
+class ClassroomUserSearchThrottle(UserRateThrottle):
+    scope = "classroom_user_search"
+    rate = "30/min"
+
+
+class ClassroomUserSearchAPIView(ClassroomAPIView):
+    throttle_classes = [ClassroomUserSearchThrottle]
+
+    def get(self, request, classroom_id):
+        classroom = self.classroom(request, classroom_id)
+        # Authorize before validating or querying usernames. This is not a public directory.
+        require_classroom_management(request.user, classroom)
+        query = ClassroomUserSearchInputSerializer(data={
+            "q": request.query_params.get("q", ""),
+            "purpose": request.query_params.get("purpose", ""),
+        })
+        query.is_valid(raise_exception=True)
+        purpose = query.validated_data["purpose"]
+        if purpose == "cohost":
+            require_course_creator(request.user, classroom.course)
+        if not classroom.is_active:
+            raise ValidationError("This classroom is inactive.")
+        users = get_user_model().objects.filter(is_active=True, username__icontains=query.validated_data["q"])
+        if purpose == "invite":
+            if classroom.course.status != "APPROVED":
+                raise ValidationError("Only approved courses can invite learners.")
+            # Existing members (including revoked members) cannot be invited as learners.
+            users = users.exclude(pk__in=classroom.memberships.values("user_id")).exclude(
+                pk__in=[request.user.pk, classroom.course.creator_id])
+        else:
+            users = users.exclude(pk__in=classroom.memberships.filter(
+                is_active=True, role__in=[ClassroomRole.HOST, ClassroomRole.COHOST]).values("user_id"))
+        return self.page(request, users.order_by(Lower("username"), "pk"), ClassroomUserSearchSerializer)

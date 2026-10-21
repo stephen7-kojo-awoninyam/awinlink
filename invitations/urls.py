@@ -12,7 +12,7 @@ urlpatterns = [
     path(
         "invite/<int:opportunity_id>/<int:talent_id>/",
         views.invite_talent_for_opportunity,
-        name="invite_talent"
+        name="invite_talent_for_opportunity"
     ),
 
 

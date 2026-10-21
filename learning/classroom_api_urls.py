@@ -5,6 +5,8 @@ from .whiteboard_api import WhiteboardAPIView, ClassroomChatAPIView
 
 
 urlpatterns = [
+    path("classrooms/<int:classroom_id>/users/", views.ClassroomUserSearchAPIView.as_view(), name="classroom_user_search"),
+    path("classrooms/<int:classroom_id>/staff/", views.ClassroomStaffAPIView.as_view(), name="classroom_staff"),
     path("sessions/<int:session_id>/chat/", ClassroomChatAPIView.as_view(), name="classroom_chat"),
     path("sessions/<int:session_id>/whiteboard/", WhiteboardAPIView.as_view(), name="classroom_whiteboard"),
     path("classrooms/<int:classroom_id>/invitations/", views.ClassroomInvitationListCreateAPIView.as_view(), name="classroom_invitations"),

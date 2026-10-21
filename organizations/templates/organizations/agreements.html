@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Roster agreements · Awinlink{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/organization-rosters.css' %}"><link rel="stylesheet" href="{% static 'css/organization-agreements.css' %}">{% endblock %}
+{% block content %}
+<main class="talent-rosters" data-agreements>
+  <h1>Roster agreements</h1>
+  <p>Transfers, sponsorships, ambassador deals and contracts. Each party reviews the same terms and explicitly consents. A transfer moves the named affiliation only after all three parties agree.</p>
+  <p>Agreements are private records of consent. No payments are collected or electronic signatures issued.</p>
+  <p><a href="{% url 'organization_talent_rosters' %}">Talent rosters</a> · <a href="{% url 'organization_agreements' %}">All my agreements</a></p>
+  <p role="status" data-agreement-feedback></p><button type="button" data-agreement-refresh>Refresh agreements</button>
+  <form data-agreement-create hidden>{% csrf_token %}
+    <h2>Propose an agreement</h2>
+    <label>Confirmed roster affiliation <select name="roster_entry_id" required></select></label>
+    <label>Agreement type <select name="kind"><option value="CONTRACT">Contract</option><option value="SPONSORSHIP">Sponsorship</option><option value="AMBASSADOR">Ambassador deal</option><option value="TRANSFER">Talent transfer</option></select></label>
+    <label>Title <input name="title" maxlength="200" required></label>
+    <label>Terms <textarea name="terms" maxlength="20000" rows="7" required></textarea></label>
+    <label>Start date (optional) <input name="starts_on" type="date"></label><label>End date (optional) <input name="ends_on" type="date"></label>
+    <label>Agreed value (optional; no collection) <input name="amount" type="number" min="0" max="9999999999.99" step="0.01"></label>
+    <label>Currency (3 letters) <input name="currency" maxlength="3" pattern="[A-Z]{3}" value="GHS" required></label>
+    <fieldset data-transfer-fields hidden><legend>Destination affiliation</legend>
+      <label>Destination organization <select name="destination_id"></select></label>
+      <label>Destination tag <input name="destination_tag" maxlength="80"></label>
+      <label>Destination roster <input name="destination_roster" maxlength="100"></label>
+    </fieldset>
+    <button type="submit">Save draft</button><p>Saving a draft does not give consent. Review it and submit when ready.</p>
+  </form>
+  <h2>Agreements available to you</h2><div data-agreement-list></div>
+  <noscript>Enable JavaScript to review and manage agreements.</noscript>
+</main><script src="{% static 'js/organization-agreements.js' %}" defer></script>
+{% endblock %}

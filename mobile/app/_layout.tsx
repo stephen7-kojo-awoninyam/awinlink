@@ -24,7 +24,7 @@ function Navigation() {
           'competition-workspace', 'competitions', 'connections', 'conversation/[id]',
           'event-certificates', 'event-management', 'events', 'learning', 'learning/[id]',
           'learning/quiz/[id]', 'learning/results', 'learning/studio', 'messages', 'onboarding',
-          'organizations', 'organization-team', 'account-settings', 'report', 'portfolio', 'profile-edit', 'recruitment', 'shortlists', 'specialist',
+          'organizations', 'organization-team', 'organization-rosters', 'organization-agreements', 'account-settings', 'report', 'portfolio', 'profile-edit', 'recruitment', 'shortlists', 'specialist',
           'talent/[id]'].map(name => <Stack.Screen key={name} name={name} />)}
       </Stack.Protected>
     </Stack>

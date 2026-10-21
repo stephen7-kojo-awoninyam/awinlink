@@ -75,6 +75,9 @@ def prepare():
     other_session = services.schedule_session(actor=host, classroom=other_room, lesson=lesson, title='Other audit session',
         scheduled_start=starts, scheduled_end=starts + timedelta(hours=1))
     services.start_session(actor=host, session=other_session)
+    flow_course = Course.objects.create(creator=host, category=category, title='VC UI flow course',
+        slug='vc-flow-' + nonce, description='Synthetic end-to-end UI course', status='APPROVED')
+    flow_lesson = Lesson.objects.create(course=flow_course, title='VC UI flow lesson', order=1)
     identities = {}
     for kind, user in users.items():
         store = SessionStore()
@@ -84,7 +87,7 @@ def prepare():
         store.save()
         identities[kind] = {'user_id': user.pk, 'username': user.username, 'session_cookie': store.session_key}
     ARTIFACTS.mkdir(exist_ok=True)
-    fixture = {'session_id': session.pk, 'other_session_id': other_session.pk, 'room_id': room.pk,
+    fixture = {'flow_course_id': flow_course.pk, 'flow_lesson_id': flow_lesson.pk, 'session_id': session.pk, 'other_session_id': other_session.pk, 'room_id': room.pk,
         'learner_participant_id': learner.pk, 'waiting_participant_id': waiting.pk,
         'cookie_name': settings.SESSION_COOKIE_NAME, 'identities': identities, 'redis_prefix': prefix}
     manifest_path.write_text(json.dumps(fixture, indent=2))

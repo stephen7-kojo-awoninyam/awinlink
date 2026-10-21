@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Talent Market bookings{% endblock %}
+{% block content %}
+<style>#market-bookings [hidden]{display:none!important}#market-bookings input,#market-bookings textarea{max-width:100%;margin:.4rem 0}#market-bookings article{margin:1rem 0;padding:1rem;border:1px solid #ddd;border-radius:12px}#market-bookings p{white-space:pre-wrap;overflow-wrap:anywhere}</style>
+<main id="market-bookings" class="container py-4" style="max-width:1000px">
+<h1>Talent Market bookings</h1><a href="{% url 'marketplace:home' %}">Listings, pricing and proposals</a>
+<p>Agreed prices are recorded here. Awinlink does not collect payments.</p>
+<div id="booking-error" role="alert"></div>
+<details><summary>My availability</summary><p>Openings apply to all your listings. Enter ISO dates with Z or an explicit UTC offset, such as 2026-11-01T10:00:00+00:00.</p>
+<form id="availability-form"><label>Starts<input name="starts_at" required class="form-control"></label><label>Ends<input name="ends_at" required class="form-control"></label><label>Display timezone<input name="timezone" value="UTC" required class="form-control"></label><button>Add opening</button></form>
+<button id="availability-load">Refresh my openings</button><div id="availability-results"></div><button id="availability-next" hidden>Next openings</button></details>
+<button id="bookings-load">My bookings</button><div id="booking-results"></div><button id="bookings-next" hidden>Next bookings</button>
+<section id="booking-detail" hidden><h2 id="booking-title"></h2><div id="booking-summary"></div><div id="booking-actions"></div>
+<label>Reason for cancellation or changes<textarea id="booking-reason" maxlength="3000" class="form-control"></textarea></label>
+<h3>Activity</h3><div id="booking-events"></div><button id="events-next" hidden>Older activity</button>
+<h3>Fulfillment conversation</h3><button id="booking-older" hidden>Load older messages</button><div id="booking-messages"></div>
+<form id="booking-message-form"><label>Message<textarea name="body" required maxlength="3000" class="form-control"></textarea></label><button>Send message</button></form>
+<h3>Deliveries</h3><div id="booking-submissions"></div><button id="submissions-next" hidden>Older deliveries</button>
+<form id="booking-submission-form"><label>Delivery summary<textarea name="summary" required maxlength="10000" class="form-control"></textarea></label><label>Optional private file (up to 2 MiB)<input name="artifact" type="file"></label><button>Submit delivery</button></form>
+<div id="booking-review"></div><form id="booking-review-form"><label>Rating<select name="rating"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label><label>Review<textarea name="text" required maxlength="3000" class="form-control"></textarea></label><label><input name="publish" type="checkbox"> Publish this review as a verified buyer</label><button>Save review</button></form>
+</section>
+<input type="hidden" id="booking-csrf" value="{{ csrf_token }}">
+</main><script src="{% static 'js/marketplace-bookings.js' %}"></script>
+{% endblock %}

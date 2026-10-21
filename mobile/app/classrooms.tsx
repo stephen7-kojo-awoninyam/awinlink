@@ -7,7 +7,7 @@ import { EmptyState } from '@/src/components/EmptyState';
 import { colors } from '@/src/theme';
 import type { Session } from '@/src/classrooms/client';
 
-type Room = { id: number; title: string; capacity: number };
+import { ClassroomSetup, RoomManagement, type Room } from '@/src/classrooms/Management';
 type PageResult<T> = { results: T[]; next: string | null };
 function nextPath(value: string) { const path = value.replace(/^https?:\/\/[^/]+\/api\//, '').replace(/^\/api\//, ''); if (!path.startsWith('learning/')) throw new Error('Invalid classroom pagination.'); return path; }
 export default function ClassroomsScreen() {
@@ -24,9 +24,11 @@ export default function ClassroomsScreen() {
   }
   return <><Stack.Screen options={{ headerShown: true, title: 'Live classrooms' }} /><Page title="Live classrooms" eyebrow="LEARNING TOGETHER" refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()} />}>
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+    <ClassroomSetup refresh={load} />
     {loading ? <ActivityIndicator color={colors.primary} /> : !rooms.length ? <EmptyState title="No classrooms available" message="Enroll in a course to discover its classrooms." actionLabel="Refresh" onAction={() => void load()} /> : rooms.map(room => <View key={room.id} style={styles.card}>
       <Text style={styles.title}>{room.title}</Text><Text>{room.capacity} seats</Text>
-      {sessions[room.id]?.map(session => <Pressable accessibilityRole="button" key={session.id} onPress={() => router.push({ pathname: '/classroom/[id]', params: { id: String(session.id) } })} style={styles.button}><Text style={styles.link}>{session.title} · {session.status.toLowerCase()}</Text></Pressable>)}
+      <RoomManagement room={room} refresh={load} />
+      {sessions[room.id]?.map(session => <Pressable accessibilityRole="button" key={session.id} onPress={() => router.push({ pathname: '/classroom/[id]', params: { id: String(session.id) } })} style={styles.button}><Text style={styles.link}>{session.title} · {session.status.toLowerCase()}{session.scheduled_start ? ' | ' + new Date(session.scheduled_start).toLocaleString() : ''}</Text></Pressable>)}
       {sessions[room.id]?.length === 0 && <Text>No sessions scheduled.</Text>}
       {(!sessions[room.id] || sessionNext[room.id]) && <Pressable accessibilityRole="button" disabled={working} onPress={() => void loadSessions(room)} style={styles.button}><Text style={styles.link}>{sessions[room.id] ? 'More sessions' : 'View sessions'}</Text></Pressable>}
     </View>)}

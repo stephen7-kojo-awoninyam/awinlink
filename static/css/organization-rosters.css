@@ -1,0 +1,17 @@
+.talent-rosters { box-sizing: border-box; max-width: 960px; margin: 0 auto; padding: 24px 16px 100px; color: #17253d; }
+.talent-rosters h1 { font-size: clamp(1.6rem, 5vw, 2.2rem); line-height: 1.2; }
+.talent-rosters h2 { margin: 28px 0 14px; font-size: 1.3rem; }
+.talent-rosters h3 { margin: 0 0 12px; font-size: 1.1rem; overflow-wrap: anywhere; }
+.talent-rosters p { line-height: 1.6; overflow-wrap: anywhere; }
+.talent-rosters [data-mine], .talent-rosters [data-roster] { display: grid; gap: 16px; }
+.talent-rosters article, .talent-rosters form { box-sizing: border-box; min-width: 0; padding: 20px; border: 1px solid #dbe3ef; border-radius: 16px; background: #fff; box-shadow: 0 4px 16px #213b6310; }
+.talent-rosters form { display: grid; gap: 16px; margin: 20px 0; }
+.talent-rosters [hidden] { display: none !important; }
+.talent-rosters label { display: grid; gap: 6px; margin: 12px 0; font-weight: 600; }
+.talent-rosters input:not([type=hidden]), .talent-rosters select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid #a9b8cc; border-radius: 8px; font: inherit; font-size: 16px; background: #fff; color: #17253d; }
+.talent-rosters button { min-height: 44px; margin: 4px 6px 4px 0; padding: 10px 16px; border: 1px solid #1f64d8; border-radius: 9px; background: #f3f7ff; color: #154ca9; font: inherit; font-weight: 600; cursor: pointer; }
+.talent-rosters button[type=submit] { background: #1f64d8; color: #fff; }
+.talent-rosters button:disabled { opacity: .55; cursor: wait; }
+.talent-rosters :is(input, select, button):focus-visible { outline: 3px solid #81b1ff; outline-offset: 2px; }
+.talent-rosters [data-feedback]:not(:empty) { padding: 12px 16px; border-radius: 9px; background: #edf4ff; }
+@media (max-width: 480px) { .talent-rosters article, .talent-rosters form { padding: 16px; } .talent-rosters article button { width: 100%; margin-right: 0; } }

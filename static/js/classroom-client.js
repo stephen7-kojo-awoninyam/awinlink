@@ -99,6 +99,8 @@
         const ice = await this.api('messaging/calls/ice-servers/');
         if (epoch !== this.epoch || !this.wanted) return;
         this.iceServers = this.options.validateIce(ice.ice_servers);
+        if (![undefined, "all", "relay"].includes(ice.ice_transport_policy)) throw new Error("Invalid ICE transport policy.");
+        this.icePolicy = ice.ice_transport_policy || "all";
         if (this.options.canCapture && !this.options.canCapture()) {
           const error = new Error('Return to Awinlink and join the classroom again.'); error.name = 'SecurityError'; throw error;
         }
@@ -202,7 +204,7 @@
       }
     }
     makePeer(info, epoch) {
-      const pc = this.options.peer(this.iceServers);
+      const pc = this.options.peer(this.iceServers, this.icePolicy);
       const record = { id: info.participant_id, generation: info.generation, pc, epoch, serial: Promise.resolve(), candidates: [], senders: {} };
       this.peers.set(record.id, record);
       for (const kind of ['audio', 'video']) {

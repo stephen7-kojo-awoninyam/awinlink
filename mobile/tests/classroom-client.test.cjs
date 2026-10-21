@@ -80,7 +80,7 @@ test('leave during a permission prompt fences and stops late media acquisition',
 });
 test('reconnect uses fresh UUID, drops remote media and ignores an old socket close', async () => {
   const f = fixture(); const { socket } = await f.ready([{ participant_id: 20, generation: 'one' }]);
-  socket.fail(1013); assert.equal(f.peers[0].closed, true); assert.equal(f.client.state.connected, false);
+  socket.fail(4503); assert.equal(f.peers[0].closed, true); assert.equal(f.client.state.connected, false);
   const retry = f.timers.find(t => !t.cancelled && t.ms === 1000); await retry.fn(); await flush();
   const second = f.sockets.at(-1); assert.notEqual(second.path, socket.path);
   second.message({ type: 'connection', session_id: 7, participant_id: 10, peers: [] }); await flush();
@@ -218,5 +218,27 @@ test('chat catchup follows server pagination rather than skipping a second histo
   activity.message({ type: 'chat_history', messages: [{ id: 100, text: 'first batch' }], has_more: true, next_after: 100 }); await flush();
   await f.timers.find(timer => !timer.cancelled && timer.ms === 150).fn();
   assert.ok(activity.sent.some(message => message.type === 'chat_history' && message.after === 100));
+  await f.client.dispose();
+});
+
+test('ICE transport policy reaches every classroom peer and defaults to all', async () => {
+  for (const policy of ['relay', 'all', undefined]) {
+    let received;
+    const f = fixture({ peer(ice, transport) { received = { ice, transport }; return new Peer(); } });
+    const api = f.client.api;
+    f.client.api = async (...args) => args[0].includes('ice-servers') ? { ice_servers: [{ urls: 'turn:relay.invalid' }], ice_transport_policy: policy } : api(...args);
+    await f.ready([{ participant_id: 20, generation: 'one' }]);
+    assert.equal(received.transport, policy || 'all');
+    assert.equal(received.ice[0].urls, 'turn:relay.invalid');
+    await f.client.dispose();
+  }
+});
+
+test('invalid ICE policy stops joining before media capture', async () => {
+  const f = fixture(); const api = f.client.api;
+  f.client.api = async (...args) => args[0].includes('ice-servers') ? { ice_servers: [], ice_transport_policy: 'invalid' } : api(...args);
+  await f.client.join();
+  assert.equal(f.captures.length, 0);
+  assert.equal(f.sockets.length, 0);
   await f.client.dispose();
 });

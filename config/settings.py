@@ -105,6 +105,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
 
     # Local Apps
     "accounts",
@@ -334,6 +335,9 @@ CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "")
 CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "")
 PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "")
 ADVERTISING_CURRENCY = os.environ.get("ADVERTISING_CURRENCY", "GHS").upper()
+MARKETPLACE_CURRENCY = os.environ.get('MARKETPLACE_CURRENCY', 'GHS').strip().upper()
+MARKETPLACE_BOOKINGS_ENABLED = os.environ.get('MARKETPLACE_BOOKINGS_ENABLED', 'false').strip().lower() in {'1', 'true', 'yes', 'on'}
+MARKETPLACE_PLATFORM_FEE_BPS = int(os.environ.get('MARKETPLACE_PLATFORM_FEE_BPS', '0'))
 
 CLOUDINARY_STORAGE = {
     "CLOUD_NAME": CLOUDINARY_CLOUD_NAME,

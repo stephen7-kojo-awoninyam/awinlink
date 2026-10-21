@@ -8,7 +8,7 @@ from domains.models import TalentDomain
 from scouts.models import ScoutProfile
 from coaches.models import CoachProfile
 from organizations.models import Organization, OrganizationMembership
-from .models import Listing, Offer
+from .models import Listing, Offer, DealMessage
 
 
 @override_settings(ALLOWED_HOSTS=['testserver'], STORAGES={
@@ -37,8 +37,84 @@ class MarketTests(APITestCase):
     def offer(self, **kwargs):
         return Offer.objects.create(listing=self.listing, sender=self.scout, terms='Training opportunity', **kwargs)
 
+    def test_invalid_filters_are_client_errors(self):
+        self.auth(self.scout)
+        for key, value in [('subecosystem', '\u00b2'), ('subecosystem', '9223372036854775808'),
+                           ('subecosystem', '-1'), ('subecosystem', 'NaN'),
+                           ('ecosystem', 'INVALID'), ('work_type', 'office'),
+                           ('experience', 'senior'), ('mine', 'yes'), ('country', 'x' * 101),
+                           ('q', '\x00')]:
+            with self.subTest(key=key, value=value):
+                self.assertEqual(self.client.get('/api/marketplace/listings/', {key: value}).status_code, 400)
+        self.assertEqual(self.client.get('/api/marketplace/listings/',
+                         dict(ecosystem='', subecosystem='', work_type='', experience='')).status_code, 200)
+
+    def test_message_history_pagination_with_concurrent_insert(self):
+        offer = self.offer()
+        rows = DealMessage.objects.bulk_create([DealMessage(offer=offer, author=self.scout,
+                                                           body=f'Message {i}') for i in range(205)])
+        self.auth(self.talent)
+        url = f'/api/marketplace/deals/{offer.pk}/'
+        first = self.client.get(url).data
+        self.assertEqual([m['id'] for m in first['messages']], [m.pk for m in rows[-50:]])
+        self.assertTrue(first['permissions']['can_accept'])
+        self.assertFalse(first['permissions']['can_withdraw'])
+        inserted = self.client.post(url + 'messages/', {'body': 'Newest'}, format='json')
+        self.assertEqual(inserted.status_code, 201)
+        ids = [m['id'] for m in first['messages']]
+        cursor = first['next_before']
+        while cursor is not None:
+            page = self.client.get(url + 'messages/', {'before': cursor})
+            self.assertEqual(page.status_code, 200)
+            ids = [m['id'] for m in page.data['messages']] + ids
+            cursor = page.data['next_before']
+        self.assertEqual(ids, [m.pk for m in rows])
+        self.assertEqual(self.client.get(url).data['messages'][-1]['id'], inserted.data['id'])
+
+    def test_message_history_empty_and_invalid_cursor(self):
+        offer = self.offer()
+        self.auth(self.scout)
+        url = f'/api/marketplace/deals/{offer.pk}/'
+        self.assertEqual(self.client.get(url + 'messages/').data, {'messages': [], 'next_before': None})
+        for value in ['bad', '\u00b2', '0', '-1', '9223372036854775808']:
+            for path in [url, url + 'messages/']:
+                self.assertEqual(self.client.get(path, {'before': value}).status_code, 400)
+
+    def test_final_rooms_remain_readable_but_cannot_message(self):
+        for action, actor in [('ACCEPT', self.talent), ('DECLINE', self.talent), ('WITHDRAW', self.scout)]:
+            offer = self.offer()
+            url = f'/api/marketplace/deals/{offer.pk}/'
+            DealMessage.objects.create(offer=offer, author=self.scout, body='Existing history')
+            self.auth(actor)
+            self.assertEqual(self.client.post(url, {'action': action, 'consent': True}, format='json').status_code, 200)
+            for user in [self.talent, self.scout]:
+                self.auth(user)
+                room = self.client.get(url)
+                self.assertFalse(any(room.data['permissions'].values()))
+                self.assertEqual(self.client.get(url + 'messages/').data['messages'][0]['body'], 'Existing history')
+                self.assertEqual(self.client.post(url + 'messages/', {'body': 'Forbidden'}, format='json').status_code, 400)
+            self.assertEqual(offer.messages.count(), 1)
+
+    def test_history_pagination_preserves_access_controls(self):
+        offer = self.offer(organization=self.org)
+        url = f'/api/marketplace/deals/{offer.pk}/messages/?before=100'
+        self.auth(self.talent)
+        self.assertEqual(self.client.post(f'/api/marketplace/deals/{offer.pk}/',
+                         {'action': 'ACCEPT', 'consent': True}, format='json').status_code, 200)
+        self.auth(self.outsider)
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.auth(self.scout)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.member.status = 'SUSPENDED'
+        self.member.save()
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.auth(self.talent)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        UserBlock.objects.create(user=self.talent, blocked_user=self.scout)
+        self.assertEqual(self.client.get(url).status_code, 403)
+
     def test_authentication(self):
-        for path in ['markets/', 'listings/', 'offers/', 'deals/1/']:
+        for path in ['markets/', 'listings/', 'offers/', 'deals/1/', 'deals/1/messages/']:
             self.assertEqual(self.client.get('/api/marketplace/' + path).status_code, 401)
 
     def test_listing_consent_and_owner(self):

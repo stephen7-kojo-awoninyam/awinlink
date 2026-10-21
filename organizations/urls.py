@@ -1,8 +1,12 @@
 from django.urls import path
 from . import views
+from .roster_views import roster_page
+from .agreement_views import agreement_page
 
 
 urlpatterns = [
+    path("agreements/", agreement_page, name="organization_agreements"),
+    path("talent-rosters/", roster_page, name="organization_talent_rosters"),
     path("team-invitations/<int:invitation_id>/", views.team_invitation_response, name="team_invitation_response"),
 
     path(

@@ -43,6 +43,8 @@ export default function ProfileScreen() {
 
   return (
     <Page eyebrow="YOUR ACCOUNT" title="Profile">
+      <Pressable accessibilityRole="button" onPress={() => router.push('/organization-agreements')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Transfers, sponsorships and contracts</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/organization-rosters')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Talent tags and rosters</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => router.push('/account-settings')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Account and safety</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => router.push('/team-invitation')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Respond to team invitation</Text></Pressable>
       <View style={styles.profileCard}>

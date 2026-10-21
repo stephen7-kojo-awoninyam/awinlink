@@ -29,7 +29,7 @@ export default function ClassroomScreen() {
         media: constraints => constraints.audio || constraints.video ? mediaDevices.getUserMedia(constraints) : Promise.resolve(new MediaStream()),
         canCapture: () => AppState.currentState !== 'background',
         display: supportedSharing ? () => mediaDevices.getDisplayMedia({}) : undefined,
-        peer: iceServers => new RTCPeerConnection({ iceServers }), validateIce: validatedIceServers,
+        peer: (iceServers, iceTransportPolicy) => new RTCPeerConnection({ iceServers, iceTransportPolicy }), validateIce: validatedIceServers,
         onState: next => { setState(next); if (AppState.currentState === 'background' && next.connected && !next.sharing) void clientRef.current?.leave(); },
       });
       clientRef.current = client; setState(client.state); void client.load().catch(report);

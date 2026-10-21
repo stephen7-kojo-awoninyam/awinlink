@@ -11,6 +11,7 @@
     "expo-constants": "~57.0.20",
     "expo-device": "~57.0.2",
     "expo-document-picker": "~57.0.3",
+    "expo-file-system": "~57.0.7",
     "expo-font": "~57.0.4",
     "expo-linking": "~57.0.13",
     "expo-notifications": "~57.0.23",
@@ -57,7 +58,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "build:classroom-client": "node scripts/build-classroom-client.cjs",
-    "test:classroom": "node --test tests/classroom-client.test.cjs tests/classroom-browser.test.cjs"
+    "test:classroom": "node --test tests/classroom-client.test.cjs tests/classroom-browser.test.cjs tests/classroom-management-browser.test.cjs"
   },
   "private": true,
   "overrides": {

@@ -48,6 +48,7 @@ class OrganizationCapability(str, Enum):
     MANAGE_OPPORTUNITIES = "manage_opportunities"
     VIEW_RECRUITMENT = "view_recruitment"
     MANAGE_RECRUITMENT = "manage_recruitment"
+    MANAGE_AGREEMENTS = "manage_agreements"
     VIEW_EVENTS = "view_events"
     MANAGE_EVENTS = "manage_events"
     VIEW_COMPETITIONS = "view_competitions"
@@ -80,6 +81,7 @@ _RECRUITMENT_CAPABILITIES = frozenset({
     OrganizationCapability.MANAGE_RECRUITMENT,
 })
 _OPERATIONAL_CAPABILITIES = _RECRUITMENT_CAPABILITIES | frozenset({
+    OrganizationCapability.MANAGE_AGREEMENTS,
     OrganizationCapability.EDIT_PROFILE,
     OrganizationCapability.MANAGE_EVENTS,
     OrganizationCapability.MANAGE_COMPETITIONS,

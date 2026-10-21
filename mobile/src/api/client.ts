@@ -67,6 +67,8 @@ async function readError(response: Response) {
   const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
   if (typeof body?.detail === 'string') return body.detail;
   if (body?.error && typeof body.error === 'object' && 'detail' in body.error && typeof body.error.detail === 'string') {
+    const fields = (body.error as { fields?: Record<string, unknown> }).fields;
+    if (fields && typeof fields === 'object') return Object.entries(fields).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : String(value)}`).join('; ');
     return body.error.detail;
   }
   if (Array.isArray(body?.non_field_errors) && typeof body.non_field_errors[0] === 'string') {

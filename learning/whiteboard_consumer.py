@@ -57,7 +57,7 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
             await self.finish(4403)
         except Exception:
             logger.exception("Whiteboard connection failed")
-            await self.finish(1013)
+            await self.finish(4503)
 
     async def authenticated(self):
         if self.scope.get("jwt_invalid") or not getattr(self.user, "is_authenticated", False):
@@ -81,10 +81,10 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
         if self.closing:
             return
         if bytes_data is not None:
-            await self.finish(1003)
+            await self.finish(4400)
             return
         if text_data is None or len(text_data.encode()) > 65536:
-            await self.finish(1009)
+            await self.finish(4400)
             return
         now = whiteboard_clock()
         self.tokens = min(30., self.tokens + (now - self.refill_at) * 10)
@@ -125,7 +125,7 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
             await self.refresh()
         except Exception:
             logger.exception("Whiteboard command failed")
-            await self.finish(1013)
+            await self.finish(4503)
 
     async def refresh(self, force=False):
         if self.closing:
@@ -142,7 +142,7 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
             await self.finish(4403)
         except Exception:
             logger.exception("Whiteboard refresh failed")
-            await self.finish(1013)
+            await self.finish(4503)
 
     async def whiteboard_changed(self, event):
         await self.refresh()
@@ -167,7 +167,7 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
             await self.refresh()
         except Exception:
             logger.exception("Classroom chat delivery failed")
-            await self.finish(1013)
+            await self.finish(4503)
 
     async def sync_chat(self, *, after=None, force=False):
         if self.closing:
@@ -190,7 +190,7 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
                 await self.sync_chat()
         except Exception:
             logger.exception("Whiteboard channel lease refresh failed")
-            await self.finish(1013)
+            await self.finish(4503)
 
     async def watch(self):
         try:
@@ -203,7 +203,7 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
         except asyncio.CancelledError:
             pass
         except Exception:
-            await self.finish(1013)
+            await self.finish(4503)
 
     async def finish(self, code=None):
         if self.closing:

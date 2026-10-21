@@ -118,6 +118,8 @@ def assign_classroom_role(*, actor, classroom, user, role):
     if role == ClassroomRole.LEARNER:
         require_enrollment(user, classroom)
     member = classroom.memberships.filter(user=user).first()
+    if member and member.is_active and member.role == ClassroomRole.HOST and role != ClassroomRole.HOST:
+        raise ValidationError("Transfer the host role before changing the current host.")
     if member and member.is_active and member.role == role:
         return member
     if role == ClassroomRole.HOST:
@@ -136,7 +138,11 @@ def assign_classroom_role(*, actor, classroom, user, role):
         participant = session.participants.filter(membership=member).first()
         if participant:
             participant.role = role
-            participant.save(update_fields=["role"])
+            if role != ClassroomRole.LEARNER and participant.admission_state != AdmissionState.ADMITTED:
+                _seat(session, participant)
+                participant.admission_state = AdmissionState.ADMITTED
+                participant.admitted_at = timezone.now()
+            participant.save(update_fields=["role", "admission_state", "admitted_at"])
         elif role != ClassroomRole.LEARNER:
             _seat(session)
             SessionParticipant.objects.create(session=session, membership=member, role=role,
@@ -440,3 +446,19 @@ def revoke_classroom_invitation(*, actor, invitation):
     invitation.save(update_fields=["status", "responded_at"])
     _audit(actor, "INVITATION_REVOKED", classroom=classroom, invitation_id=invitation.pk)
     return invitation
+
+
+@transaction.atomic
+def remove_classroom_cohost(*, actor, classroom, user):
+    classroom = _locked_classroom(classroom)
+    actor = require_course_creator(actor, classroom.course)
+    _available(classroom)
+    if classroom.live_sessions.filter(status=LiveSession.Status.LIVE).exists():
+        raise ValidationError("Staff assignments cannot change while a session is live.")
+    member = classroom.memberships.select_for_update().get(user=user)
+    if member.role != ClassroomRole.COHOST:
+        raise PermissionDenied("Only cohosts may be removed. Transfer the host role first.")
+    member.is_active = False
+    member.save(update_fields=["is_active"])
+    member.session_participations.filter(session__status=LiveSession.Status.SCHEDULED).update(admission_state=AdmissionState.REMOVED)
+    _audit(actor, "ROLE_CHANGED", classroom=classroom, user_id=user.pk, role="REMOVED")

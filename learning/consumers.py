@@ -34,7 +34,7 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
         try:
             allowed = not self.scope.get("jwt_invalid") and getattr(self.user, "is_authenticated", False) and await self.credential_valid()
         except DatabaseError:
-            await self.terminate(1013)
+            await self.terminate(4503)
             return
         if not allowed:
             await self.terminate(4401)
@@ -80,7 +80,7 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
             await self.terminate(code)
         except (RedisError, ChannelFull, OSError, RuntimeError, DatabaseError):
             logger.exception("Classroom signaling connection failed for session %s.", self.session_id)
-            await self.terminate(1013)
+            await self.terminate(4503)
 
     def connection_args(self):
         return {"session_id": self.session_id, "user_id": self.user.pk,
@@ -100,7 +100,7 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
                 return False
             state = await database_sync_to_async(signaling.connection_state)(**self.connection_args())
         except DatabaseError:
-            await self.terminate(1013)
+            await self.terminate(4503)
             return False
         if state != "authorized":
             code = {"ended": 4410, "removed": 4403, "replaced": 4409}[state]
@@ -121,11 +121,11 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
         if not await self.authorized():
             return
         if bytes_data is not None:
-            await self.terminate(1003)
+            await self.terminate(4400)
             return
         try:
             if text_data is None or len(text_data.encode("utf-8")) > signaling.MAX_FRAME_BYTES:
-                await self.terminate(1009)
+                await self.terminate(4400)
                 return
             data = signaling.parse_message(text_data)
         except (ValueError, TypeError, RecursionError, UnicodeError):
@@ -151,7 +151,7 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
                 "recipient_connection": str(recipient["connection_id"]), "recipient_channel": recipient["signaling_channel_name"],
             })
         except (RedisError, ChannelFull, OSError):
-            await self.terminate(1013)
+            await self.terminate(4503)
 
     async def classroom_signal(self, event):
         if event.get("session_id") != self.session_id or event.get("recipient_id") != self.participant_id or event.get("recipient_channel") != self.channel_name or event.get("recipient_connection") != str(self.connection_id):
@@ -185,7 +185,7 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
         except signaling.SignalingDenied as exc:
             await self.terminate({"ended": 4410, "removed": 4403, "replaced": 4409}[exc.reason], exc.reason)
         except (RedisError, ChannelFull, OSError):
-            await self.terminate(1013)
+            await self.terminate(4503)
 
     async def run_watchdog(self):
         try:
@@ -198,7 +198,7 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
         except asyncio.CancelledError:
             pass
         except (RedisError, ChannelFull, OSError):
-            await self.terminate(1013)
+            await self.terminate(4503)
 
     async def terminate(self, code, reason=None):
         if self.closing:

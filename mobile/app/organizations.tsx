@@ -4,6 +4,7 @@ import { useFocusEffect } from 'expo-router';
 
 import { apiRequest } from '@/src/api/client';
 import { EmptyState } from '@/src/components/EmptyState';
+import { OrganizationBadges } from '@/src/organizations/Badges';
 import { Page } from '@/src/components/Page';
 import { colors } from '@/src/theme';
 
@@ -96,6 +97,7 @@ export default function OrganizationsScreen() {
             <Pressable accessibilityRole="button" onPress={() => setSelected(null)}><Text style={styles.back}>All organizations</Text></Pressable>
             {!!selected.logo && <Image source={{ uri: selected.logo }} style={styles.logo} />}
             <Text style={styles.title}>{selected.name}</Text>
+            <OrganizationBadges organizationId={selected.id} />
             <Text style={styles.meta}>{[selected.category_name, selected.domain_name].filter(Boolean).join(' | ')}</Text>
             <Text style={styles.meta}>{[selected.city, selected.country].filter(Boolean).join(', ')}</Text>
             <Text style={styles.description}>{selected.description || 'No description provided.'}</Text>

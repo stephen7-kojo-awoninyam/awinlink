@@ -373,6 +373,139 @@ class OrganizationTeamInvitation(models.Model):
 
 
 # =====================================
+# ORGANIZATION TALENT ROSTERS
+# =====================================
+
+class OrganizationTalent(models.Model):
+    """A roster affiliation; unclaimed entries never create login accounts."""
+    organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="talent_roster")
+    talent = models.ForeignKey("talents.TalentProfile", null=True, blank=True, on_delete=models.PROTECT, related_name="organization_tags")
+    name = models.CharField(max_length=200)
+    talent_details = models.CharField(max_length=300, blank=True)
+    tag = models.CharField(max_length=80)
+    roster = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=12, default="UNCLAIMED", choices=[(v, v.title()) for v in ["UNCLAIMED", "PENDING", "CONFIRMED", "DECLINED", "REMOVED"]])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name", "pk"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(status__in=["UNCLAIMED", "PENDING", "CONFIRMED", "DECLINED", "REMOVED"]), name="org_talent_status_valid"),
+            models.CheckConstraint(condition=models.Q(status="UNCLAIMED", talent__isnull=True) | models.Q(status__in=["PENDING", "CONFIRMED", "DECLINED"], talent__isnull=False) | models.Q(status="REMOVED"), name="org_talent_link_valid"),
+            models.UniqueConstraint(fields=["organization", "talent", "tag", "roster"], condition=models.Q(status__in=["PENDING", "CONFIRMED"]), name="org_talent_live_tag_unique"),
+        ]
+
+
+class OrganizationTalentEvent(models.Model):
+    affiliation = models.ForeignKey(OrganizationTalent, on_delete=models.PROTECT, related_name="history")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=20)
+    reason = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["pk"]
+
+
+# =====================================
+# ROSTER AGREEMENTS
+# =====================================
+
+class TalentAgreement(models.Model):
+    class Kind(models.TextChoices):
+        TRANSFER = "TRANSFER", "Talent transfer"
+        SPONSORSHIP = "SPONSORSHIP", "Sponsorship"
+        AMBASSADOR = "AMBASSADOR", "Ambassador deal"
+        CONTRACT = "CONTRACT", "Contract"
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        PENDING = "PENDING", "Awaiting consent"
+        ACTIVE = "ACTIVE", "Active"
+        COMPLETED = "COMPLETED", "Transfer completed"
+        ENDING = "ENDING", "Ending requested"
+        ENDED = "ENDED", "Ended by agreement"
+        DECLINED = "DECLINED", "Declined"
+        WITHDRAWN = "WITHDRAWN", "Withdrawn"
+
+    roster_entry = models.ForeignKey(OrganizationTalent, on_delete=models.PROTECT, related_name="agreements")
+    organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="talent_agreements")
+    talent = models.ForeignKey("talents.TalentProfile", on_delete=models.PROTECT, related_name="roster_agreements")
+    destination = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.PROTECT, related_name="incoming_talent_agreements")
+    destination_entry = models.OneToOneField(OrganizationTalent, null=True, blank=True, on_delete=models.PROTECT, related_name="transfer_agreement")
+    kind = models.CharField(max_length=12, choices=Kind.choices)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.DRAFT)
+    title = models.CharField(max_length=200)
+    terms = models.TextField(max_length=20000)
+    starts_on = models.DateField(null=True, blank=True)
+    ends_on = models.DateField(null=True, blank=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, default="GHS")
+    destination_tag = models.CharField(max_length=80, blank=True)
+    destination_roster = models.CharField(max_length=100, blank=True)
+    roster_snapshot = models.JSONField(default=dict, editable=False)
+    terms_hash = models.CharField(max_length=64, editable=False)
+    revision = models.PositiveIntegerField(default=1, editable=False)
+    end_round = models.PositiveIntegerField(default=0, editable=False)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="created_talent_agreements")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    activated_at = models.DateTimeField(null=True, editable=False)
+    ended_at = models.DateTimeField(null=True, editable=False)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(kind__in=["TRANSFER", "SPONSORSHIP", "AMBASSADOR", "CONTRACT"]), name="org_agreement_kind_valid"),
+            models.CheckConstraint(condition=models.Q(status__in=["DRAFT", "PENDING", "ACTIVE", "COMPLETED", "ENDING", "ENDED", "DECLINED", "WITHDRAWN"]), name="org_agreement_status_valid"),
+            models.CheckConstraint(condition=(models.Q(kind="TRANSFER", destination__isnull=False) & ~models.Q(destination=models.F("organization"))) | (~models.Q(kind="TRANSFER") & models.Q(destination__isnull=True)), name="org_agreement_destination_valid"),
+            models.CheckConstraint(condition=models.Q(amount__isnull=True) | models.Q(amount__gte=0), name="org_agreement_amount_valid"),
+            models.CheckConstraint(condition=models.Q(starts_on__isnull=True) | models.Q(ends_on__isnull=True) | models.Q(ends_on__gte=models.F("starts_on")), name="org_agreement_dates_valid"),
+            models.CheckConstraint(condition=(models.Q(kind="TRANSFER") & ~models.Q(status__in=["ACTIVE", "ENDING", "ENDED"])) | (~models.Q(kind="TRANSFER") & ~models.Q(status="COMPLETED")), name="org_agreement_lifecycle_valid"),
+            models.CheckConstraint(condition=models.Q(status="COMPLETED", destination_entry__isnull=False) | (~models.Q(status="COMPLETED") & models.Q(destination_entry__isnull=True)), name="org_agreement_transfer_result"),
+            models.CheckConstraint(condition=models.Q(status__in=["ACTIVE", "ENDING", "ENDED", "COMPLETED"], activated_at__isnull=False) | models.Q(status__in=["DRAFT", "PENDING", "DECLINED", "WITHDRAWN"], activated_at__isnull=True), name="org_agreement_activation_time"),
+            models.CheckConstraint(condition=models.Q(status="ENDED", ended_at__isnull=False) | (~models.Q(status="ENDED") & models.Q(ended_at__isnull=True)), name="org_agreement_ending_time"),
+            models.UniqueConstraint(fields=["roster_entry"], condition=models.Q(kind="TRANSFER", status="PENDING"), name="org_agreement_one_pending_transfer"),
+        ]
+
+
+class TalentAgreementConsent(models.Model):
+    agreement = models.ForeignKey(TalentAgreement, on_delete=models.PROTECT, related_name="consents")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    actor_name = models.CharField(max_length=150)
+    party = models.CharField(max_length=12, choices=[(v, v.title()) for v in ["ORIGIN", "DESTINATION", "TALENT"]])
+    purpose = models.CharField(max_length=8, choices=[("ACTIVATE", "Activate"), ("END", "End")])
+    revision = models.PositiveIntegerField()
+    round = models.PositiveIntegerField(default=0)
+    terms_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["agreement", "party", "purpose", "revision", "round"], name="org_agreement_consent_unique"),
+            models.CheckConstraint(condition=models.Q(party__in=["ORIGIN", "DESTINATION", "TALENT"]), name="org_agreement_consent_party"),
+            models.CheckConstraint(condition=models.Q(purpose__in=["ACTIVATE", "END"]), name="org_agreement_consent_purpose"),
+        ]
+
+
+class TalentAgreementEvent(models.Model):
+    agreement = models.ForeignKey(TalentAgreement, on_delete=models.PROTECT, related_name="events")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    actor_name = models.CharField(max_length=150)
+    action = models.CharField(max_length=24)
+    party = models.CharField(max_length=12, blank=True)
+    revision = models.PositiveIntegerField()
+    reason = models.TextField(max_length=1000, blank=True)
+    snapshot = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["pk"]
+
+
+# =====================================
 # SPORTS ORGANIZATION PROFILE
 # =====================================
 

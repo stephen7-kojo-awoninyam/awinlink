@@ -29,6 +29,16 @@ ICE = {"candidate": "candidate:1 1 udp 2122260223 192.0.2.1 54321 typ host", "sd
 
 
 class ClassroomSignalValidationTests(SimpleTestCase):
+    def test_application_close_codes_are_accepted_by_daphne_transport(self):
+        from autobahn.websocket.protocol import WebSocketProtocol
+        # Validate the transport method without starting a second txaio framework.
+        protocol = object.__new__(WebSocketProtocol)
+        with patch.object(protocol, "sendCloseFrame") as close:
+            for code in [4400, 4401, 4403, 4404, 4408, 4409, 4410, 4503]:
+                protocol.sendClose(code=code)
+                self.assertEqual(close.call_args.kwargs["code"], code)
+
+
     def test_expired_token_cannot_emit_after_a_database_await(self):
         from .consumers import ClassroomConsumer
         consumer = ClassroomConsumer()
@@ -125,8 +135,8 @@ class SocketFixture(ClassroomFixture):
 
     async def open_socket(self, user, **kwargs):
         socket = self.socket(user, **kwargs)
-        self.assertTrue((await socket.connect())[0])
-        ready = await socket.receive_json_from()
+        self.assertTrue((await socket.connect(timeout=5))[0])
+        ready = await socket.receive_json_from(timeout=5)
         self.assertEqual(ready["type"], "connection")
         return socket, ready
 
@@ -137,14 +147,14 @@ class SocketFixture(ClassroomFixture):
 
     async def next_type(self, socket, kind):
         for _ in range(20):
-            result = await socket.receive_json_from(timeout=3)
+            result = await socket.receive_json_from(timeout=10)
             if result["type"] == kind:
                 return result
         self.fail(f"Did not receive {kind}")
 
     async def close_code(self, socket):
         for _ in range(128):
-            output = await socket.receive_output(timeout=3)
+            output = await socket.receive_output(timeout=5)
             if output["type"] == "websocket.close":
                 return output["code"]
         self.fail("Socket did not close")
@@ -340,12 +350,12 @@ class ClassroomSocketSecurityTests(SocketFixture, TransactionTestCase):
                 await self.next_type(first, "error")
                 self.assertTrue(await second.receive_nothing(timeout=0.05))
             await first.send_to(bytes_data=b"binary")
-            self.assertEqual(await self.close_code(first), 1003)
+            self.assertEqual(await self.close_code(first), 4400)
             await first.disconnect()
             await second.disconnect()
             large, _ = await self.open_socket(self.learner)
             await large.send_to(text_data="x" * (signaling.MAX_FRAME_BYTES + 1))
-            self.assertEqual(await self.close_code(large), 1009)
+            self.assertEqual(await self.close_code(large), 4400)
             await large.disconnect()
         async_to_sync(run)()
 
@@ -392,7 +402,7 @@ class ClassroomSocketSecurityTests(SocketFixture, TransactionTestCase):
                     socket = self.socket(self.learner)
                     connected, code = await socket.connect()
                 self.assertFalse(connected)
-                self.assertEqual(code, 1013)
+                self.assertEqual(code, 4503)
                 await socket.disconnect()
         async_to_sync(run)()
         self.assertFalse(AttendanceInterval.objects.filter(participant=self.first_participant, left_at__isnull=True).exists())

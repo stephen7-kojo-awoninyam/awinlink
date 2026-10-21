@@ -1,11 +1,24 @@
 from django.urls import path
 
 from . import api_views
+from . import roster_views
+from . import agreement_views
 
 
 app_name = "organization_team"
 
 urlpatterns = [
+    path("agreements/", agreement_views.Agreements.as_view(), name="agreements"),
+    path("agreements/roster-choices/", agreement_views.RosterChoices.as_view(), name="agreement_roster_choices"),
+    path("agreements/destinations/", agreement_views.Destinations.as_view(), name="agreement_destinations"),
+    path("agreements/<int:pk>/", agreement_views.AgreementDetail.as_view(), name="agreement"),
+    path("agreements/<int:pk>/history/", agreement_views.AgreementHistory.as_view(), name="agreement_history"),
+    path("roster-workspaces/", roster_views.Workspaces.as_view(), name="roster_workspaces"),
+    path("talent-tags/mine/", roster_views.Mine.as_view(), name="talent_tags_mine"),
+    path("talent-tags/<int:pk>/", roster_views.Entry.as_view(), name="talent_tag"),
+    path("talent-tags/profile/<int:talent_id>/", roster_views.Badges.as_view(), name="talent_badges"),
+    path("<int:organization_id>/roster/", roster_views.Roster.as_view(), name="talent_roster"),
+    path("<int:organization_id>/roster/public/", roster_views.Badges.as_view(), name="public_roster"),
     path("<int:organization_id>/team/invitations/", api_views.TeamInvitationListCreateAPIView.as_view(), name="invitation_list_create"),
     path("<int:organization_id>/team/invitations/<int:invitation_id>/revoke/", api_views.TeamInvitationRevokeAPIView.as_view(), name="invitation_revoke"),
     path("<int:organization_id>/team/members/", api_views.TeamMemberListAPIView.as_view(), name="member_list"),

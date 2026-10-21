@@ -28,6 +28,9 @@ def publish_notification(notification_id):
         from learning.classroom_notifications import classroom_notification_is_current
         if not classroom_notification_is_current(notification):
             return
+        from marketplace.services import booking_notification_is_current
+        if not booking_notification_is_current(notification):
+            return
         from .push import (
             notification_payload,
             send_expo_call_push,
