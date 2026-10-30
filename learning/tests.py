@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 
-from learning.models import Course, LearningCategory
+from learning.models import Course, LearningCategory, Lesson
 
 
 User = get_user_model()
@@ -32,7 +32,7 @@ class CourseModerationAndResubmissionTests(APITestCase):
         self.pending_url = "/api/learning/courses/pending/"
 
     def create_course(self, *, creator, title, slug, status, rejection_reason=""):
-        return Course.objects.create(
+        course = Course.objects.create(
             creator=creator,
             category=self.category,
             title=title,
@@ -41,6 +41,8 @@ class CourseModerationAndResubmissionTests(APITestCase):
             status=status,
             rejection_reason=rejection_reason,
         )
+        Lesson.objects.create(course=course, title='Ready lesson', order=1)
+        return course
 
     def test_admin_can_list_only_pending_courses(self):
         self.client.force_authenticate(user=self.admin)

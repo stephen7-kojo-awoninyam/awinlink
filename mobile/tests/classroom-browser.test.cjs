@@ -42,9 +42,11 @@ test('browser controls, whiteboard, plaintext chat, media cleanup and mobile vie
       function check(condition,label){if(!condition)throw new Error(label);}
       (async()=>{await pause(100);
         check(document.getElementById('vc-join').disabled===false,'admitted learner join button');
+        check(!document.getElementById('vc-camera').checked&&!document.getElementById('vc-microphone').checked,'camera and microphone default off');
         check(document.querySelector('[data-action=start]').hidden,'server forbids start');
         check(document.querySelector('#vc-roster img')===null,'participant names rendered as text');
         document.getElementById('vc-join').click();await pause(150);
+        check(captures[0].getTracks().length===0,'joining without selecting devices captures no media');
         check(document.getElementById('vc-status').textContent.includes('Connected'),'socket connected');
         check(document.getElementById('vc-message').disabled===false,'chat enabled');
         const malicious='<img src=x onerror="window.injected=true">';

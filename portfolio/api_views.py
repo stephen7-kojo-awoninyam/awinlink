@@ -1,285 +1,68 @@
-
+from api.pagination import PagedAPIView
 from django.shortcuts import get_object_or_404
-
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from talents.models import TalentProfile
-
 from .models import PortfolioItem
+from .permissions import (owned_portfolio_item_for, owned_portfolio_talent_for,
+    visible_portfolio_items_for, visible_portfolio_talent_for)
 from .serializers import PortfolioItemSerializer
 
 
-# ============================================================
-# MY PORTFOLIO
-# ============================================================
-
-class MyPortfolioListAPIView(APIView):
-
+class PortfolioAPI(PagedAPIView):
     permission_classes = [IsAuthenticated]
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response['Cache-Control'] = 'private, no-store'
+        return response
+
+
+class MyPortfolioListAPIView(PortfolioAPI):
     def get(self, request):
-
-        if request.user.role != "ATHLETE":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only talent accounts "
-                        "have a personal portfolio."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        talent = getattr(
-            request.user,
-            "talent_profile",
-            None
-        )
-
-        if talent is None:
-
-            return Response(
-                {
-                    "detail": "Talent profile not found."
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        portfolio_items = PortfolioItem.objects.filter(
-            talent=talent
-        ).order_by(
-            "-created_at"
-        )
-
-        serializer = PortfolioItemSerializer(
-            portfolio_items,
-            many=True
-        )
-
-        return Response(serializer.data)
+        talent = owned_portfolio_talent_for(request.user)
+        items = PortfolioItem.objects.filter(talent=talent).select_related('talent__user').order_by('-created_at')
+        return Response(PortfolioItemSerializer(self.page(request, items), many=True).data)
 
 
-# ============================================================
-# CREATE PORTFOLIO ITEM
-# ============================================================
-
-class PortfolioItemCreateAPIView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
+class PortfolioItemCreateAPIView(PortfolioAPI):
     def post(self, request):
-
-        if request.user.role != "ATHLETE":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only talent accounts "
-                        "can create portfolio items."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        talent = getattr(
-            request.user,
-            "talent_profile",
-            None
-        )
-
-        if talent is None:
-
-            return Response(
-                {
-                    "detail": "Talent profile not found."
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        serializer = PortfolioItemSerializer(
-            data=request.data
-        )
-
-        if serializer.is_valid():
-
-            portfolio_item = serializer.save(
-                talent=talent
-            )
-
-            return Response(
-                PortfolioItemSerializer(
-                    portfolio_item
-                ).data,
-                status=status.HTTP_201_CREATED
-            )
-
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        talent = owned_portfolio_talent_for(request.user)
+        serializer = PortfolioItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(talent=talent)
+        return Response(serializer.data, status=201)
 
 
-# ============================================================
-# PORTFOLIO ITEM DETAIL
-# ============================================================
-
-class PortfolioItemDetailAPIView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
+class PortfolioItemDetailAPIView(PortfolioAPI):
     def get(self, request, item_id):
-
-        item = get_object_or_404(
-            PortfolioItem,
-            id=item_id
-        )
-
-        serializer = PortfolioItemSerializer(
-            item
-        )
-
-        return Response(serializer.data)
+        item = get_object_or_404(visible_portfolio_items_for(request.user), pk=item_id)
+        return Response(PortfolioItemSerializer(item).data)
 
 
-# ============================================================
-# UPDATE PORTFOLIO ITEM
-# ============================================================
-
-class PortfolioItemUpdateAPIView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
+class PortfolioItemUpdateAPIView(PortfolioAPI):
     def patch(self, request, item_id):
-
-        item = get_object_or_404(
-            PortfolioItem,
-            id=item_id
-        )
-
-        if request.user.role != "ATHLETE":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only talent accounts "
-                        "can update portfolio items."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        if item.talent.user != request.user:
-
-            return Response(
-                {
-                    "detail": (
-                        "You do not have permission "
-                        "to update this portfolio item."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        serializer = PortfolioItemSerializer(
-            item,
-            data=request.data,
-            partial=True
-        )
-
-        if serializer.is_valid():
-
-            serializer.save()
-
-            return Response(
-                serializer.data
-            )
-
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-
-# ============================================================
-# DELETE PORTFOLIO ITEM
-# ============================================================
-
-class PortfolioItemDeleteAPIView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-    def delete(self, request, item_id):
-
-        item = get_object_or_404(
-            PortfolioItem,
-            id=item_id
-        )
-
-        if request.user.role != "ATHLETE":
-
-            return Response(
-                {
-                    "detail": (
-                        "Only talent accounts "
-                        "can delete portfolio items."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        if item.talent.user != request.user:
-
-            return Response(
-                {
-                    "detail": (
-                        "You do not have permission "
-                        "to delete this portfolio item."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        item.delete()
-
-        return Response(
-            {
-                "detail": (
-                    "Portfolio item deleted successfully."
-                )
-            },
-            status=status.HTTP_204_NO_CONTENT
-        )
-
-
-# ============================================================
-# TALENT PORTFOLIO
-# ============================================================
-
-class TalentPortfolioAPIView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, talent_id):
-
-        talent = get_object_or_404(
-            TalentProfile,
-            id=talent_id
-        )
-
-        portfolio_items = PortfolioItem.objects.filter(
-            talent=talent
-        ).order_by(
-            "-created_at"
-        )
-
-        serializer = PortfolioItemSerializer(
-            portfolio_items,
-            many=True
-        )
-
+        item = owned_portfolio_item_for(request.user, item_id)
+        serializer = PortfolioItemSerializer(item, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        from media_erasure.services import save_instance_with_media_retention
+        save_instance_with_media_retention(item, serializer.save, requested_by_id=request.user.pk)
         return Response(serializer.data)
+
+
+class PortfolioItemDeleteAPIView(PortfolioAPI):
+    def delete(self, request, item_id):
+        item = owned_portfolio_item_for(request.user, item_id)
+        from media_erasure.services import delete_instance_with_retention
+        delete_instance_with_retention(item, requested_by_id=request.user.pk)
+        return Response(status=204)
+
+
+class TalentPortfolioAPIView(PortfolioAPI):
+    def get(self, request, talent_id):
+        # Check the parent even when a portfolio is empty.
+        talent = visible_portfolio_talent_for(request.user, talent_id)
+        items = visible_portfolio_items_for(request.user).filter(talent=talent).order_by('-created_at')
+        return Response(PortfolioItemSerializer(self.page(request, items), many=True).data)
 

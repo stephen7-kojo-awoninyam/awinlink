@@ -24,6 +24,7 @@ test('production validates real origins, identities, public policy links and FCM
       EXPO_PUBLIC_EAS_PROJECT_ID: '00000000-0000-4000-8000-000000000000',
       AWINLINK_ANDROID_PACKAGE: 'com.example.awinlink', AWINLINK_IOS_BUNDLE_IDENTIFIER: 'com.example.awinlink',
       EXPO_PUBLIC_PRIVACY_URL: 'https://app.example/privacy', EXPO_PUBLIC_TERMS_URL: 'https://app.example/terms', EXPO_PUBLIC_SUPPORT_URL: 'https://app.example/support',
+      EXPO_PUBLIC_DELETE_ACCOUNT_URL: 'https://app.example/delete-account',
     });
     const google = path.join(temporary, 'google-services.json');
     process.env.AWINLINK_GOOGLE_SERVICES_FILE = google;
@@ -32,6 +33,8 @@ test('production validates real origins, identities, public policy links and FCM
     assert.equal(config.android.package, 'com.example.awinlink');
     assert.equal(config.ios.entitlements['aps-environment'], 'production');
     assert.ok(config.android.blockedPermissions.includes('android.permission.SYSTEM_ALERT_WINDOW'));
+    assert.ok(config.android.blockedPermissions.includes('android.permission.READ_EXTERNAL_STORAGE'));
+    assert.ok(config.android.blockedPermissions.includes('android.permission.WRITE_EXTERNAL_STORAGE'));
     process.env.EXPO_PUBLIC_API_URL = 'http://api.example';
     assert.throws(configure, /HTTPS/);
     process.env.EXPO_PUBLIC_API_URL = 'https://api.example';
@@ -44,6 +47,9 @@ test('production validates real origins, identities, public policy links and FCM
     assert.equal(configure().ios.bundleIdentifier, 'com.example.awinlink');
     delete process.env.EXPO_PUBLIC_PRIVACY_URL;
     assert.throws(configure, /PRIVACY_URL/);
+    process.env.EXPO_PUBLIC_PRIVACY_URL = 'https://app.example/privacy';
+    delete process.env.EXPO_PUBLIC_DELETE_ACCOUNT_URL;
+    assert.throws(configure, /DELETE_ACCOUNT_URL/);
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
     Object.assign(process.env, original);

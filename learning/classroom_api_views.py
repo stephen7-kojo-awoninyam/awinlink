@@ -140,6 +140,19 @@ class ClassroomListCreateAPIView(ClassroomAPIView):
         return Response(ClassroomSerializer(classroom, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
 
+class CourseLiveSessionsAPIView(ClassroomAPIView):
+    """Return only course sessions visible under the current classroom ACL."""
+
+    def get(self, request, course_id):
+        from .classroom_learning import visible_learning_sessions
+
+        lesson_id = None
+        if "lesson" in request.query_params:
+            lesson_id = serializers.IntegerField(min_value=1).run_validation(request.query_params["lesson"])
+        sessions = visible_learning_sessions(request.user, course_id, lesson_id=lesson_id)
+        return self.page(request, sessions, LiveSessionSerializer)
+
+
 class ClassroomDetailAPIView(ClassroomAPIView):
     def get(self, request, classroom_id):
         return Response(ClassroomSerializer(self.classroom(request, classroom_id), context={"request": request}).data)

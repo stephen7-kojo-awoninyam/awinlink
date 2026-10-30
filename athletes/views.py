@@ -3,6 +3,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .forms import AthleteProfileForm, AthleteMediaForm
 from .models import AthleteProfile
 from sports.models import Sport, SportCategory
+from .visibility import visible_athlete_profiles_for
+from django.views.decorators.cache import never_cache
 # Create your views here.
 
 @login_required
@@ -83,10 +85,11 @@ def create_profile(request):
 
 
 
+@never_cache
 def athlete_profile(request, id):
 
     profile = get_object_or_404(
-        AthleteProfile,
+        visible_athlete_profiles_for(request.user),
         id=id
     )
 
@@ -140,4 +143,4 @@ def add_media(request):
         {
             "form": form
         }
-    )    
+    )

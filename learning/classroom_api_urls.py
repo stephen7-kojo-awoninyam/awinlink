@@ -16,6 +16,7 @@ urlpatterns = [
     path("classroom-invitations/<int:invitation_id>/accept/", views.ClassroomInvitationAcceptAPIView.as_view(), name="classroom_invitation_accept"),
     path("classroom-invitations/<int:invitation_id>/decline/", views.ClassroomInvitationDeclineAPIView.as_view(), name="classroom_invitation_decline"),
     path("classrooms/", views.ClassroomListCreateAPIView.as_view(), name="classroom_list_create"),
+    path("courses/<int:course_id>/live-sessions/", views.CourseLiveSessionsAPIView.as_view(), name="course_live_sessions"),
     path("classrooms/<int:classroom_id>/", views.ClassroomDetailAPIView.as_view(), name="classroom_detail"),
     path("classrooms/<int:classroom_id>/sessions/", views.ClassroomSessionListScheduleAPIView.as_view(), name="classroom_sessions"),
     path("sessions/<int:session_id>/", views.SessionDetailAPIView.as_view(), name="classroom_session_detail"),

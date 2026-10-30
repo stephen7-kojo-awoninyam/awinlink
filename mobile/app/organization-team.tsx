@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { Stack, useFocusEffect } from 'expo-router';
 import { apiRequest } from '@/src/api/client';
+import { LoadMore } from '@/src/components/LoadMore';
+import { usePagedState } from '@/src/paged-state';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { Page, ui } from '@/src/components/Page';
 import { colors } from '@/src/theme';
@@ -13,8 +15,8 @@ const roles = ['MANAGER', 'RECRUITER', 'VIEWER'];
 export default function OrganizationTeam() {
   const { user } = useAuth();
   const [organization, setOrganization] = useState<number | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [members, setMembers] = usePagedState<Member>([]);
+  const [invitations, setInvitations] = usePagedState<Invitation>([]);
   const [username, setUsername] = useState('');
   const [role, setRole] = useState('VIEWER');
   const [loading, setLoading] = useState(true);
@@ -88,6 +90,9 @@ export default function OrganizationTeam() {
           {invitation.status === 'PENDING' && button('Revoke invitation', () => void mutate(`invitations/${invitation.id}/revoke/`))}
         </View>)}
       </>}
+
+      <LoadMore items={members} onChange={setMembers} label="Load more members" />
+      <LoadMore items={invitations} onChange={setInvitations} label="Load more invitations" />
     </Page>
   </>;
 }

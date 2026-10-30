@@ -34,7 +34,7 @@ module.exports = () => {
   if (production) {
     httpsUrl(process.env.EXPO_PUBLIC_API_URL, 'EXPO_PUBLIC_API_URL', true);
     httpsUrl(process.env.EXPO_PUBLIC_WEB_URL, 'EXPO_PUBLIC_WEB_URL', true);
-    for (const key of ['EXPO_PUBLIC_PRIVACY_URL', 'EXPO_PUBLIC_TERMS_URL', 'EXPO_PUBLIC_SUPPORT_URL']) httpsUrl(process.env[key], key);
+    for (const key of ['EXPO_PUBLIC_PRIVACY_URL', 'EXPO_PUBLIC_TERMS_URL', 'EXPO_PUBLIC_SUPPORT_URL', 'EXPO_PUBLIC_DELETE_ACCOUNT_URL']) httpsUrl(process.env[key], key);
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId || '')) throw new Error('Set EXPO_PUBLIC_EAS_PROJECT_ID to your EAS project UUID.');
     if (![androidPackage, iosBundle].every(value => /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(value || ''))) throw new Error('Set valid owned AWINLINK_ANDROID_PACKAGE and AWINLINK_IOS_BUNDLE_IDENTIFIER values.');
     if (process.env.EAS_BUILD_PLATFORM !== 'ios' && !googleServicesFile) throw new Error('Set AWINLINK_GOOGLE_SERVICES_FILE for Android FCM configuration.');

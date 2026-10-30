@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect } from 'expo-router';
@@ -17,10 +19,10 @@ export default function CompetitionWorkspaceScreen() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
   const isCoach = user?.role === 'COACH';
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [queue, setQueue] = useState<Competition[]>([]);
+  const [assignments, setAssignments] = usePagedState<Assignment>([]);
+  const [queue, setQueue] = usePagedState<Competition>([]);
   const [selected, setSelected] = useState<Competition | null>(null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = usePagedState<Participant>([]);
   const [drafts, setDrafts] = useState<Record<number, EvaluationDraft>>({});
   const [reviewNote, setReviewNote] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
@@ -101,6 +103,10 @@ export default function CompetitionWorkspaceScreen() {
         <View style={styles.row}><Pressable disabled={workingId !== null} onPress={() => void reviewCompetition(competition, 'approve')} style={styles.button}><Text style={styles.buttonText}>{workingId === competition.id ? 'Working...' : 'Approve'}</Text></Pressable><Pressable disabled={workingId !== null} onPress={() => void reviewCompetition(competition, 'reject')} style={styles.reject}><Text style={styles.rejectText}>Request changes</Text></Pressable></View>
       </View>) : assignments.length === 0 ? <EmptyState title="No judging assignments" message="When an organization assigns you to judge or mentor a competition, it will appear here." /> : assignments.map((assignment) => <Pressable key={assignment.id} disabled={workingId !== null} onPress={() => void openAssignment(assignment)} style={styles.card}><Text style={styles.person}>Competition #{assignment.competition}</Text><Text style={styles.meta}>{assignment.role.toLowerCase()} assignment</Text><Text style={styles.open}>{workingId === assignment.id ? 'Loading...' : 'Open assignment'}</Text></Pressable>)}
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+
+      <LoadMore items={assignments} onChange={setAssignments} label="Load more assignments" />
+      <LoadMore items={queue} onChange={setQueue} label="Load more queue" />
+      <LoadMore items={participants} onChange={setParticipants} label="Load more participants" />
     </Page>
   </>;
 }

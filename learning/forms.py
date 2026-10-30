@@ -3,6 +3,7 @@ from django import forms
 from .models import (
     LearningCategory,
     Course,
+    CourseModule,
     Lesson,
     CourseReview,
     Quiz,
@@ -56,6 +57,17 @@ class LearningCategoryForm(forms.ModelForm):
 
 class CourseForm(forms.ModelForm):
 
+    def __init__(self, *args, **kwargs):
+        creator = kwargs.pop("creator", None)
+        super().__init__(*args, **kwargs)
+        self.fields["category"].queryset = LearningCategory.objects.order_by("name", "pk")
+        self.fields["category"].empty_label = "Select a course category"
+        if creator and not self.is_bound and not self.instance.pk and "category" not in self.initial:
+            from .category_defaults import creator_course_category
+            category = creator_course_category(creator)
+            if category:
+                self.initial["category"] = category.pk
+
     class Meta:
         model = Course
 
@@ -67,7 +79,6 @@ class CourseForm(forms.ModelForm):
             "thumbnail",
             "level",
             "duration",
-            "is_free",
         ]
 
         widgets = {
@@ -119,11 +130,6 @@ class CourseForm(forms.ModelForm):
                 }
             ),
 
-            "is_free": forms.CheckboxInput(
-                attrs={
-                    "class": "form-check-input"
-                }
-            ),
         }
 
 
@@ -133,6 +139,10 @@ class CourseForm(forms.ModelForm):
 
 class LessonForm(forms.ModelForm):
 
+    def __init__(self, *args, course=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['module'].queryset = CourseModule.objects.filter(course=course) if course else CourseModule.objects.none()
+
     class Meta:
         model = Lesson
 
@@ -141,6 +151,10 @@ class LessonForm(forms.ModelForm):
             "description",
             "video",
             "notes",
+            "captions",
+            "caption_language",
+            "transcript",
+            "module",
             "order",
             "duration",
         ]
@@ -190,6 +204,23 @@ class LessonForm(forms.ModelForm):
         }
 
 
+class CourseModuleForm(forms.ModelForm):
+    def clean_order(self):
+        value = self.cleaned_data['order']
+        if value < 1:
+            raise forms.ValidationError('Section order must be at least 1.')
+        return value
+
+    class Meta:
+        model = CourseModule
+        fields = ['title', 'description', 'order']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Section title'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        }
+
+
 # =========================================================
 # COURSE REVIEW FORM
 # =========================================================
@@ -234,6 +265,12 @@ class CourseReviewForm(forms.ModelForm):
 
 class QuizForm(forms.ModelForm):
 
+    def clean_passing_score(self):
+        score = self.cleaned_data['passing_score']
+        if not 1 <= score <= 100:
+            raise forms.ValidationError('Passing score must be between 1 and 100.')
+        return score
+
     class Meta:
         model = Quiz
 
@@ -265,6 +302,12 @@ class QuizForm(forms.ModelForm):
 # =========================================================
 
 class QuestionForm(forms.ModelForm):
+
+    def clean_correct_answer(self):
+        answer = self.cleaned_data['correct_answer']
+        if answer not in {'A', 'B', 'C', 'D'}:
+            raise forms.ValidationError('Select a correct answer from A, B, C or D.')
+        return answer
 
     class Meta:
         model = Question

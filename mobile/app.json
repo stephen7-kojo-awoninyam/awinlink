@@ -39,7 +39,14 @@
       "./plugins/withNativeCalls.cjs",
       "expo-document-picker",
       "expo-notifications",
-      ["expo-audio", {"microphonePermission": "Allow Awinlink to record voice messages.", "enableBackgroundPlayback": false, "enableBackgroundRecording": false}],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Awinlink to record voice messages.",
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ],
       [
         "@config-plugins/react-native-webrtc",
         {
@@ -59,6 +66,16 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "launch": {
+        "free": true,
+        "purchasesEnabled": false
+      },
+      "router": {},
+      "eas": {
+        "projectId": "61040fa9-1640-482c-b56c-882324069184"
+      }
     }
   }
 }

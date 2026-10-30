@@ -8,6 +8,8 @@ from .api_views import (
     CourseCreateAPIView,
     MyCoursesAPIView,
     CourseLessonsAPIView,
+    CourseModulesAPIView,
+    CourseModuleDetailAPIView,
     LessonCreateAPIView,
     LessonDetailAPIView,
     CourseEnrollmentAPIView,
@@ -23,6 +25,10 @@ from .api_views import (
     CourseApproveAPIView,
     CourseRejectAPIView,
     PendingCoursesAPIView,
+    CourseSubmissionReadinessAPIView,
+    StudioLessonQuizAPIView,
+    StudioQuizQuestionsAPIView,
+    StudioQuestionDetailAPIView,
 )
 
 
@@ -89,12 +95,20 @@ urlpatterns = [
         CourseDetailAPIView.as_view(),
         name="course_detail"
     ),
+    path(
+        "courses/<int:course_id>/readiness/",
+        CourseSubmissionReadinessAPIView.as_view(),
+        name="course_submission_readiness"
+    ),
 
     path(
         "courses/<int:course_id>/lessons/",
         CourseLessonsAPIView.as_view(),
         name="course_lessons"
     ),
+
+    path("courses/<int:course_id>/modules/", CourseModulesAPIView.as_view(), name="course_modules"),
+    path("modules/<int:module_id>/", CourseModuleDetailAPIView.as_view(), name="course_module_detail"),
 
     path(
         "courses/<int:course_id>/lessons/create/",
@@ -159,6 +173,11 @@ urlpatterns = [
         LessonQuizAPIView.as_view(),
         name="lesson_quiz"
     ),
+    path(
+        "studio/lessons/<int:lesson_id>/quiz/",
+        StudioLessonQuizAPIView.as_view(),
+        name="studio_lesson_quiz"
+    ),
 
 
     # =====================================================
@@ -169,6 +188,16 @@ urlpatterns = [
         "quizzes/<int:quiz_id>/questions/",
         QuizQuestionsAPIView.as_view(),
         name="quiz_questions"
+    ),
+    path(
+        "studio/quizzes/<int:quiz_id>/questions/",
+        StudioQuizQuestionsAPIView.as_view(),
+        name="studio_quiz_questions"
+    ),
+    path(
+        "studio/questions/<int:question_id>/",
+        StudioQuestionDetailAPIView.as_view(),
+        name="studio_question_detail"
     ),
 
     path(

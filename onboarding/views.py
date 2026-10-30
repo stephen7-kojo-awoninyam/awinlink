@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.shortcuts import render, redirect
 from .forms import RoleSelectionForm
 from talents.forms import TalentProfileForm
@@ -6,6 +5,11 @@ from talents.models import TalentProfile
 from django.contrib.auth.decorators import login_required
 from organizations.forms import OrganizationForm
 from organizations.models import Organization
+from accounts.models import User
+from accounts.roles import PUBLIC_ROLES
+from django.db import transaction
+from django.core.exceptions import PermissionDenied
+from django.views.decorators.http import require_http_methods
 
 
 
@@ -21,42 +25,33 @@ def welcome(request):
     
     
     
+@login_required
+@require_http_methods(["GET", "POST"])
 def choose_role(request):
-
-    return render(
-        request,
-        "onboarding/choose_role.html"
-    )    
-    
-    
-    
-
-
-def choose_role(request):
-
-    if request.method == "POST":
-
-        role = request.POST.get("role")
-
-        request.user.role = role
-        request.user.save()
-
-        if role == "TALENT":
-            return redirect("talent_onboarding")
-
-        elif role == "ORGANIZATION":
-            return redirect("organization_onboarding")
-
-        elif role == "COACH":
-            return redirect("coach_onboarding")
-
-        elif role == "SCOUT":
-            return redirect("scout_onboarding")
-
-    return render(
-        request,
-        "onboarding/choose_role.html"
-    )  
+    form = RoleSelectionForm(request.POST if request.method == 'POST' else None)
+    # Re-read under a lock: a concurrent trusted admin promotion must not be
+    # overwritten by a stale browser user's role or unrelated account fields.
+    with transaction.atomic():
+        user = User.objects.select_for_update().get(pk=request.user.pk)
+        if not user.is_active:
+            raise PermissionDenied('This account is unavailable.')
+        if user.role == 'ADMIN' or user.is_staff or user.is_superuser:
+            return redirect('dashboard')
+        # Older onboarding stored TALENT instead of ATHLETE. Allow that account
+        # to select a public role without bulk rewriting historical accounts.
+        if user.role not in PUBLIC_ROLES and user.role != 'TALENT':
+            raise PermissionDenied('This account requires administrator review.')
+        if request.method == 'POST' and form.is_valid():
+            user.role = form.cleaned_data['role']
+            user.save(update_fields=['role'])
+            return redirect({
+                'ATHLETE': 'talent_onboarding',
+                'ORGANIZATION': 'organization_onboarding',
+                'COACH': 'select_coach_category',
+                'SCOUT': 'select_scout_category',
+            }[user.role])
+    return render(request, 'onboarding/choose_role.html', {'form': form},
+                  status=400 if request.method == 'POST' else 200)
     
     
 
@@ -138,4 +133,4 @@ def organization_onboarding(request):
         {
             "form": form
         }
-    )       
+    )

@@ -1,7 +1,9 @@
 import { apiRequest } from '@/src/api/client';
 
 export type TalentTag = { id: number; name: string; talent_details: string; tag: string; roster: string;
-  status: string; talent_id: number | null; organization_id: number; organization_name: string; actions?: string[] };
+  status: string; talent_id: number | null; coach_id?: number | null; scout_id?: number | null;
+  user_id?: number | null; profile_type?: 'TALENT' | 'COACH' | 'SCOUT' | null; profile_name?: string;
+  category?: string | null; category_name?: string; organization_id: number; organization_name: string; actions?: string[] };
 export type Workspace = { id: number; name: string; can_manage: boolean };
 export type RosterEvent = { id: number; action: string; reason: string; created_at: string };
 

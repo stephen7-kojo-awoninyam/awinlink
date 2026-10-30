@@ -9,6 +9,7 @@ from phonenumbers.phonenumberutil import region_code_for_country_code
 from phonenumbers.phonenumberutil import country_code_for_region
 
 from .models import User
+from .roles import PUBLIC_ROLE_CHOICES as PUBLIC_ACCOUNT_ROLE_CHOICES, validate_public_authority_input
 from .legal import TERMS_VERSION
 from django.utils import timezone
 
@@ -245,9 +246,7 @@ class UserRegistrationForm(UserCreationForm):
         return user
 
     # Platform administrators are provisioned outside public registration.
-    PUBLIC_ROLE_CHOICES = tuple(
-        choice for choice in User.ROLE_CHOICES if choice[0] != "ADMIN"
-    )
+    PUBLIC_ROLE_CHOICES = PUBLIC_ACCOUNT_ROLE_CHOICES
 
     email = forms.EmailField(
         required=True,
@@ -469,6 +468,7 @@ class UserRegistrationForm(UserCreationForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        validate_public_authority_input(self.data)
 
         role = cleaned_data.get("role")
 

@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -13,7 +15,7 @@ import { colors } from '@/src/theme';
 export default function FeedScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [posts, setPosts] = usePagedState<FeedPost>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -103,6 +105,8 @@ export default function FeedScreen() {
           <FeedPostCard key={post.id} onToggleLike={toggleLike} post={post} />
         ))
       )}
+
+      <LoadMore items={posts} onChange={setPosts} label="Load more posts" />
     </Page>
   );
 }

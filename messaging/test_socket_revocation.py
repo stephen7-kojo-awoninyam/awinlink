@@ -36,12 +36,15 @@ class SocketRevocationTests(TransactionTestCase):
         await socket.receive_json_from()
 
     def test_expired_idle_socket_is_closed_without_client_activity(self):
+        # Import before minting: one-second, integer-rounded tokens can expire
+        # during ASGI startup instead of exercising an established idle socket.
+        from config.asgi import application  # noqa: F401
         token = AccessToken.for_user(self.user)
-        token.set_exp(lifetime=timedelta(seconds=1))
+        token.set_exp(lifetime=timedelta(seconds=5))
         async def run():
             socket = self.socket(token=str(token))
             await self.connected(socket)
-            self.assertEqual((await socket.receive_output(timeout=2))['code'], 4001)
+            self.assertEqual((await socket.receive_output(timeout=7))['code'], 4001)
             await socket.disconnect()
         async_to_sync(run)()
 

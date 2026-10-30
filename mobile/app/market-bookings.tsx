@@ -69,5 +69,7 @@ export default function MarketBookings() {
       {booking.capabilities.manage_review && button(booking.review?.published ? 'Make review private' : 'Publish review', async () => { await request(`bookings/${booking.id}/reviews/`, { publish: !booking.review?.published }, 'PATCH'); await open(booking.id); })}
       {booking.capabilities.review && <>{input('Rating (1-5)', rating, setRating)}{input('Review', review, setReview)}<Text>Publish as a verified buyer</Text><Switch accessibilityLabel="Publish review" value={publish} onValueChange={setPublish} />{button('Save review', async () => { await request(`bookings/${booking.id}/reviews/`, { rating: Number(rating), text: review, publish }); setReview(''); setPublish(false); await open(booking.id); })}</>}
     </View>}
+
+
   </Page>;
 }

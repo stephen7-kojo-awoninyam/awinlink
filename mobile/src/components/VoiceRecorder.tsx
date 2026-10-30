@@ -62,7 +62,7 @@ export function VoiceRecorder({ conversationId, disabled, onSent }: {
   }
   return <View style={{ padding: 10, gap: 6 }}>
     {uri ? <>
-      <VoicePlayer uri={uri} />
+      <VoicePlayer uri={uri} localPreview />
       <Button title="Send voice message" disabled={disabled || working} onPress={() => void send()} />
       <Button title="Discard recording" disabled={working} onPress={() => setUri('')} />
     </> : <Button title={state.isRecording ? `Stop recording (${Math.floor(state.durationMillis / 1000)}s)` : 'Record voice message'}

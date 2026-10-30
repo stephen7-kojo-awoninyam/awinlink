@@ -106,6 +106,8 @@ class ClassroomChatSocketTests(ChatFixture, TransactionTestCase):
             for socket in [host, learner, unrelated]:
                 self.assertTrue((await socket.connect())[0]); await socket.receive_json_from()
             await host.send_json_to({'type': 'chat', 'client_id': str(uuid4()), 'text': 'Hello class'})
+            sent = await host.receive_json_from()
+            self.assertEqual(sent['type'], 'chat'); self.assertEqual(sent['message']['text'], 'Hello class')
             received = await learner.receive_json_from()
             self.assertEqual(received['type'], 'chat'); self.assertEqual(received['message']['text'], 'Hello class')
             self.assertTrue(await unrelated.receive_nothing(timeout=.1))

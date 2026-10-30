@@ -25,7 +25,7 @@ class CloudMediaTests(SimpleTestCase):
                              ('feed/videos', 'video'), ('feed/images', 'image')]:
             with self.subTest(folder=folder):
                 upload.return_value = {'public_id': f'{folder}/original_id'}
-                self.assertEqual(storage.save(f'{folder}/clip.webm', ContentFile(b'original')),
+                self.assertEqual(storage.save(f'{folder}/clip.' + ('png' if kind == 'image' else 'webm'), ContentFile(b'\x89PNG\r\n\x1a\nfixture' if kind == 'image' else b'\x1aE\xdf\xa3fixture')),
                                  f'{folder}/original_id')
                 self.assertEqual(upload.call_args.kwargs['resource_type'], kind)
                 self.assertTrue(upload.call_args.kwargs['folder'].endswith(folder))
@@ -34,10 +34,48 @@ class CloudMediaTests(SimpleTestCase):
                 else:
                     self.assertNotIn('type', upload.call_args.kwargs)
 
+    @patch('cloudinary.uploader.upload', return_value={'public_id': 'learning/captions/lesson'})
+    def test_caption_tracks_are_private_raw_cloud_assets(self, upload):
+        storage = PlaybackMediaStorage()
+        storage.save('learning/captions/lesson.vtt', ContentFile(b'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nHello\n'))
+        self.assertEqual(upload.call_args.kwargs['resource_type'], 'raw')
+        self.assertEqual(upload.call_args.kwargs['type'], 'authenticated')
+
     @patch('cloudinary.uploader.destroy', return_value={'result': 'ok'})
-    def test_delete_uses_same_video_namespace(self, destroy):
-        PlaybackMediaStorage().delete('messages/audio/existing_id')
-        self.assertEqual(destroy.call_args.kwargs['resource_type'], 'video')
+    @patch('cloudinary.api.resource', return_value={'asset_id': 'immutable-123'})
+    def test_explicit_delete_uses_verified_asset_resource_delivery_and_invalidation(self, resource, destroy):
+        storage = PlaybackMediaStorage()
+        self.assertTrue(storage.delete_asset('messages/audio/existing_id', asset_id='immutable-123',
+            resource_type='video', delivery_type='authenticated'))
+        resource.assert_called_once_with('media/messages/audio/existing_id', resource_type='video', type='authenticated')
+        destroy.assert_called_once_with('media/messages/audio/existing_id', resource_type='video',
+            type='authenticated', invalidate=True)
+
+    @patch('cloudinary.uploader.destroy')
+    @patch('cloudinary.api.resource', return_value={'asset_id': 'replacement-asset'})
+    def test_asset_identity_mismatch_never_deletes(self, resource, destroy):
+        from config.media_storage import MediaDeletionConflict
+        with self.assertRaises(MediaDeletionConflict):
+            PlaybackMediaStorage().delete_asset('portfolio/files/legacy.pdf', asset_id='old-asset',
+                resource_type='raw', delivery_type='upload')
+        destroy.assert_not_called()
+
+    @patch('cloudinary.uploader.destroy', return_value={'result': 'ok'})
+    @patch('cloudinary.api.resource', return_value={'asset_id': 'legacy-asset'})
+    def test_legacy_raw_upload_delivery_is_deleted_only_when_explicitly_identified(self, resource, destroy):
+        storage = PlaybackMediaStorage()
+        self.assertTrue(storage.delete_asset('portfolio/files/legacy.pdf', asset_id='legacy-asset',
+            resource_type='raw', delivery_type='upload'))
+        resource.assert_called_once_with('media/portfolio/files/legacy.pdf', resource_type='raw', type='upload')
+        destroy.assert_called_once_with('media/portfolio/files/legacy.pdf', resource_type='raw',
+            type='upload', invalidate=True)
+
+    @patch('cloudinary.uploader.destroy')
+    def test_implicit_cloudinary_delete_fails_closed(self, destroy):
+        from config.media_storage import MediaDeletionConflict
+        with self.assertRaises(MediaDeletionConflict):
+            PlaybackMediaStorage().delete('portfolio/files/legacy.pdf')
+        destroy.assert_not_called()
 
     def test_delivery_codecs_and_local_legacy_file(self):
         import cloudinary
@@ -61,7 +99,7 @@ class CloudMediaTests(SimpleTestCase):
             storage = PlaybackMediaStorage()
             self.assertEqual(storage.url('feed/images/private'), '/media/feed/images/private')
             self.assertEqual(storage.url('messages/files/private.pdf'), '/media/messages/files/private.pdf')
-            self.assertTrue(storage.url('talents/profile/public.jpg').startswith('https://'))
+            self.assertEqual(storage.url('talents/profile/public.jpg'), '/media/talents/profile/public.jpg')
 
     def test_railway_and_local_storage_selection(self):
         for cloud in (False, True):
@@ -100,13 +138,31 @@ class LocalPlaybackTests(TestCase):
 
     def upload_audio(self):
         response = self.api.post(f'/api/messaging/conversations/{self.conversation.pk}/messages/create/',
-                                 {'message_type': 'AUDIO', 'audio': SimpleUploadedFile('voice.webm', b'0123456789', 'audio/webm')}, format='multipart')
+                                 {'message_type': 'AUDIO', 'audio': SimpleUploadedFile('voice.webm', b'\x1aE\xdf\xa3456789', 'audio/webm')}, format='multipart')
         self.assertEqual(response.status_code, 201, response.data)
         message = Message.objects.get(pk=response.data['id'])
         with message.audio.open() as original:
-            self.assertEqual(original.read(), b'0123456789')
+            self.assertEqual(original.read(), b'\x1aE\xdf\xa3456789')
         self.assertTrue(response.data['audio'].startswith('http://testserver/media/'))
         return message.audio.url
+
+    def test_lesson_caption_track_uses_lesson_enrollment_acl(self):
+        from learning.models import Course, LearningCategory, Lesson
+        category = LearningCategory.objects.create(name='Private caption test')
+        course = Course.objects.create(creator=self.user, category=category, title='Private lesson', slug='private-caption-test', description='Test')
+        lesson = Lesson.objects.create(course=course, title='Lesson', order=1)
+        lesson.captions.save('lesson.vtt', ContentFile(b'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nPrivate caption\n'))
+        path = lesson.captions.name
+        self.api.force_authenticate(self.other)
+        self.assertEqual(self.api.get(f'/media/{path}').status_code, 404)
+        from learning.models import Enrollment
+        Enrollment.objects.create(course=course, user=self.other)
+        response = self.api.get(f'/media/{path}')
+        self.assertEqual(response.status_code, 200)
+        body = b''.join(response.streaming_content)
+        self.assertIn(b'Private caption', body)
+        self.assertIn('text/vtt', response['Content-Type'])
+        self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
 
     def test_audio_upload_and_seek_under_debug_false(self):
         url = self.upload_audio()
@@ -115,7 +171,7 @@ class LocalPlaybackTests(TestCase):
             self.assertEqual(response.status_code, 206)
             self.assertEqual(response['Content-Type'], 'audio/webm')
             self.assertEqual(response['Content-Range'], 'bytes 2-5/10')
-            self.assertEqual(b''.join(response.streaming_content), b'2345')
+            self.assertEqual(b''.join(response.streaming_content), b'\xdf\xa345')
             head = self.api.head(url)
             self.assertEqual(head.status_code, 200)
             self.assertEqual(head['Content-Length'], '10')
@@ -260,5 +316,5 @@ class LocalPlaybackTests(TestCase):
         url = self.upload_audio()
         self.assertEqual(self.api.get(url + '?playback=mp3').status_code, 422)
         raw = self.api.get(url)
-        self.assertEqual(b''.join(raw.streaming_content), b'0123456789')
+        self.assertEqual(b''.join(raw.streaming_content), b'\x1aE\xdf\xa3456789')
         self.assertEqual(self.api.get(url + '?playback=mp4').status_code, 400)

@@ -59,6 +59,26 @@ class EventAdmin(admin.ModelAdmin):
         )
     }
 
+    def save_model(self, request, obj, form, change):
+        if change:
+            from media_erasure.services import save_instance_with_media_retention
+            save_instance_with_media_retention(obj,
+                lambda: super(EventAdmin, self).save_model(request, obj, form, change),
+                requested_by_id=request.user.pk)
+            return
+        super().save_model(request, obj, form, change)
+
+    def delete_model(self, request, obj):
+        from media_erasure.services import delete_event_with_retention
+        delete_event_with_retention(obj, requested_by_id=request.user.pk)
+
+    def delete_queryset(self, request, queryset):
+        from django.db import transaction
+        from media_erasure.services import delete_event_with_retention
+        with transaction.atomic():
+            for obj in queryset.select_for_update().order_by('pk'):
+                delete_event_with_retention(obj, requested_by_id=request.user.pk)
+
 
 
 @admin.register(EventRegistration)
@@ -92,6 +112,29 @@ class EventFeedbackAdmin(admin.ModelAdmin):
     list_filter = (
         "rating",
     )
+
+
+@admin.register(EventMedia)
+class EventMediaAdmin(admin.ModelAdmin):
+    list_display = ('event', 'uploaded_by', 'media_type', 'uploaded_at')
+    readonly_fields = ('event', 'uploaded_by', 'media_type', 'file', 'caption', 'uploaded_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def delete_model(self, request, obj):
+        from media_erasure.services import delete_instance_with_retention
+        delete_instance_with_retention(obj, requested_by_id=request.user.pk)
+
+    def delete_queryset(self, request, queryset):
+        from django.db import transaction
+        from media_erasure.services import delete_instance_with_retention
+        with transaction.atomic():
+            for obj in queryset.select_for_update().order_by('pk'):
+                delete_instance_with_retention(obj, requested_by_id=request.user.pk)
     
     
 @admin.register(EventCertificate)
@@ -123,6 +166,4 @@ class EventCertificateAdmin(admin.ModelAdmin):
         "issued_at",
 
     )
-    
-    
-   
+

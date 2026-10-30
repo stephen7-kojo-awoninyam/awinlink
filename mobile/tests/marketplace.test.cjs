@@ -24,6 +24,7 @@ function fixture() {
     messages: [{ id: 51, author: 1, body: 'Latest' }], next_before: 51,
     permissions: { can_message: true, can_accept: true, can_decline: true, can_withdraw: false } };
   const api = compile('../src/api/client.ts', name => {
+    if (name === '@/src/pagination') return require('./pagination-helpers.cjs').pagination;
     assert.equal(name, 'expo-secure-store');
     return { getItemAsync: async () => 'fixture-token' };
   }, { process: { env: { EXPO_PUBLIC_API_URL: 'https://fixture.invalid' } },

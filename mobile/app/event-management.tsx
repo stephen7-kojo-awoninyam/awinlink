@@ -1,4 +1,6 @@
-import { useCallback, useState } from 'react';
+import { LoadMore } from '@/src/components/LoadMore';
+import { useScopedState } from '@/src/privacy-state';
+import { useCallback, useRef } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -19,22 +21,26 @@ const eventTypes = ['WORKSHOP', 'BOOTCAMP', 'AUDITION', 'CONFERENCE', 'TRIAL', '
 
 export default function EventManagementScreen() {
   const { user } = useAuth();
-  const [organizationId, setOrganizationId] = useState<number | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
-  const [form, setForm] = useState(initialForm);
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [online, setOnline] = useState(false);
-  const [meetingLink, setMeetingLink] = useState('');
-  const [eventImage, setEventImage] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [working, setWorking] = useState(false);
-  const [error, setError] = useState('');
+  const scope = `${user?.id ?? ''}:${user?.role ?? ''}`;
+  const loadRevision = useRef(0);
+  const [organizationId, setOrganizationId] = useScopedState<number | null>(scope, null);
+  const [categories, setCategories] = useScopedState<Category[]>(scope, []);
+  const [events, setEvents] = useScopedState<EventItem[]>(scope, []);
+  const [registrations, setRegistrations] = useScopedState<Registration[]>(scope, []);
+  const [form, setForm] = useScopedState(scope, initialForm);
+  const [categoryId, setCategoryId] = useScopedState<number | null>(scope, null);
+  const [online, setOnline] = useScopedState(scope, false);
+  const [meetingLink, setMeetingLink] = useScopedState(scope, '');
+  const [eventImage, setEventImage] = useScopedState<DocumentPicker.DocumentPickerAsset | null>(scope, null);
+  const [loading, setLoading] = useScopedState(scope, true);
+  const [refreshing, setRefreshing] = useScopedState(scope, false);
+  const [working, setWorking] = useScopedState(scope, false);
+  const [error, setError] = useScopedState(scope, '');
 
   const load = useCallback(async () => {
+    const revision = ++loadRevision.current;
     setError('');
+    setEvents([]); setRegistrations([]); setOrganizationId(null);
     try {
       const [org, categoryList, eventList, registrationList] = await Promise.all([
         apiRequest<Org>('organizations/me/'),
@@ -42,16 +48,21 @@ export default function EventManagementScreen() {
         apiRequest<EventItem[]>('events/my/'),
         apiRequest<Registration[]>('events/registrations/'),
       ]);
+      if (revision !== loadRevision.current) return;
       setOrganizationId(org.id);
       setCategories(categoryList);
       setEvents(eventList);
       setRegistrations(registrationList);
       if (!categoryId && categoryList[0]) setCategoryId(categoryList[0].id);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load event management.'); }
-    finally { setLoading(false); setRefreshing(false); }
-  }, [categoryId]);
+    } catch (e) {
+      if (revision !== loadRevision.current) return;
+      setEvents([]); setRegistrations([]); setCategories([]); setOrganizationId(null);
+      setError(e instanceof Error ? e.message : 'Unable to load event management.');
+    }
+    finally { if (revision === loadRevision.current) { setLoading(false); setRefreshing(false); } }
+  }, [categoryId, scope]);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { void load(); return () => { ++loadRevision.current; }; }, [load]));
 
   if (!user) return <Redirect href="/login" />;
   if (user.role !== 'ORGANIZATION') return <Redirect href="/(tabs)" />;
@@ -136,6 +147,10 @@ export default function EventManagementScreen() {
         {registrations.length ? registrations.map((item) => <View key={item.id} style={styles.card}><Text style={styles.cardTitle}>{item.talent_name}</Text><Text style={styles.meta}>{item.event_title} · {item.status}</Text><View style={styles.actions}>{item.status === 'REGISTERED' && <><Pressable disabled={working} onPress={() => void setRegistrationStatus(item, 'APPROVED')} style={styles.button}><Text style={styles.buttonText}>Approve</Text></Pressable><Pressable disabled={working} onPress={() => void setRegistrationStatus(item, 'REJECTED')} style={styles.secondary}><Text style={styles.secondaryText}>Reject</Text></Pressable></>}{item.status === 'APPROVED' && !item.attendance_marked && <Pressable disabled={working} onPress={() => void markAttendance(item)} style={styles.button}><Text style={styles.buttonText}>Mark attended</Text></Pressable>}</View></View>) : <Text style={styles.meta}>No event registrations yet.</Text>}
         {!!error && <Text accessibilityRole="alert" style={styles.notice}>{error}</Text>}
       </>}
+
+      <LoadMore items={categories} onChange={setCategories} label="Load more categories" />
+      <LoadMore items={events} onChange={setEvents} label="Load more events" />
+      <LoadMore items={registrations} onChange={setRegistrations} label="Load more registrations" />
     </Page>
   </>;
 }

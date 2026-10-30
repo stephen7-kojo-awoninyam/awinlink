@@ -1,3 +1,7 @@
+import { useScopedState } from '@/src/privacy-state';
+import { useAuth } from '@/src/auth/AuthProvider';
+import { LoadMore } from '@/src/components/LoadMore';
+import { useSearchPath } from '@/src/search-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Linking, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
@@ -12,14 +16,18 @@ type Organization = {
   id: number; name: string; category_name: string; domain_name: string;
   country: string; city: string; website: string; description: string;
   logo: string | null; followers_count: number;
+  is_followed?: boolean;
 };
 type Follow = { organization_id: number };
 
 export default function OrganizationsScreen() {
-  const [items, setItems] = useState<Organization[]>([]);
-  const [followed, setFollowed] = useState<Set<number>>(new Set());
-  const [selected, setSelected] = useState<Organization | null>(null);
+  const { user } = useAuth();
+  const scope = `${user?.id}:${user?.role}`;
+  const [items, setItems] = useScopedState<Organization[]>(scope, []);
+  const [followed, setFollowed] = useScopedState<Set<number>>(scope, new Set());
+  const [selected, setSelected] = useScopedState<Organization | null>(scope, null);
   const [query, setQuery] = useState('');
+  const endpoint = useSearchPath('organizations/', query);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [working, setWorking] = useState(false);
@@ -33,7 +41,7 @@ export default function OrganizationsScreen() {
     setError('');
     try {
       const [organizations, follows] = await Promise.all([
-        apiRequest<Organization[]>('organizations/'),
+        apiRequest<Organization[]>(endpoint),
         apiRequest<Follow[]>('organizations/following/'),
       ]);
       if (revision === dataRevision.current && generation === loadGeneration.current) {
@@ -47,8 +55,8 @@ export default function OrganizationsScreen() {
     } finally {
       if (generation === loadGeneration.current) { setLoading(false); setRefreshing(false); }
     }
-  }, []);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  }, [endpoint, scope]);
+  useFocusEffect(useCallback(() => { void load(); return () => { ++loadGeneration.current; }; }, [load]));
 
   const matches = useMemo(() => {
     const term = query.trim().toLocaleLowerCase();
@@ -62,7 +70,7 @@ export default function OrganizationsScreen() {
     const organizationId = target.id;
     setWorking(true);
     setError('');
-    const isFollowed = followed.has(selected.id);
+    const isFollowed = followed.has(selected.id) || selected.is_followed === true;
     try {
       const result = await apiRequest<{ followers_count: number }>(`organizations/${organizationId}/${isFollowed ? 'unfollow' : 'follow'}/`, {
         method: isFollowed ? 'DELETE' : 'POST',
@@ -74,9 +82,9 @@ export default function OrganizationsScreen() {
         return next;
       });
       setItems((current) => current.map((item) => item.id === organizationId
-        ? { ...item, followers_count: result.followers_count } : item));
+        ? { ...item, followers_count: result.followers_count, is_followed: !isFollowed } : item));
       setSelected((current) => current?.id === organizationId
-        ? { ...current, followers_count: result.followers_count } : current);
+        ? { ...current, followers_count: result.followers_count, is_followed: !isFollowed } : current);
     } catch (followError) {
       setError(followError instanceof Error ? followError.message : 'Unable to update follow.');
     } finally { setWorking(false); }
@@ -111,7 +119,7 @@ export default function OrganizationsScreen() {
             <Text style={styles.meta}>{selected.followers_count} followers</Text>
             <Pressable accessibilityRole="button" disabled={working} onPress={() => void toggleFollow()}
               style={[styles.button, working && styles.disabled]}>
-              <Text style={styles.buttonText}>{working ? 'Updating...' : followed.has(selected.id) ? 'Following' : 'Follow organization'}</Text>
+              <Text style={styles.buttonText}>{working ? 'Updating...' : followed.has(selected.id) || selected.is_followed ? 'Following' : 'Follow organization'}</Text>
             </Pressable>
           </View>
         ) : matches.length === 0 ? <EmptyState title="No organizations found"
@@ -127,6 +135,8 @@ export default function OrganizationsScreen() {
             {followed.has(item.id) && <Text style={styles.followed}>FOLLOWING</Text>}
           </Pressable>
         ))}
+
+      <LoadMore items={items} onChange={setItems} label="Load more items" />
     </Page>
   );
 }

@@ -41,7 +41,7 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
                 await self.finish(4400)
                 return
             # Subscribe before reading to avoid missing a commit during connection.
-            for room in [services.group(self.session_id), session_group(self.session_id)]:
+            for room in [services.group(self.session_id), session_group(self.session_id), chat.chat_group(self.session_id)]:
                 await self.channel_layer.group_add(room, self.channel_name)
                 self.groups_joined.append(room)
             state = await database_sync_to_async(services.snapshot)(actor=self.user, session_id=self.session_id)
@@ -101,7 +101,14 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
                               parse_constant=authentication._reject_constant)
             if isinstance(data, dict) and data.get("type") == "chat" and set(data) == {"type", "client_id", "text"}:
                 result = await database_sync_to_async(chat.send)(actor=self.user, session_id=self.session_id,
-                    data={"client_id": data["client_id"], "text": data["text"]})
+                    data={"client_id": data["client_id"], "text": data["text"]}, publish=False)
+                # Stay on this socket's event loop: the in-memory Channels layer
+                # used by tests cannot safely receive group_send from a different
+                # loop through transaction.on_commit's sync callback.
+                await self.channel_layer.group_send(chat.chat_group(self.session_id), {
+                    "type": "classroom_chat", "session_id": self.session_id,
+                    "message_id": result["id"],
+                })
                 await self.send_json({"type": "chat", "message": result})
                 return
             if isinstance(data, dict) and data.get("type") == "chat_history" and set(data) <= {"type", "after"}:

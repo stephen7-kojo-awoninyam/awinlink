@@ -49,3 +49,5 @@ GoogleService-Info.plist
 *.apk
 *.ipa
 *.xcarchive/
+.eas-inspect/
+.eas-inspect-check/

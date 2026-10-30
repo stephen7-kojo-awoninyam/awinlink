@@ -59,6 +59,8 @@ class Conversation(models.Model):
 
     class Meta:
 
+        indexes = [models.Index(fields=['-updated_at', '-id'], name='msg_conversation_recent_idx')]
+
         ordering = [
             "-updated_at"
         ]
@@ -113,6 +115,8 @@ class ConversationParticipant(models.Model):
     )
 
     class Meta:
+
+        indexes = [models.Index(fields=['user', '-conversation'], name='msg_member_user_page_idx')]
 
         constraints = [
 
@@ -216,6 +220,12 @@ class Message(models.Model):
         default=False
     )
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['conversation', '-id'], name='msg_conversation_page_idx'),
+            models.Index(fields=['conversation', 'created_at'], name='msg_conversation_read_idx'),
+        ]
+
     def __str__(self):
 
         if self.content:
@@ -263,6 +273,9 @@ class Call(models.Model):
         blank=True,
         related_name="initiated_calls"
     )
+
+    # Original legacy decision retained when retired statuses are normalized.
+    legacy_status = models.CharField(max_length=10, blank=True, default='', editable=False)
 
     call_type = models.CharField(
         max_length=10,
@@ -344,6 +357,8 @@ class CallParticipant(models.Model):
 
     class Meta:
 
+        indexes = [models.Index(fields=['user', 'status', 'call'], name='msg_incoming_call_idx')]
+
         constraints = [
             models.UniqueConstraint(
                 fields=["call", "user"],
@@ -357,4 +372,4 @@ class CallParticipant(models.Model):
             f"{self.user.username} - "
             f"Call {self.call.id} - "
             f"{self.status}"
-        )    
+        )

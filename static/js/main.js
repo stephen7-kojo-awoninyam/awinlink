@@ -1433,38 +1433,6 @@ function syncGlobalCallState(callData) {
     });
 
 
-    /*
-     * -----------------------------------------------------
-     * DEBUG INFORMATION
-     * -----------------------------------------------------
-     */
-
-    console.log(
-        "GLOBAL CALL STATE:",
-        globalCallState
-    );
-
-    console.log(
-        "Joined participants:",
-        Object.keys(
-            globalCallState.joinedParticipants
-        )
-    );
-
-    console.log(
-        "Ringing participants:",
-        Object.keys(
-            globalCallState.ringingParticipants
-        )
-    );
-
-    console.log(
-        "Invited participants:",
-        Object.keys(
-            globalCallState.invitedParticipants
-        )
-    );
-
 }
 
 /*
@@ -1497,25 +1465,45 @@ function hasActiveCallParticipants() {
 
 const rtcConfiguration = { iceTransportPolicy: 'all', iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 const callDiagnostics = [];
+const safeCallDiagnosticEvents = new Set(['ice_configuration', 'inbound_media', 'selected_ice_pair', 'playback_blocked', 'signal_sent', 'signal_received', 'remote_track', 'ice_state', 'ice_error', 'signaling_error', 'local_tracks']);
+const safeCallDiagnosticValues = {
+    type: new Set(['ready', 'offer', 'answer', 'ice_candidate', 'ice-candidate']),
+    policy: new Set(['all', 'relay']), kind: new Set(['audio', 'video']),
+    localType: new Set(['host', 'srflx', 'prflx', 'relay']), remoteType: new Set(['host', 'srflx', 'prflx', 'relay']),
+    state: new Set(['new', 'checking', 'connected', 'completed', 'disconnected', 'failed', 'closed']),
+    media: new Set(['AUDIO', 'VIDEO']),
+    name: new Set(['Error', 'TypeError', 'OperationError', 'NotAllowedError', 'AbortError', 'InvalidStateError']),
+};
 function callDiagnostic(event, detail = {}) {
-    callDiagnostics.push({ at: Date.now(), callId: currentCallId, event, ...detail });
+    if (window.AWINLINK_CALL_DEBUG !== true) return;
+    const safe = {};
+    for (const [key, value] of Object.entries(detail)) {
+        if (safeCallDiagnosticValues[key]?.has(String(value))) safe[key] = String(value);
+        else if (['bytesReceived', 'packetsLost', 'framesDecoded', 'code', 'count'].includes(key) && Number.isFinite(value) && value >= 0) safe[key] = value;
+        else if (key === 'relayConfigured' && typeof value === 'boolean') safe[key] = value;
+    }
+    if (!safeCallDiagnosticEvents.has(event)) return;
+    callDiagnostics.push({ at: Date.now(), event, ...safe });
     if (callDiagnostics.length > 100) callDiagnostics.shift();
-    console.info?.('[Awinlink call]', event, detail);
+    console.debug?.('[Awinlink call]', callDiagnostics[callDiagnostics.length - 1]);
 }
-window.getAwinlinkCallDiagnostics = () => callDiagnostics.map(item => ({ ...item }));
+window.getAwinlinkCallDiagnostics = () => window.AWINLINK_CALL_DEBUG === true ? callDiagnostics.map(item => ({ ...item })) : [];
 async function loadCallIceServers() {
     const response = await fetch('/api/messaging/calls/ice-servers/', { credentials: 'same-origin', cache: 'no-store' });
     if (!response.ok) throw new Error('Unable to load call network configuration.');
     const data = await response.json();
+    if (![undefined, 'all', 'relay'].includes(data.ice_transport_policy)) throw new Error('Invalid ICE transport policy.');
     const servers = Array.isArray(data.ice_servers) ? data.ice_servers.filter(server => {
         const urls = [].concat(server?.urls || []);
         return urls.length && urls.every(url => typeof url === 'string' && /^(stun|stuns|turn|turns):/.test(url));
     }) : [];
     rtcConfiguration.iceTransportPolicy = data.ice_transport_policy === 'relay' ? 'relay' : 'all';
+    if (rtcConfiguration.iceTransportPolicy === 'relay' && !servers.some(server => [].concat(server.urls).some(url => /^turns?:/.test(url)))) throw new Error('Relay connectivity is unavailable.');
     rtcConfiguration.iceServers = servers.length ? servers : [{ urls: 'stun:stun.l.google.com:19302' }];
     callDiagnostic('ice_configuration', { policy: rtcConfiguration.iceTransportPolicy, relayConfigured: rtcConfiguration.iceServers.some(server => [].concat(server.urls).some(url => /^turns?:/.test(url))) });
 }
 async function recordCallStats(peer, remoteUserId) {
+    if (window.AWINLINK_CALL_DEBUG !== true) return;
     try {
         const report = await peer.getStats();
         report.forEach(row => {
@@ -1676,12 +1664,6 @@ async function createPeerConnection(
     }
 
 
-    console.log(
-        "Creating peer connection with:",
-        remoteUserId
-    );
-
-
     const peerConnection =
         new RTCPeerConnection(
             rtcConfiguration
@@ -1764,17 +1746,11 @@ async function createPeerConnection(
     peerConnection.onconnectionstatechange =
         function () {
 
-            console.log(
-                "Connection state:",
-                remoteUserId,
-                peerConnection.connectionState
-            );
-
             if (generation !== callGeneration || peerConnections[remoteUserId] !== peerConnection) return;
             if (peerConnection.connectionState === "connected") {
                 setCallStatus("Connected");
                 startCallTimer();
-                if (!peerConnection.callStatsTimer) peerConnection.callStatsTimer = setInterval(() => {
+                if (window.AWINLINK_CALL_DEBUG === true && !peerConnection.callStatsTimer) peerConnection.callStatsTimer = setInterval(() => {
                     if (generation === callGeneration && peerConnections[remoteUserId] === peerConnection) void recordCallStats(peerConnection, remoteUserId);
                 }, 5000);
             } else if (peerConnection.connectionState === "connecting") {
@@ -1829,11 +1805,6 @@ async function createPeerConnection(
         });
 
 
-        console.log(
-            "Offer sent to:",
-            remoteUserId
-        );
-
     }
 
 
@@ -1887,10 +1858,7 @@ async function processPendingIceCandidates(
 
         } catch (error) {
 
-            console.error(
-                "Unable to add queued ICE candidate:",
-                error
-            );
+            callDiagnostic('signaling_error', { name: error?.name });
 
         }
 
@@ -2269,12 +2237,8 @@ function removePeerConnection(
             clearInterval(peerConnection.callStatsTimer);
             peerConnection.close();
 
-        } catch (error) {
-
-            console.warn(
-                "Unable to close peer connection:",
-                error
-            );
+        } catch {
+            // Continue closing other call peers without logging connection details.
 
         }
 
@@ -2328,11 +2292,6 @@ function cleanupWebRTC() {
     });
 
 
-    console.log(
-        "Cleaning up WebRTC..."
-    );
-
-
     clearIncomingCallTimeout();
     clearOutgoingCallTimeout();
     stopCallTimer();
@@ -2348,9 +2307,8 @@ function cleanupWebRTC() {
                 clearInterval(peerConnections[userId].callStatsTimer);
                 peerConnections[userId].close();
 
-            } catch (error) {
-
-                console.warn(error);
+            } catch {
+                // Continue cleaning up remaining call peers without logging details.
 
             }
 
@@ -2381,9 +2339,8 @@ function cleanupWebRTC() {
 
             callSocket.close();
 
-        } catch (error) {
-
-            console.warn(error);
+        } catch {
+            // Keep cleanup failures out of potentially persistent browser logs.
 
         }
 
@@ -2453,7 +2410,7 @@ async function endWebRTCCall() {
     if (!id) return;
     try {
         await queueCallMutation(() => postCall(`/api/messaging/calls/${id}/end/`, { end_for_everyone: true }));
-    } catch (error) { console.warn('Unable to end call on server:', error); }
+    } catch { /* Call UI already releases local media if the request fails. */ }
 }
 
 /* =========================================================
@@ -2730,7 +2687,7 @@ async function rejectIncomingCall(callId, timedOut = false) {
     rememberEndedCall(id);
     try {
         await queueCallMutation(() => postCall(`/api/messaging/calls/${id}/reject/`, { timed_out: timedOut }));
-    } catch (error) { console.warn('Unable to reject call:', error); }
+    } catch { /* Incoming call UI already closes if the request fails. */ }
 }
 
 
@@ -2791,8 +2748,8 @@ function connectGlobalUserSocket() {
     let socket;
     try {
         socket = new WebSocket(socketUrl);
-    } catch (error) {
-        console.warn("Unable to create Awinlink global WebSocket:", error);
+    } catch {
+        console.warn("Unable to create Awinlink global WebSocket.");
         scheduleGlobalUserSocketReconnect();
         return;
     }
@@ -2830,27 +2787,10 @@ function connectGlobalUserSocket() {
                     );
 
 
-                console.log(
-                    "GLOBAL AWINLINK EVENT:",
-                    JSON.stringify(
-                        data,
-                        null,
-                        2
-                    )
-                );
-
-
                 if (
                     data.type ===
                     "incoming_call"
                 ) {
-
-                    console.log(
-                        "Incoming Awinlink call:",
-                        data
-                    );
-
-
                     showIncomingCall(
                         data
                     );
@@ -2871,10 +2811,7 @@ function connectGlobalUserSocket() {
 
             } catch (error) {
 
-                console.error(
-                    "Global WebSocket message error:",
-                    error
-                );
+                console.warn('Unable to process a global WebSocket message.');
 
             }
 
@@ -2883,11 +2820,6 @@ function connectGlobalUserSocket() {
 
     socket.onerror =
         function (error) {
-
-            console.warn(
-                "Awinlink global WebSocket error:",
-                error
-            );
 
             socket.close();
 
@@ -2958,10 +2890,10 @@ function refreshMessageBadges() {
     clearTimeout(messageBadgeTimer);
     messageBadgeTimer = setTimeout(async () => {
         try {
-            const response = await fetch('/api/messaging/conversations/');
+            const response = await fetch('/api/messaging/conversations/unread-count/');
             if (!response.ok) return;
-            const conversations = await response.json();
-            const count = conversations.reduce((sum, conversation) => sum + (conversation.unread_count || 0), 0);
+            const summary = await response.json();
+            const count = summary.unread_count || 0;
             document.querySelectorAll('[data-message-unread]').forEach(badge => {
                 badge.textContent = String(count);
                 badge.hidden = count === 0;

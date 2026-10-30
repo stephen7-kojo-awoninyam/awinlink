@@ -58,17 +58,10 @@ RECOMMENDATION_INTEREST_HALF_LIFE_DAYS = int(
     os.environ.get("RECOMMENDATION_INTEREST_HALF_LIFE_DAYS", "60")
 )
 
-DEBUG = os.environ.get(
-    "DEBUG",
-    "False" if os.environ.get("RAILWAY_ENVIRONMENT_NAME") or os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER") else "True"
-).lower() == "true"
-
-from config.security import validate_production_secret
+from config.security import environment_flag, security_environment, validate_production_secret
 from django.core.exceptions import ImproperlyConfigured
 
-HOSTED_PRODUCTION = bool(os.environ.get("RAILWAY_ENVIRONMENT_NAME") or os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RENDER"))
-if HOSTED_PRODUCTION and DEBUG:
-    raise ImproperlyConfigured('DEBUG must be disabled on hosted production services.')
+AWINLINK_ENV, HOSTED_PRODUCTION, DEBUG = security_environment(os.environ)
 validate_production_secret(SECRET_KEY, production=HOSTED_PRODUCTION or not DEBUG)
 
 
@@ -90,6 +83,8 @@ ALLOWED_HOSTS.extend(
     host.strip() for host in os.environ.get("ALLOWED_HOSTS", "").split(",")
     if host.strip()
 )
+if not DEBUG and '*' in ALLOWED_HOSTS:
+    raise ImproperlyConfigured('Production ALLOWED_HOSTS must use explicit hostnames.')
 
 
 # =====================================================
@@ -99,7 +94,7 @@ ALLOWED_HOSTS.extend(
 INSTALLED_APPS = [
 
     # Django
-    "django.contrib.admin",
+    "config.admin_app.SecureAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -138,6 +133,7 @@ INSTALLED_APPS = [
     "feed",
     "learning",
     "events",
+    "media_erasure.apps.MediaErasureConfig",
     "coaches",
     "science_technology",
     "others",
@@ -158,9 +154,11 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "config.privacy_headers.PrivateResponseMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "config.upload_handlers.UploadSecurityMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -328,6 +326,12 @@ MEDIA_URL = "/media/"
 
 MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
 
+FILE_UPLOAD_HANDLERS = [
+    'config.upload_handlers.SecureUploadHandler',
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
+
 
 # Cloudinary credentials
 CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "")
@@ -399,6 +403,9 @@ SIMPLE_JWT = {
 
 REST_FRAMEWORK = {
 
+    "DEFAULT_PAGINATION_CLASS": "api.pagination.BoundedCursorPagination",
+    "PAGE_SIZE": 50,
+
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "accounts.authentication.RevocableJWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
@@ -414,6 +421,29 @@ REST_FRAMEWORK = {
     ),
 }
 
+# Atomic resource protection uses the same Railway Redis service as auth, but
+# separate keys. These are throughput/concurrency budgets, never data deletion.
+AWINLINK_RESOURCE_CACHE_ALIAS = 'security' if os.environ.get('REDIS_URL') else 'default'
+AWINLINK_JSON_BODY_BYTES = 2621440
+AWINLINK_UPLOAD_OVERHEAD_BYTES = 5 * 1024 * 1024
+AWINLINK_UPLOAD_IDLE_SECONDS = 120
+AWINLINK_UPLOAD_REQUEST_SECONDS = 3600
+AWINLINK_RESOURCE_LIMITS = {
+    'turn_credentials_burst': (30, 60),  # per account, shared across call/classroom clients
+    'turn_credentials_hour': (300, 3600),
+    'ws_connections': (12, 45),       # simultaneous transports/account, lease TTL
+    'ws_global_connections': (2000, 45),
+    'ws_connects': (60, 60),          # reconnect burst/account, refill seconds
+    'ws_handshakes': (600, 60),       # pre-authentication attempts/trusted client IP
+    'ws_frames': (240, 4),            # aggregate signaling/chat/whiteboard frames
+    'upload_connections': (4, 120),
+    'upload_global': (16, 120),
+    'upload_bytes': (1024 * 1024 * 1024, 3600),
+    'anonymous_upload_bytes': (250 * 1024 * 1024, 3600),
+    'transcoding': (2, 90),           # cluster-wide FFmpeg processes
+    'transcoding_file': (1, 90),      # only one derivative producer per source
+}
+
 
 # =====================================================
 # RENDER / HTTPS / SECURITY
@@ -421,22 +451,24 @@ REST_FRAMEWORK = {
 
 if not DEBUG or os.environ.get("RENDER"):
 
-    SECURE_PROXY_SSL_HEADER = (
-        "HTTP_X_FORWARDED_PROTO",
-        "https",
-    )
+    AWINLINK_TRUST_PROXY_HEADERS = environment_flag(os.environ, 'AWINLINK_TRUST_PROXY_HEADERS', HOSTED_PRODUCTION)
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https") if AWINLINK_TRUST_PROXY_HEADERS else None
 
     SECURE_SSL_REDIRECT = True
 
     SESSION_COOKIE_SECURE = True
 
     CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    SECURE_CONTENT_TYPE_NOSNIFF = True
 
     SECURE_HSTS_SECONDS = 31536000
 
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = environment_flag(os.environ, 'SECURE_HSTS_INCLUDE_SUBDOMAINS', HOSTED_PRODUCTION)
 
-    SECURE_HSTS_PRELOAD = True
+    SECURE_HSTS_PRELOAD = environment_flag(os.environ, 'SECURE_HSTS_PRELOAD', HOSTED_PRODUCTION)
 
     if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
 
@@ -501,6 +533,8 @@ CSRF_TRUSTED_ORIGINS.extend(
     origin.strip() for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
 )
+if not DEBUG and any(not origin.startswith('https://') for origin in CSRF_TRUSTED_ORIGINS):
+    raise ImproperlyConfigured('Production CSRF_TRUSTED_ORIGINS must use HTTPS origins.')
 
 # Server-only Google web OAuth client. Leave blank to disable Google authentication.
 GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "").strip()

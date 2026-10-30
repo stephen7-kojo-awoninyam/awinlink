@@ -220,6 +220,7 @@ class OpportunityRecommendationTests(TestCase):
 		self.organization = Organization.objects.create(
 			name="Example Organization",
 			country="Ghana",
+			user=get_user_model().objects.create_user(username='opportunity-owner', role='ORGANIZATION'),
 		)
 		self.domain = TalentDomain.objects.create(name="Sports")
 		self.opportunity = Opportunity.objects.create(
@@ -364,7 +365,7 @@ class CourseAndEventRecommendationTests(TestCase):
 		self.engine = RecommendationEngine()
 
 	def test_course_recommendations_exclude_courses_already_enrolled_in(self):
-		category = LearningCategory.objects.create(name="Sports")
+		category, _ = LearningCategory.objects.get_or_create(name="Sports")
 		enrolled_course = Course.objects.create(
 			creator=self.creator,
 			category=category,

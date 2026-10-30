@@ -214,10 +214,25 @@ class AgreementPostgresTests(TransactionTestCase):
         latest = executor.loader.graph.leaf_nodes()
         self.addCleanup(lambda: MigrationExecutor(connection).migrate(latest))
         models = [Organization, OrganizationTalent, OrganizationTalentEvent, TalentProfile, User]
-        before = [list(model.objects.order_by("pk").values()) for model in models]
-        executor.migrate([("organizations", "0012_talent_rosters")])
-        self.assertEqual([list(model.objects.order_by("pk").values()) for model in models], before)
+        target = [("organizations", "0012_talent_rosters")]
+        historical = executor.loader.project_state(target).apps
+        old_models = [historical.get_model(model._meta.app_label, model._meta.model_name) for model in models]
+        columns = [[field.attname for field in model._meta.concrete_fields] for model in old_models]
+
+        def rows(snapshot_models):
+            return [list(model.objects.order_by("pk").values(*fields))
+                    for model, fields in zip(snapshot_models, columns)]
+
+        before = rows(models)
+        executor.migrate(target)
+        # Current runtime models include coach/scout columns added by 0014.
+        # Match reads to the historical schema while testing 0012 -> 0013.
+        self.assertEqual(rows(old_models), before)
+        MigrationExecutor(connection).migrate([("organizations", "0013_roster_agreements")])
+        self.assertEqual(rows(old_models), before)
+        self.assertFalse(Agreement.objects.exists())
+        self.assertFalse(Consent.objects.exists())
         MigrationExecutor(connection).migrate(latest)
-        self.assertEqual([list(model.objects.order_by("pk").values()) for model in models], before)
+        self.assertEqual(rows(models), before)
         self.assertFalse(Agreement.objects.exists())
         self.assertFalse(Consent.objects.exists())

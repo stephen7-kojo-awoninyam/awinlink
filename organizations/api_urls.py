@@ -17,6 +17,7 @@ urlpatterns = [
     path("talent-tags/mine/", roster_views.Mine.as_view(), name="talent_tags_mine"),
     path("talent-tags/<int:pk>/", roster_views.Entry.as_view(), name="talent_tag"),
     path("talent-tags/profile/<int:talent_id>/", roster_views.Badges.as_view(), name="talent_badges"),
+    path("profile-badges/<int:user_id>/", roster_views.Badges.as_view(), name="profile_badges"),
     path("<int:organization_id>/roster/", roster_views.Roster.as_view(), name="talent_roster"),
     path("<int:organization_id>/roster/public/", roster_views.Badges.as_view(), name="public_roster"),
     path("<int:organization_id>/team/invitations/", api_views.TeamInvitationListCreateAPIView.as_view(), name="invitation_list_create"),

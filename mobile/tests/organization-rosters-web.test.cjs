@@ -82,3 +82,43 @@ test('web refresh rechecks permissions and preserves personal tags when organiza
   assert.equal(root.elements['[data-mine]'].children[0].children[0].textContent, 'Personal request');
   assert.equal(root.elements['[data-roster]'].children.length, 0);
 });
+
+for (const role of ['COACH', 'SCOUT']) {
+  for (const category of ['SPORTS', 'SCIENCE_TECHNOLOGY', 'ARTS', 'OTHERS']) {
+    test(`web ${role} ${category} retains personal consent and history controls`, async () => {
+      const root = new Element(), calls = [], events = [];
+      root.elements = Object.fromEntries(['[data-feedback]', '[data-workspace]', '[data-create]', '[data-mine]', '[data-roster]', '[data-refresh]'].map(key => [key, new Element()]));
+      root.elements['[data-create]'].elements = { '[name=csrfmiddlewaretoken]': { value: 'profile-csrf' } };
+      const entry = { id: 9, name: '<img> person', organization_name: 'Academy', tag: 'Mentor', category,
+        category_name: { SPORTS: 'Sports', SCIENCE_TECHNOLOGY: 'Science and technology', ARTS: 'Arts', OTHERS: 'Others' }[category],
+        profile_type: role, talent_id: null, talent_details: '', status: 'PENDING', actions: ['CONFIRM', 'DECLINE', 'REMOVE'] };
+      vm.runInNewContext(fs.readFileSync(path.resolve(__dirname, '../../static/js/organization-rosters.js'), 'utf8'), {
+        document: { querySelector: () => root, createElement: tag => new Element(tag) }, window: { confirm: () => true },
+        fetch: async (url, options) => {
+          let data;
+          if (options.method === 'POST') {
+            const body = JSON.parse(options.body); calls.push(body);
+            assert.equal(options.headers['X-CSRFToken'], 'profile-csrf');
+            entry.status = body.action === 'CONFIRM' ? 'CONFIRMED' : 'REMOVED';
+            entry.actions = entry.status === 'CONFIRMED' ? ['REMOVE'] : [];
+            events.push({ action: body.action, created_at: '2026-10-22T12:00:00Z' }); data = entry;
+          } else data = { results: url.includes('workspaces') ? [] : url.endsWith('/9/') ? events : [entry], next: null };
+          return { ok: true, json: async () => data };
+        },
+      });
+      await flush();
+      const card = () => root.elements['[data-mine]'].children[0];
+      const button = label => card().children.find(n => n.tag === 'button' && n.textContent === label);
+      assert.ok(card().children.some(n => n.textContent.includes(entry.category_name)));
+      assert.ok(!card().children.some(n => n.tag === 'a'));
+      assert.equal(card().children[0].textContent, '<img> person');
+      button('Confirm affiliation').listeners.click(); await flush();
+      assert.equal(entry.status, 'CONFIRMED');
+      button('Remove tag').listeners.click(); await flush();
+      assert.equal(entry.status, 'REMOVED');
+      await button('View history').listeners.click();
+      assert.deepEqual(calls.map(row => row.action), ['CONFIRM', 'REMOVE']);
+      assert.ok(card().children.at(-1).children.some(n => n.textContent.includes('CONFIRM')));
+    });
+  }
+}

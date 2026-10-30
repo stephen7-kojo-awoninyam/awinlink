@@ -2,7 +2,6 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Linking,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,7 +16,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { useMessaging } from '@/src/messaging/useMessaging';
+import { downloadMedia } from '@/src/media-download';
 import { apiRequest } from '@/src/api/client';
+import { LoadMore } from '@/src/components/LoadMore';
+import { useScopedState } from '@/src/privacy-state';
+import { preservePage } from '@/src/pagination';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { waitForCallEndRequests } from '@/src/calls/callLifecycle';
 import { EmptyState } from '@/src/components/EmptyState';
@@ -34,7 +37,8 @@ export default function ConversationScreen() {
   const { user } = useAuth();
   const conversationId = Number(routeId);
   const title = Array.isArray(routeTitle) ? routeTitle[0] : routeTitle;
-  const [messages, setMessages] = useState<Message[]>([]);
+  const scope = `${user?.id}:${conversationId}`;
+  const [messages, setMessages] = useScopedState<Message[]>(scope, []);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -57,9 +61,9 @@ export default function ConversationScreen() {
         `messaging/conversations/${conversationId}/messages/`,
       );
       if (generation !== loadGeneration.current) return;
-      setMessages(current => revision === messageRevision.current ? result :
-        [...new Map([...result, ...current].map(message => [message.id, message])).values()]
-          .sort((a, b) => a.id - b.id));
+      setMessages(current => preservePage(result,
+        [...new Map((revision === messageRevision.current ? [...current, ...result] : [...result, ...current])
+          .map(message => [message.id, message])).values()].sort((a, b) => a.id - b.id)));
       await apiRequest(`messaging/conversations/${conversationId}/read-all/`, {
         method: 'POST',
       });
@@ -68,7 +72,7 @@ export default function ConversationScreen() {
     } finally {
       if (generation === loadGeneration.current) setLoading(false);
     }
-  }, [conversationId]);
+  }, [conversationId, scope]);
 
   const { typing, sendTyping } = useMessaging(loadMessages, conversationId);
   useFocusEffect(useCallback(() => {
@@ -199,7 +203,7 @@ export default function ConversationScreen() {
                 {messages.length === 0 ? (
                   <Text style={styles.emptyText}>No messages yet. Say hello.</Text>
                 ) : (
-                  messages.map((message) => {
+                  [...messages].sort((a, b) => a.id - b.id).map((message) => {
                     const ownMessage = message.sender.id === user?.id;
                     const attachment =
                       message.message_type === 'IMAGE'
@@ -230,7 +234,7 @@ export default function ConversationScreen() {
                         {message.image && <Image accessibilityLabel="Message image attachment" source={{ uri: message.image }} style={styles.attachmentImage} />}
                         {!!message.video && <VideoPlayer uri={message.video} />}
                         {!!message.audio && <VoicePlayer uri={message.audio} />}
-                        {!!message.file && <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(message.file!)}><Text style={[styles.attachmentLink, ownMessage && styles.ownMessageText]}>Open file</Text></Pressable>}
+                        {!!message.file && <Pressable accessibilityRole="link" onPress={() => void downloadMedia(message.file!).catch(() => setError('Unable to download this file.'))}><Text style={[styles.attachmentLink, ownMessage && styles.ownMessageText]}>Open file</Text></Pressable>}
                         <Text style={[styles.timestamp, ownMessage && styles.ownTimestamp]}>
                           {new Intl.DateTimeFormat(undefined, {
                             hour: 'numeric',
@@ -242,6 +246,7 @@ export default function ConversationScreen() {
                     );
                   })
                 )}
+                <LoadMore items={messages} onChange={setMessages} label="Load older messages" />
               </ScrollView>
               {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
               <VoiceRecorder conversationId={conversationId} disabled={sending} onSent={appendMessage} />

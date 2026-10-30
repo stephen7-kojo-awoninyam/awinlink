@@ -1366,15 +1366,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (files.length) {
 
-            attachmentPreview.innerHTML =
-                files.join("<br>");
+            attachmentPreview.textContent =
+                files.join("\n");
+
+            attachmentPreview.style.whiteSpace = "pre-line";
 
             attachmentPreview.style.display =
                 "block";
 
         } else {
 
-            attachmentPreview.innerHTML = "";
+            attachmentPreview.textContent = "";
 
             attachmentPreview.style.display =
                 "none";

@@ -5,6 +5,17 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def preserve_participants(apps, schema_editor):
+    alias = schema_editor.connection.alias
+    Conversation = apps.get_model('messaging', 'Conversation')
+    Participant = apps.get_model('messaging', 'ConversationParticipant')
+    for room in Conversation.objects.using(alias).select_related('organization', 'talent').iterator():
+        # Only the two authoritative legacy links grant access, never message
+        # authorship or today's broader organization membership.
+        for user_id in {room.organization.user_id, room.talent.user_id}:
+            Participant.objects.using(alias).get_or_create(conversation_id=room.pk, user_id=user_id)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -22,14 +33,6 @@ class Migration(migrations.Migration):
             name='sender',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sent_messages', to=settings.AUTH_USER_MODEL),
         ),
-        migrations.RemoveField(
-            model_name='conversation',
-            name='organization',
-        ),
-        migrations.RemoveField(
-            model_name='conversation',
-            name='talent',
-        ),
         migrations.CreateModel(
             name='ConversationParticipant',
             fields=[
@@ -42,4 +45,9 @@ class Migration(migrations.Migration):
                 'constraints': [models.UniqueConstraint(fields=('conversation', 'user'), name='unique_conversation_participant')],
             },
         ),
+        # Group membership cannot reconstruct the original organization/talent
+        # pair. Refuse reversal instead of destroying access/history.
+        migrations.RunPython(preserve_participants),
+        migrations.RemoveField(model_name='conversation', name='organization'),
+        migrations.RemoveField(model_name='conversation', name='talent'),
     ]

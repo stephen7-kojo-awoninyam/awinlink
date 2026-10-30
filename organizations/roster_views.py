@@ -26,10 +26,19 @@ class ActionInput(serializers.Serializer):
 
 
 def entry_data(entry, user=None, manager=None):
-    result = {key: getattr(entry, key) for key in ["id", "name", "talent_details", "tag", "roster", "status", "talent_id", "organization_id"]}
+    result = {key: getattr(entry, key) for key in ["id", "name", "talent_details", "tag", "roster", "status", "talent_id", "coach_id", "scout_id", "organization_id"]}
     result["organization_name"] = entry.organization.name
+    result["profile_type"] = entry.profile_type
+    result["user_id"] = entry.linked_user_id
+    profile = entry.linked_profile
+    result["profile_name"] = (profile.user.get_full_name() or profile.user.username) if profile else ""
+    result["category"] = (getattr(profile, "talent_category", None)
+                          or getattr(profile, "coach_category", None)
+                          or getattr(profile, "scout_category", None)) if profile else None
+    category_labels = {"SPORTS": "Sports", "SCIENCE_TECHNOLOGY": "Science and technology", "ARTS": "Arts", "OTHERS": "Others"}
+    result["category_name"] = category_labels.get(result["category"], "")
     if user is not None:
-        recipient = entry.talent_id is not None and entry.talent.user_id == user.pk
+        recipient = entry.linked_user_id == user.pk
         if manager is None:
             manager = has_organization_capability(user, entry.organization, Cap.MANAGE_RECRUITMENT)
         result["actions"] = (["CONFIRM", "DECLINE"] if recipient and entry.status == "PENDING" and entry.organization.status == "ACTIVE" else [])
@@ -62,7 +71,7 @@ class Roster(RosterAPI):
     def get(self, request, organization_id):
         organization = get_object_or_404(Organization, pk=organization_id)
         require_organization_capability(request.user, organization, Cap.VIEW_TALENTS)
-        rows = organization.talent_roster.select_related("organization", "talent__user").all()
+        rows = organization.talent_roster.select_related(*services.PROFILE_JOINS).all()
         manager = has_organization_capability(request.user, organization, Cap.MANAGE_RECRUITMENT)
         return self.page(request, rows, lambda row: entry_data(row, request.user, manager))
 
@@ -76,7 +85,7 @@ class Roster(RosterAPI):
 
 class Mine(RosterAPI):
     def get(self, request):
-        rows = OrganizationTalent.objects.select_related("organization", "talent__user").filter(talent__user=request.user)
+        rows = OrganizationTalent.objects.select_related(*services.PROFILE_JOINS).filter(services.recipient_filter(request.user))
         managers = {}
         def serialize(row):
             if row.organization_id not in managers:
@@ -87,8 +96,8 @@ class Mine(RosterAPI):
 
 class Entry(RosterAPI):
     def visible_entry(self, request, pk):
-        entry = get_object_or_404(OrganizationTalent.objects.select_related("organization", "talent__user"), pk=pk)
-        if entry.talent_id is None or entry.talent.user_id != request.user.pk:
+        entry = get_object_or_404(OrganizationTalent.objects.select_related(*services.PROFILE_JOINS), pk=pk)
+        if entry.linked_user_id != request.user.pk:
             require_organization_capability(request.user, entry.organization, Cap.VIEW_TALENTS)
         return entry
 
@@ -106,8 +115,10 @@ class Entry(RosterAPI):
 
 
 class Badges(RosterAPI):
-    def get(self, request, talent_id=None, organization_id=None):
+    def get(self, request, talent_id=None, organization_id=None, user_id=None):
         rows = services.public_entries(request.user)
+        if user_id is not None:
+            rows = rows.filter(services.recipient_filter(user_id))
         if talent_id is not None:
             rows = rows.filter(talent_id=talent_id)
         if organization_id is not None:

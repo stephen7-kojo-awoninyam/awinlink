@@ -10,6 +10,7 @@ from recommendations.api_views import (
     RecommendationImpressionsAPIView,
     RecommendationInterestPreferencesAPIView,
 )
+from recommendations.rising_views import PreferencesAPI as RisingPreferencesAPI, MatchesAPI as RisingMatchesAPI, OptionsAPI as RisingOptionsAPI
 
 from .views import (
     CourseRecommendationAPIView,
@@ -112,6 +113,9 @@ app_name = "api"
 
 
 urlpatterns = [
+    path("rising-talent/preferences/", RisingPreferencesAPI.as_view(), name="rising_talent_preferences"),
+    path("rising-talent/matches/", RisingMatchesAPI.as_view(), name="rising_talent_matches"),
+    path("rising-talent/options/", RisingOptionsAPI.as_view(), name="rising_talent_options"),
     path("auth/google/start/", GoogleMobileStart.as_view()),
     path("auth/google/complete/", GoogleMobileComplete.as_view()),
     path('notifications/voip-push/', VoipPushTokenAPIView.as_view(), name='voip_push_token'),

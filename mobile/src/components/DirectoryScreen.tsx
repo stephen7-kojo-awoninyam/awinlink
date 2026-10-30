@@ -1,11 +1,16 @@
-import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { LoadMore } from '@/src/components/LoadMore';
+import { useSearchPath } from '@/src/search-query';
+import { useScopedState } from '@/src/privacy-state';
+import { useCallback, useMemo, useRef } from 'react';
+import { ActivityIndicator, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { apiRequest } from '@/src/api/client';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { EmptyState } from '@/src/components/EmptyState';
+import { AuthorizedImage } from '@/src/components/AuthorizedImage';
+import { VideoPlayer } from '@/src/components/MediaPlayer';
 import { Page } from '@/src/components/Page';
 import { colors } from '@/src/theme';
 
@@ -43,51 +48,66 @@ type EventMedia = { id: number; media_type: string; file: string; caption: strin
 
 export function DirectoryScreen({ kind }: { kind: DirectoryKind }) {
   const { user } = useAuth();
+  const scope = `${user?.id ?? ''}:${user?.role ?? ''}:${kind}`;
+  const loadRevision = useRef(0);
   const router = useRouter();
-  const [items, setItems] = useState<DirectoryItem[]>([]);
-  const [registered, setRegistered] = useState<Set<number>>(new Set());
-  const [myEntries, setMyEntries] = useState<Registration[]>([]);
-  const [results, setResults] = useState<CompetitionResult[]>([]);
-  const [submission, setSubmission] = useState('');
-  const [submissionUrl, setSubmissionUrl] = useState('');
-  const [feedback, setFeedback] = useState<EventFeedback[]>([]);
-  const [media, setMedia] = useState<EventMedia[]>([]);
-  const [rating, setRating] = useState('5');
-  const [comment, setComment] = useState('');
-  const [mediaWorking, setMediaWorking] = useState(false);
-  const [selected, setSelected] = useState<DirectoryItem | null>(null);
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [working, setWorking] = useState(false);
-  const [error, setError] = useState('');
-  const [actionError, setActionError] = useState('');
+  const [items, setItems] = useScopedState<DirectoryItem[]>(scope, []);
+  const [registered, setRegistered] = useScopedState<Set<number>>(scope, new Set());
+  const [myEntries, setMyEntries] = useScopedState<Registration[]>(scope, []);
+  const [results, setResults] = useScopedState<CompetitionResult[]>(scope, []);
+  const [submission, setSubmission] = useScopedState(scope, '');
+  const [submissionUrl, setSubmissionUrl] = useScopedState(scope, '');
+  const [feedback, setFeedback] = useScopedState<EventFeedback[]>(scope, []);
+  const [media, setMedia] = useScopedState<EventMedia[]>(scope, []);
+  const [rating, setRating] = useScopedState(scope, '5');
+  const [comment, setComment] = useScopedState(scope, '');
+  const [mediaWorking, setMediaWorking] = useScopedState(scope, false);
+  const [selected, setSelected] = useScopedState<DirectoryItem | null>(scope, null);
+  const selectedId = useRef<number | null>(null);
+  selectedId.current = selected?.id ?? null;
+  const detailRevision = useRef(0);
+  const registrationRevision = useRef(0);
+  const [query, setQuery] = useScopedState(scope, '');
+  const [loading, setLoading] = useScopedState(scope, true);
+  const [refreshing, setRefreshing] = useScopedState(scope, false);
+  const [working, setWorking] = useScopedState(scope, false);
+  const [error, setError] = useScopedState(scope, '');
+  const [actionError, setActionError] = useScopedState(scope, '');
   const noun = kind === 'competitions' ? 'competition' : 'event';
   const title = kind === 'competitions' ? 'Competitions' : 'Events';
   const endpoint = kind === 'competitions' ? 'competitions/' : 'events/';
+  const searchEndpoint = useSearchPath(endpoint, query);
   const registrationsEndpoint = kind === 'competitions' ? 'competitions/my/' : 'events/my-registrations/';
+  const registeredIds = useMemo(() => new Set([...registered, ...myEntries
+    .filter(entry => !['CANCELLED', 'REJECTED', 'WITHDRAWN'].includes(entry.status || ''))
+    .map(entry => kind === 'competitions' ? entry.competition : entry.event)
+    .filter((id): id is number => typeof id === 'number')]), [registered, myEntries, kind]);
 
   const load = useCallback(async () => {
+    const revision = ++loadRevision.current;
     setError('');
     try {
-      const results = await apiRequest<DirectoryItem[]>(endpoint);
+      const results = await apiRequest<DirectoryItem[]>(searchEndpoint);
+      if (revision !== loadRevision.current) return;
       setItems(results);
       if (user?.role === 'ATHLETE') {
         const mine = await apiRequest<Registration[]>(registrationsEndpoint);
+        if (revision !== loadRevision.current) return;
         setMyEntries(mine);
         setRegistered(new Set(mine.filter((registration) => !['CANCELLED', 'REJECTED', 'WITHDRAWN'].includes(registration.status || '')).map((registration) =>
           kind === 'competitions' ? registration.competition : registration.event,
         ).filter((id): id is number => typeof id === 'number')));
       }
     } catch (loadError) {
+      if (revision !== loadRevision.current) return;
+      setItems([]); setMyEntries([]); setRegistered(new Set()); setSelected(null); setFeedback([]); setMedia([]);
       setError(loadError instanceof Error ? loadError.message : `Unable to load ${title.toLowerCase()}.`);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (revision === loadRevision.current) { setLoading(false); setRefreshing(false); }
     }
-  }, [endpoint, kind, registrationsEndpoint, title, user?.role]);
+  }, [searchEndpoint, kind, registrationsEndpoint, title, scope]);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { void load(); return () => { ++loadRevision.current; ++detailRevision.current; }; }, [load]));
 
   const visibleItems = useMemo(() => {
     const term = query.trim().toLocaleLowerCase();
@@ -141,14 +161,48 @@ export function DirectoryScreen({ kind }: { kind: DirectoryKind }) {
     }
   }
 
+  async function loadOwnRegistration(item: DirectoryItem) {
+    if (user?.role !== 'ATHLETE') return;
+    const revision = ++registrationRevision.current;
+    setWorking(true);
+    try {
+      const rows = await apiRequest<Registration[]>(`${registrationsEndpoint}?${noun}=${item.id}`);
+      if (revision !== registrationRevision.current || selectedId.current !== item.id) return;
+      setMyEntries(current => [...current.filter(entry => (kind === 'events' ? entry.event : entry.competition) !== item.id), ...rows]);
+      setRegistered(current => {
+        const next = new Set(current); next.delete(item.id);
+        if (rows.some(row => !['CANCELLED', 'REJECTED', 'WITHDRAWN'].includes(row.status || ''))) next.add(item.id);
+        return next;
+      });
+      setSubmission(rows[0]?.submission || ''); setSubmissionUrl(rows[0]?.submission_url || '');
+    } catch (e) {
+      if (revision === registrationRevision.current && selectedId.current === item.id) {
+        setSelected(null); setError(e instanceof Error ? e.message : 'Unable to load your registration. Select the event again to retry.');
+      }
+    } finally {
+      if (revision === registrationRevision.current && selectedId.current === item.id) setWorking(false);
+    }
+  }
+
   async function loadEventDetails(item: DirectoryItem) {
-    if (kind !== 'events') return;
-    const [feedbackResult, mediaResult] = await Promise.allSettled([
-      apiRequest<EventFeedback[]>(`events/${item.id}/feedback/list/`),
-      apiRequest<EventMedia[]>(`events/${item.id}/media/`),
-    ]);
-    if (feedbackResult.status === 'fulfilled') setFeedback(feedbackResult.value);
-    if (mediaResult.status === 'fulfilled') setMedia(mediaResult.value);
+    if (kind !== 'events' || selectedId.current !== item.id) return;
+    const revision = ++detailRevision.current;
+    setFeedback([]); setMedia([]);
+    try {
+      const [detail, feedbackResult, mediaResult] = await Promise.all([
+        apiRequest<DirectoryItem>(`events/${item.id}/`),
+        apiRequest<EventFeedback[]>(`events/${item.id}/feedback/list/`),
+        apiRequest<EventMedia[]>(`events/${item.id}/media/`),
+      ]);
+      if (revision !== detailRevision.current || selectedId.current !== item.id) return;
+      setSelected(detail); setFeedback(feedbackResult); setMedia(mediaResult);
+    } catch (e) {
+      if (revision !== detailRevision.current || selectedId.current !== item.id) return;
+      setSelected(null); setFeedback([]); setMedia([]);
+      setItems(current => current.filter(value => value.id !== item.id));
+      setError(e instanceof Error ? e.message : 'Event unavailable.');
+      setActionError(e instanceof Error ? e.message : 'Event unavailable.');
+    }
   }
 
   async function cancelEventRegistration() {
@@ -180,7 +234,7 @@ export function DirectoryScreen({ kind }: { kind: DirectoryKind }) {
     const form = new FormData();
     form.append('media_type', file.mimeType?.startsWith('video/') ? 'VIDEO' : 'IMAGE');
     form.append('caption', '');
-    form.append('file', { uri: file.uri, name: file.name, type: file.mimeType || 'application/octet-stream' } as unknown as Blob);
+    form.append('file', Platform.OS === 'web' && file.file ? file.file : { uri: file.uri, name: file.name, type: file.mimeType || 'application/octet-stream' } as unknown as Blob);
     setMediaWorking(true); setActionError('');
     try {
       const uploaded = await apiRequest<EventMedia>(`events/${selected.id}/media/upload/`, { method: 'POST', body: form });
@@ -201,12 +255,13 @@ export function DirectoryScreen({ kind }: { kind: DirectoryKind }) {
       <TextInput accessibilityLabel={`Search ${title.toLowerCase()}`} value={query} onChangeText={setQuery}
         placeholder={`Search ${title.toLowerCase()}`} placeholderTextColor={colors.muted}
         style={styles.search} />
+      {!!error && items.length > 0 && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
       {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> :
         error && items.length === 0 ? <EmptyState title={`${title} unavailable`} message={error}
           actionLabel="Try again" onAction={() => { setLoading(true); void load(); }} /> :
         selected ? (
           <View style={styles.card}>
-            <Pressable accessibilityRole="button" onPress={() => { setSelected(null); setActionError(''); }}>
+            <Pressable accessibilityRole="button" onPress={() => { selectedId.current = null; ++detailRevision.current; setSelected(null); setActionError(''); }}>
               <Text style={styles.back}>Back to {title.toLowerCase()}</Text>
             </Pressable>
             <Text style={styles.title}>{selected.title}</Text>
@@ -229,7 +284,7 @@ export function DirectoryScreen({ kind }: { kind: DirectoryKind }) {
               <Text style={styles.meta}>{selected.participant_count} registered</Text>}
             {kind === 'events' && typeof selected.registrations_count === 'number' &&
               <Text style={styles.meta}>{selected.registrations_count} registered</Text>}
-            {user?.role === 'ATHLETE' && (registered.has(selected.id) ?
+            {user?.role === 'ATHLETE' && (registeredIds.has(selected.id) ?
               <Text style={styles.success}>You are registered.</Text> :
               openForRegistration ? (
                 <Pressable accessibilityRole="button" disabled={working} onPress={() => void register()}
@@ -237,7 +292,7 @@ export function DirectoryScreen({ kind }: { kind: DirectoryKind }) {
                   <Text style={styles.buttonText}>{working ? 'Registering...' : `Register for ${noun}`}</Text>
                 </Pressable>
               ) : <Text style={styles.meta}>Registration is not open.</Text>)}
-            {kind === 'events' && user?.role === 'ATHLETE' && registered.has(selected.id) && myEntries.find((entry) => entry.event === selected.id)?.status !== 'ATTENDED' && <Pressable accessibilityRole="button" disabled={working} onPress={() => void cancelEventRegistration()} style={styles.secondaryButton}><Text style={styles.secondaryText}>{working ? 'Working...' : 'Cancel registration'}</Text></Pressable>}
+            {kind === 'events' && user?.role === 'ATHLETE' && registeredIds.has(selected.id) && myEntries.find((entry) => entry.event === selected.id)?.status !== 'ATTENDED' && <Pressable accessibilityRole="button" disabled={working} onPress={() => void cancelEventRegistration()} style={styles.secondaryButton}><Text style={styles.secondaryText}>{working ? 'Working...' : 'Cancel registration'}</Text></Pressable>}
             {kind === 'events' && user?.role === 'ATHLETE' && myEntries.find((entry) => entry.event === selected.id)?.status === 'ATTENDED' && <View style={styles.form}>
               <Text style={styles.title}>Leave event feedback</Text>
               <TextInput accessibilityLabel="Rating from 1 to 5" keyboardType="number-pad" onChangeText={setRating} placeholder="Rating (1 to 5)" placeholderTextColor={colors.muted} style={styles.input} value={rating} />
@@ -246,11 +301,11 @@ export function DirectoryScreen({ kind }: { kind: DirectoryKind }) {
             </View>}
             {kind === 'events' && <View style={styles.form}>
               <Text style={styles.title}>Event media</Text>
-              {media.map((item) => <View key={item.id} style={styles.mediaItem}>{item.media_type === 'IMAGE' ? <Image source={{ uri: item.file }} style={styles.mediaImage} /> : <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(item.file)}><Text style={styles.back}>Open video</Text></Pressable>}{!!item.caption && <Text style={styles.meta}>{item.caption}</Text>}</View>)}
+              {media.map((item) => <View key={`${scope}:${item.id}`} style={styles.mediaItem}>{item.media_type === 'IMAGE' ? <AuthorizedImage uri={item.file} style={styles.mediaImage} /> : <VideoPlayer uri={item.file} />}{!!item.caption && <Text style={styles.meta}>{item.caption}</Text>}</View>)}
               {user?.role === 'ORGANIZATION' && <Pressable accessibilityRole="button" disabled={mediaWorking} onPress={() => void uploadEventMedia()} style={styles.secondaryButton}><Text style={styles.secondaryText}>{mediaWorking ? 'Uploading...' : 'Upload image or video'}</Text></Pressable>}
             </View>}
             {kind === 'events' && feedback.map((item) => <View key={item.id} style={styles.feedbackItem}><Text style={styles.meta}>{item.reviewer_name} · {item.rating}/5</Text><Text style={styles.description}>{item.comment}</Text></View>)}
-            {kind === 'competitions' && user?.role === 'ATHLETE' && registered.has(selected.id) && selected.status === 'ONGOING' && (() => {
+            {kind === 'competitions' && user?.role === 'ATHLETE' && registeredIds.has(selected.id) && selected.status === 'ONGOING' && (() => {
               const entry = myEntries.find((value) => value.competition === selected.id);
               const deadlineOpen = !selected.competition_end || new Date(`${selected.competition_end}T23:59:59`).getTime() >= Date.now();
               return deadlineOpen ? <View style={styles.form}>
@@ -268,7 +323,7 @@ export function DirectoryScreen({ kind }: { kind: DirectoryKind }) {
         ) : visibleItems.length === 0 ? <EmptyState title={`No ${title.toLowerCase()} found`}
           message={items.length ? 'Try another search.' : `New ${title.toLowerCase()} will appear here.`} /> :
         visibleItems.map((item) => (
-          <Pressable accessibilityRole="button" key={item.id} onPress={() => { setSelected(item); setResults([]); setFeedback([]); setMedia([]); setSubmission(''); setSubmissionUrl(''); setActionError(''); void loadResults(item); void loadEventDetails(item); }} style={styles.card}>
+          <Pressable accessibilityRole="button" key={item.id} onPress={() => { selectedId.current = item.id; setSelected(item); setResults([]); setFeedback([]); setMedia([]); setSubmission(''); setSubmissionUrl(''); setActionError(''); void loadResults(item); void loadEventDetails(item); void loadOwnRegistration(item); }} style={styles.card}>
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.meta}>
               {kind === 'competitions'
@@ -280,6 +335,12 @@ export function DirectoryScreen({ kind }: { kind: DirectoryKind }) {
           </Pressable>
         ))}
       {user?.role !== 'ATHLETE' && <Text style={styles.meta}>Registration is available to talent accounts.</Text>}
+
+      <LoadMore items={items} onChange={setItems} label="Load more items" />
+      <LoadMore items={myEntries} onChange={setMyEntries} label="Load more registrations" />
+      <LoadMore items={results} onChange={setResults} label="Load more results" />
+      <LoadMore items={feedback} onChange={setFeedback} label="Load more feedback" />
+      <LoadMore items={media} onChange={setMedia} label="Load more media" />
     </Page>
   );
 }

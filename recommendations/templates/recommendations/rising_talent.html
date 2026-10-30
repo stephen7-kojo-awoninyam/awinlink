@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Rising Talent | Awinlink{% endblock %}
+{% block content %}
+<main class="container py-4" style="max-width:1000px">
+  <h1>Rising Talent</h1>
+  <p>Discover recent momentum across Sports, Science and technology, Arts, and Others.</p>
+  <p>Signals come from public skills, self-reported dated achievements, and changes over time. They support human review and do not predict future success. Followers, private activity and personal characteristics do not affect scores.</p>
+  <section class="card p-3 mb-4" aria-labelledby="rising-privacy"><h2 id="rising-privacy">Your choices</h2>
+    <p>Discovery and alerts are off until you enable them. Only active, public talent profiles can participate. Withdraw discovery consent to remove your baselines and queued alerts. A private profile is never shared here.</p>
+    <p>For matching, choose a category and skills. Organization recipients must select an organization they can access. Leave organization empty for personal coach or scout matching.</p>
+    <form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Save Rising Talent preferences</button> <button class="btn btn-outline-secondary" type="submit" name="action" value="withdraw" formnovalidate>Turn off Rising Talent</button></form>
+  </section>
+  {% if assessment %}<section class="card p-3 mb-4"><h2>Your momentum</h2>
+    {% if assessment.evidence_complete == False %}<p>Automatic matching paused. No score was assigned.</p>{% else %}<p>{{ assessment.score }}/100 · {% if assessment.qualified %}Recent momentum detected{% else %}More evidence needed{% endif %}</p>{% endif %}
+    <ul>{% for explanation in assessment.explanations %}<li>{{ explanation }}</li>{% endfor %}</ul>
+    <p>Skills contribute up to 25 points, recent achievements 30, measured skill growth 30, and achievement momentum 15. Matching requires at least 45 points, two distinct skills, a recent dated achievement and growth evidence.</p>
+  </section>{% endif %}
+  <h2>Talents matching your focus</h2>
+  {% for match in matches %}<article class="card p-3 mb-3">
+    <h3><a href="{% url 'talent_profile' match.talent_id %}">{{ match.name }}</a></h3>
+    <p>{{ match.category_name }} · Momentum {{ match.assessment.score }}/100</p>
+    <p>{{ match.match_explanation }}</p>
+    <details><summary>Why this talent?</summary><ul>{% for explanation in match.assessment.explanations %}<li>{{ explanation }}</li>{% endfor %}</ul></details>
+  </article>{% empty %}<p>No current matches. Choose a category and relevant skills; only opted-in talents with enough recent evidence appear. No one is added to a roster or contacted automatically.</p>{% endfor %}
+</main>
+{% endblock %}

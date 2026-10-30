@@ -10,10 +10,24 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .models import Call, CallParticipant
 from .call_lifecycle import finish_call
+from .call_signaling import validate_call_signal
 from .socket_security import SecureSocketMixin
 
 
 logger = logging.getLogger(__name__)
+
+
+def _unique_signal_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate signaling key.")
+        result[key] = value
+    return result
+
+
+def _reject_signal_constant(_value):
+    raise ValueError("Non-finite signaling values are not allowed.")
 
 
 class CallConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
@@ -130,9 +144,9 @@ class CallConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
             return
 
         try:
-            data = json.loads(text_data)
+            data = json.loads(text_data, object_pairs_hook=_unique_signal_object, parse_constant=_reject_signal_constant)
 
-        except (json.JSONDecodeError, TypeError, RecursionError):
+        except (json.JSONDecodeError, TypeError, ValueError, RecursionError):
 
             await self.send(
                 text_data=json.dumps({
@@ -153,27 +167,22 @@ class CallConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
             return
 
 
-        # ---------------------------------------------------------
-        # ADD SENDER INFORMATION
-        # ---------------------------------------------------------
+        try:
+            data = validate_call_signal(data)
+        except (ValueError, TypeError, RecursionError):
+            await self.send(text_data=json.dumps({
+                "type": "error", "message": "Invalid call signaling message."
+            }))
+            return
 
-        # Normalize older web payloads while retaining aliases for older clients.
-        if data.get("type") == "ice-candidate":
-            data["type"] = "ice_candidate"
-        if data.get("type") in ("offer", "answer"):
-            description = data.get("description") or data.get(data["type"])
-            if description is not None:
-                data["description"] = description
-                data[data["type"]] = description
-        target = data.get("to_user_id", data.get("target_id"))
-        if target is not None:
-            try:
-                target = int(target)
-            except (TypeError, ValueError):
-                await self.send(text_data=json.dumps({"type": "error", "message": "Invalid signal recipient."}))
-                return
-            data["to_user_id"] = target
-            data["target_id"] = target
+        target = data["to_user_id"]
+        if target == self.user.id or not await self.target_is_participant(target):
+            await self.send(text_data=json.dumps({
+                "type": "error", "message": "Invalid call signaling recipient."
+            }))
+            return
+
+        # Sender identity is server-controlled; ignore any client supplied ID.
         data["sender_id"] = self.user.id
 
         # ---------------------------------------------------------
@@ -283,6 +292,20 @@ class CallConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
                 "RINGING",
                 "JOINED",
             ],
+        ).exists()
+
+    @database_sync_to_async
+    def target_is_participant(self, user_id):
+        from accounts.safety import blocked_user_ids
+        if user_id in blocked_user_ids(self.user):
+            return False
+        return CallParticipant.objects.filter(
+            call_id=self.call_id,
+            call__status__in=["RINGING", "ACTIVE"],
+            user_id=user_id,
+            user__is_active=True,
+            call__conversation__participants__user_id=user_id,
+            status__in=["INVITED", "RINGING", "JOINED"],
         ).exists()
 
     @database_sync_to_async

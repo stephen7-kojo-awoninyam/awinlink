@@ -77,7 +77,7 @@ class OrganizationDashboardIntegrationTests(TestCase):
         self.assertTrue(invitation.check_token(response.data["token"]))
         self.assertNotEqual(invitation.token_hash, response.data["token"])
         self.assertEqual(response.data["response_url"], reverse("team_invitation_response", args=[invitation.pk]))
-        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertTrue({'no-store', 'private'}.issubset(set(response['Cache-Control'].split(', '))))
         listing = api.get(self.endpoint("invitation_list_create"))
         self.assertEqual(listing.status_code, 200)
         self.assertEqual(listing.data[0]["recipient_username"], self.recipient.username)

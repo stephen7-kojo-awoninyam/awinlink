@@ -1,10 +1,13 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { LoadMore } from '@/src/components/LoadMore';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect } from 'expo-router';
 
 import { apiRequest } from '@/src/api/client';
+import { useScopedState } from '@/src/privacy-state';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { EmptyState } from '@/src/components/EmptyState';
+import { AuthorizedImage } from '@/src/components/AuthorizedImage';
 import { Page } from '@/src/components/Page';
 import { colors } from '@/src/theme';
 
@@ -15,17 +18,35 @@ type PortfolioItem = {
 
 export default function PortfolioScreen() {
   const { user } = useAuth();
-  const [items, setItems] = useState<PortfolioItem[]>([]);
+  const scope = `${user?.id ?? ''}:${user?.role ?? ''}`;
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
+  const generation = useRef(0);
+  const [loadedScope, setLoadedScope] = useState('');
+  const [items, setItems] = useScopedState<PortfolioItem[]>(scope, []);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const load = useCallback(async () => {
+    const version = ++generation.current;
+    if (!user || user.role !== 'ATHLETE') return;
+    const current = () => currentScope.current === scope && generation.current === version;
     setError('');
-    try { setItems(await apiRequest<PortfolioItem[]>('portfolio/my/')); }
-    catch (loadError) { setError(loadError instanceof Error ? loadError.message : 'Unable to load portfolio.'); }
-    finally { setLoading(false); setRefreshing(false); }
-  }, []);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+    setLoading(true);
+    try {
+      const result = await apiRequest<PortfolioItem[]>('portfolio/my/');
+      if (current()) { setItems(result); setLoadedScope(scope); }
+    } catch (loadError) {
+      if (current()) {
+        setItems([]); setLoadedScope(scope);
+        setError(loadError instanceof Error ? loadError.message : 'Unable to load portfolio.');
+      }
+    } finally { if (current()) { setLoading(false); setRefreshing(false); } }
+  }, [scope, user?.id, user?.role]);
+  useFocusEffect(useCallback(() => {
+    void load();
+    return () => { generation.current += 1; };
+  }, [load]));
   if (!user) return <Redirect href="/login" />;
   if (user.role !== 'ATHLETE') return <Redirect href="/(tabs)" />;
   return (
@@ -35,14 +56,14 @@ export default function PortfolioScreen() {
       <Page eyebrow="YOUR WORK" title="Portfolio"
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.primary}
           onRefresh={() => { setRefreshing(true); void load(); }} />}>
-        {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> :
+        {loading || loadedScope !== scope ? <ActivityIndicator color={colors.primary} style={styles.loader} /> :
           error ? <EmptyState title="Portfolio unavailable" message={error} actionLabel="Try again"
             onAction={() => { setLoading(true); void load(); }} /> :
           items.length === 0 ? <EmptyState title="Your portfolio is ready"
             message="Add projects and achievements from the Create tab." /> :
           items.map((item) => (
             <View key={item.id} style={styles.card}>
-              {!!item.image && <Image source={{ uri: item.image }} style={styles.image} />}
+              {!!item.image && <AuthorizedImage uri={item.image} style={styles.image} />}
               <Text style={styles.type}>{item.item_type}</Text>
               <Text style={styles.title}>{item.title}</Text>
               {!!item.description && <Text style={styles.description}>{item.description}</Text>}
@@ -51,7 +72,9 @@ export default function PortfolioScreen() {
             </View>
           ))
         }
-      </Page>
+
+      <LoadMore items={items} onChange={setItems} label="Load more items" />
+    </Page>
     </>
   );
 }

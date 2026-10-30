@@ -56,6 +56,18 @@ document.addEventListener("DOMContentLoaded", () => {
             focus.textContent = enabled ? "Exit focus" : "Focus view";
         });
         if (video) {
+            const captionToggle = viewer.querySelector('[data-caption-toggle]');
+            const captionTrack = video.querySelector('track[kind="captions"]');
+            if (captionToggle && captionTrack) {
+                const textTrack = captionTrack.track;
+                textTrack.mode = 'showing';
+                captionToggle.addEventListener('click', () => {
+                    const enabled = textTrack.mode !== 'showing';
+                    textTrack.mode = enabled ? 'showing' : 'disabled';
+                    captionToggle.setAttribute('aria-pressed', String(enabled));
+                    captionToggle.textContent = enabled ? 'Captions on' : 'Captions off';
+                });
+            }
             const speed = viewer.querySelector("[data-video-speed]");
             if (speed) speed.addEventListener("change", () => { video.playbackRate = Number(speed.value); });
             const error = viewer.querySelector("[data-video-error]");

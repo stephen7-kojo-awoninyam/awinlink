@@ -20,7 +20,7 @@
 
 <h3>
 
-{{certificate.title}}
+{{certificate.certificate_title}}
 
 </h3>
 
@@ -44,7 +44,7 @@ Talent:
 
 Event:
 
-{{certificate.event.title}}
+{{visible_event_title|default:"Event details are private"}}
 
 </p>
 
@@ -54,7 +54,7 @@ Event:
 
 Issued by:
 
-{{certificate.issued_by.get_full_name}}
+{{certificate.issued_by.name}}
 
 </p>
 
@@ -64,7 +64,7 @@ Issued by:
 
 Certificate Number:
 
-{{certificate.certificate_number}}
+{{certificate.certificate_code}}
 
 </p>
 

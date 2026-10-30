@@ -1,3 +1,8 @@
+from api.pagination import PagedAPIView
+from api.search import BoundedSearchFilter, filter_parent
+from django.utils.decorators import method_decorator
+from .visibility import visible_events_for
+from django.views.decorators.cache import never_cache
 from organizations.models import Organization
 from organizations.permissions import OrganizationCapability, get_request_organization, require_active_organization, require_user_organization_active
 from django.shortcuts import get_object_or_404
@@ -31,6 +36,7 @@ from .serializers import (
 # EVENT CATEGORIES
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventCategoryListAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -44,7 +50,10 @@ class EventCategoryListAPIView(generics.ListAPIView):
 # EVENT LIST
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventListAPIView(generics.ListAPIView):
+    filter_backends = [BoundedSearchFilter]
+    search_fields = ['title', 'description', 'organizer__name', 'category__name', 'location']
 
     permission_classes = [IsAuthenticated]
 
@@ -52,7 +61,7 @@ class EventListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        return Event.objects.filter(
+        return visible_events_for(self.request.user).filter(
             organizer__status="ACTIVE",
             status="PUBLISHED"
         ).select_related(
@@ -67,6 +76,7 @@ class EventListAPIView(generics.ListAPIView):
 # EVENT DETAIL
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventDetailAPIView(generics.RetrieveAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -77,7 +87,7 @@ class EventDetailAPIView(generics.RetrieveAPIView):
 
     def get_queryset(self):
 
-        return Event.objects.select_related(
+        return visible_events_for(self.request.user).select_related(
             "organizer",
             "category",
         )
@@ -87,6 +97,7 @@ class EventDetailAPIView(generics.RetrieveAPIView):
 # CREATE EVENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventCreateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -145,6 +156,7 @@ class EventCreateAPIView(APIView):
 # UPDATE EVENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventUpdateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -152,7 +164,7 @@ class EventUpdateAPIView(APIView):
     def put(self, request, event_id):
 
         event = get_object_or_404(
-            Event,
+            visible_events_for(self.request.user),
             id=event_id
         )
 
@@ -178,8 +190,8 @@ class EventUpdateAPIView(APIView):
         )
 
         if serializer.is_valid():
-
-            serializer.save()
+            from media_erasure.services import save_instance_with_media_retention
+            save_instance_with_media_retention(event, serializer.save, requested_by_id=request.user.pk)
 
             return Response(
                 serializer.data
@@ -195,6 +207,7 @@ class EventUpdateAPIView(APIView):
 # DELETE EVENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventDeleteAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -202,7 +215,7 @@ class EventDeleteAPIView(APIView):
     def delete(self, request, event_id):
 
         event = get_object_or_404(
-            Event,
+            visible_events_for(self.request.user),
             id=event_id
         )
 
@@ -221,7 +234,8 @@ class EventDeleteAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        event.delete()
+        from media_erasure.services import delete_event_with_retention
+        delete_event_with_retention(event, requested_by_id=request.user.pk)
 
         return Response(
             {
@@ -235,6 +249,7 @@ class EventDeleteAPIView(APIView):
 # REGISTER FOR EVENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventCancelRegistrationAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -332,6 +347,7 @@ class EventCancelRegistrationAPIView(APIView):
         )
         
         
+@method_decorator(never_cache, name='dispatch')
 class EventRegisterAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -371,7 +387,7 @@ class EventRegisterAPIView(APIView):
         # ==========================================
 
         event = get_object_or_404(
-            Event,
+            visible_events_for(self.request.user),
             id=event_id,
         )
         require_active_organization(event.organizer)
@@ -502,6 +518,7 @@ class EventRegisterAPIView(APIView):
 # MY EVENT REGISTRATIONS
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyEventRegistrationsAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -524,15 +541,16 @@ class MyEventRegistrationsAPIView(generics.ListAPIView):
 
             return EventRegistration.objects.none()
 
-        return EventRegistration.objects.filter(
-            talent=talent
+        return filter_parent(self.request, EventRegistration.objects.filter(
+            talent=talent, event__in=visible_events_for(self.request.user)
         ).select_related(
             "event",
-            "talent",
-        )
+            "talent__user",
+        ), 'event')
 
 
-class EventRegistrationListAPIView(APIView):
+@method_decorator(never_cache, name='dispatch')
+class EventRegistrationListAPIView(PagedAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -575,7 +593,7 @@ class EventRegistrationListAPIView(APIView):
         )
 
         serializer = EventRegistrationSerializer(
-            registrations,
+            self.page(request, registrations),
             many=True,
         )
 
@@ -591,6 +609,7 @@ class EventRegistrationListAPIView(APIView):
 # ORGANIZATION VIEW
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventRegistrationStatusAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -682,6 +701,7 @@ class EventRegistrationStatusAPIView(APIView):
 # MARK ATTENDANCE
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventAttendanceAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -789,6 +809,7 @@ class EventAttendanceAPIView(APIView):
 # EVENT FEEDBACK
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventFeedbackCreateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -796,7 +817,7 @@ class EventFeedbackCreateAPIView(APIView):
     def post(self, request, event_id):
 
         event = get_object_or_404(
-            Event,
+            visible_events_for(self.request.user),
             id=event_id
         )
 
@@ -847,6 +868,7 @@ class EventFeedbackCreateAPIView(APIView):
 # EVENT FEEDBACK LIST
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventFeedbackListAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -854,9 +876,9 @@ class EventFeedbackListAPIView(generics.ListAPIView):
     serializer_class = EventFeedbackSerializer
 
     def get_queryset(self):
-
+        event = get_object_or_404(visible_events_for(self.request.user), pk=self.kwargs['event_id'])
         return EventFeedback.objects.filter(
-            event_id=self.kwargs["event_id"]
+            event=event
         ).select_related(
             "reviewer"
         )
@@ -866,6 +888,7 @@ class EventFeedbackListAPIView(generics.ListAPIView):
 # EVENT CERTIFICATES
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyEventCertificatesAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -901,6 +924,7 @@ class MyEventCertificatesAPIView(generics.ListAPIView):
 # VERIFY CERTIFICATE
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventCertificateVerifyAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -914,7 +938,7 @@ class EventCertificateVerifyAPIView(APIView):
 
         return Response(
             EventCertificateSerializer(
-                certificate
+                certificate, context={'request': request}
             ).data
         )
 
@@ -923,6 +947,7 @@ class EventCertificateVerifyAPIView(APIView):
 # EVENT MEDIA
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventMediaListAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -930,9 +955,9 @@ class EventMediaListAPIView(generics.ListAPIView):
     serializer_class = EventMediaSerializer
 
     def get_queryset(self):
-
+        event = get_object_or_404(visible_events_for(self.request.user), pk=self.kwargs['event_id'])
         return EventMedia.objects.filter(
-            event_id=self.kwargs["event_id"]
+            event=event
         ).select_related(
             "event",
             "uploaded_by",
@@ -943,6 +968,7 @@ class EventMediaListAPIView(generics.ListAPIView):
 # UPLOAD EVENT MEDIA
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class EventMediaCreateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -963,7 +989,7 @@ class EventMediaCreateAPIView(APIView):
             organization = None
 
         event = get_object_or_404(
-            Event,
+            visible_events_for(self.request.user),
             id=event_id,
             organizer=organization
         )
@@ -992,7 +1018,8 @@ class EventMediaCreateAPIView(APIView):
         )
 
 
-class MyOrganizationEventsAPIView(APIView):
+@method_decorator(never_cache, name='dispatch')
+class MyOrganizationEventsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -1009,7 +1036,7 @@ class MyOrganizationEventsAPIView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
             return Response([])
-        events = Event.objects.filter(
+        events = visible_events_for(self.request.user).filter(
             organizer=organization
         ).select_related("organizer", "category").order_by("-created_at")
-        return Response(EventSerializer(events, many=True).data)
+        return Response(EventSerializer(self.page(request, events), many=True).data)

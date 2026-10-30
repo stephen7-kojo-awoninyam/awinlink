@@ -1,3 +1,6 @@
+from feed.privacy import visible_association_posts_for
+from events.visibility import visible_events_for
+from talents.visibility import visible_talent_profiles_for
 from django.db.models import Q
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
@@ -5,7 +8,6 @@ from django.urls import reverse
 from datetime import timedelta
 from django.utils import timezone
 from accounts.safety import blocked_user_ids
-from talents.visibility import visible_talent_profiles_for
 
 from connections.models import (
     Follow,
@@ -159,7 +161,7 @@ def home_feed(request):
     # POSTS
     # ==================================
 
-    posts = Post.objects.filter(
+    posts = visible_association_posts_for(request.user).filter(
 
         Q(
             author=request.user
@@ -296,7 +298,7 @@ def home_feed(request):
         | Q(post__visibility="PUBLIC")
         | Q(post__author_id__in=following_users, post__visibility="FOLLOWERS")
         | Q(post__author_id__in=following_organizations, post__visibility="ORGANIZATIONS")
-    ).exclude(user_id__in=blocked_ids).exclude(
+    ).filter(post__in=visible_association_posts_for(request.user)).exclude(user_id__in=blocked_ids).exclude(
         post__author_id__in=blocked_ids,
     ).prefetch_related("post__comments__user", "post__likes", "post__shares").distinct().order_by(
 
@@ -441,7 +443,7 @@ def home_feed(request):
         )
 
     events = list(
-        Event.objects.filter(
+        visible_events_for(request.user).filter(
             status="PUBLISHED",
         ).filter(
             event_relevance,
@@ -832,13 +834,13 @@ def home_feed(request):
 @login_required
 def explore(request):
 
-    trending_posts = Post.objects.order_by(
+    trending_posts = visible_association_posts_for(request.user).order_by(
         "-views",
         "-created_at"
     )[:10]
 
 
-    featured_talents = TalentProfile.objects.filter(
+    featured_talents = visible_talent_profiles_for(request.user).filter(
         verified=True
     ).select_related(
         "user"
@@ -861,7 +863,7 @@ def explore(request):
     )[:8]
 
 
-    events = Event.objects.filter(
+    events = visible_events_for(request.user).filter(
         status="PUBLISHED"
     ).order_by(
         "-created_at"

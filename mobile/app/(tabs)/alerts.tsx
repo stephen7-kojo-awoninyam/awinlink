@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -9,7 +11,7 @@ import { Page } from '@/src/components/Page';
 import { colors } from '@/src/theme';
 
 export default function AlertsScreen() {
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = usePagedState<AppNotification>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [working, setWorking] = useState(false);
@@ -81,6 +83,10 @@ export default function AlertsScreen() {
                 <View style={styles.copy}>
                   <Text style={styles.kind}>{notification.notification_type_display || 'Awinlink update'}</Text>
                   <Text style={styles.message}>{notification.message}</Text>
+                  {notification.metadata?.feature === 'rising_talent' && <Pressable accessibilityRole="button" onPress={() => {
+                    if (!notification.is_read) void markRead(notification.id);
+                    router.push('/rising-talent');
+                  }}><Text style={styles.markRead}>Review Rising Talent</Text></Pressable>}
                   <Text style={styles.sender}>
                     {notification.sender_name || `@${notification.sender_username || 'awinlink'}`}
                   </Text>
@@ -102,6 +108,8 @@ export default function AlertsScreen() {
               </View>
             ))
       }
+
+      <LoadMore items={notifications} onChange={setNotifications} label="Load more notifications" />
     </Page>
   );
 }

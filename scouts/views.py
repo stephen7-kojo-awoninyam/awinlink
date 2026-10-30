@@ -1,3 +1,6 @@
+from accounts.roles import active_user_has_role
+from talents.visibility import public_talent_profiles_for
+from django.views.decorators.cache import never_cache
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
@@ -23,9 +26,10 @@ from .models import (
 # =========================================================
 
 @login_required
+@never_cache
 def scout_dashboard(request):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -37,24 +41,24 @@ def scout_dashboard(request):
 
     total_views = ScoutTalentView.objects.filter(
         scout=scout,
-        talent__profile_visibility="PUBLIC",
+        talent__in=public_talent_profiles_for(request.user),
     ).count()
 
     total_followed = ScoutTalentFollow.objects.filter(
         scout=scout,
-        talent__profile_visibility="PUBLIC",
+        talent__in=public_talent_profiles_for(request.user),
     ).count()
 
     total_bookmarks = ScoutTalentBookmark.objects.filter(
         scout=scout,
-        talent__profile_visibility="PUBLIC",
+        talent__in=public_talent_profiles_for(request.user),
     ).count()
 
     recent_views = (
         ScoutTalentView.objects
         .filter(
             scout=scout,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         )
         .select_related(
             "talent",
@@ -67,7 +71,7 @@ def scout_dashboard(request):
         ScoutTalentBookmark.objects
         .filter(
             scout=scout,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         )
         .select_related(
             "talent",
@@ -94,9 +98,10 @@ def scout_dashboard(request):
 # TALENT DETAIL
 # =========================================================
 @login_required
+@never_cache
 def scout_talent_detail(request, talent_id):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
 
         return render(
             request,
@@ -108,7 +113,7 @@ def scout_talent_detail(request, talent_id):
     )
 
     talent = get_object_or_404(
-        TalentProfile.objects.select_related("user").prefetch_related(
+        public_talent_profiles_for(request.user).select_related("user").prefetch_related(
             "domains",
             "skills",
         ),
@@ -170,9 +175,10 @@ def scout_talent_detail(request, talent_id):
 
 @login_required
 @require_POST
+@never_cache
 def follow_talent(request, talent_id):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -183,7 +189,7 @@ def follow_talent(request, talent_id):
     )
 
     talent = get_object_or_404(
-        TalentProfile,
+        public_talent_profiles_for(request.user),
         id=talent_id,
         profile_visibility="PUBLIC",
     )
@@ -221,9 +227,10 @@ def follow_talent(request, talent_id):
 
 @login_required
 @require_POST
+@never_cache
 def bookmark_talent(request, talent_id):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -234,7 +241,7 @@ def bookmark_talent(request, talent_id):
     )
 
     talent = get_object_or_404(
-        TalentProfile,
+        public_talent_profiles_for(request.user),
         id=talent_id,
         profile_visibility="PUBLIC",
     )
@@ -273,9 +280,10 @@ def bookmark_talent(request, talent_id):
 
 @login_required
 @require_POST
+@never_cache
 def remove_bookmark(request, talent_id):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -289,7 +297,6 @@ def remove_bookmark(request, talent_id):
     ScoutTalentBookmark.objects.filter(
         scout=scout,
         talent_id=talent_id,
-        talent__profile_visibility="PUBLIC",
     ).delete()
 
     return redirect("scout_bookmarked_talents")
@@ -300,9 +307,10 @@ def remove_bookmark(request, talent_id):
 # =========================================================
 
 @login_required
+@never_cache
 def saved_talents(request):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -317,7 +325,7 @@ def saved_talents(request):
         ScoutTalentBookmark.objects
         .filter(
             scout=scout,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         )
         .select_related(
             "talent",
@@ -341,9 +349,10 @@ def saved_talents(request):
 # =========================================================
 
 @login_required
+@never_cache
 def scout_talent_list(request):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -357,7 +366,7 @@ def scout_talent_list(request):
     # ALL TALENTS
     # =====================================================
 
-    talents = TalentProfile.objects.select_related(
+    talents = public_talent_profiles_for(request.user).select_related(
         "user"
     ).prefetch_related(
         "domains",
@@ -425,9 +434,10 @@ def scout_talent_list(request):
 # =========================================================
 
 @login_required
+@never_cache
 def scout_bookmarked_talents(request):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -441,7 +451,7 @@ def scout_bookmarked_talents(request):
         ScoutTalentBookmark.objects
         .filter(
             scout=scout,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         )
         .select_related(
             "talent",
@@ -469,9 +479,10 @@ def scout_bookmarked_talents(request):
 # =========================================================
 
 @login_required
+@never_cache
 def scout_followed_talents(request):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -485,7 +496,7 @@ def scout_followed_talents(request):
         ScoutTalentFollow.objects
         .filter(
             scout=scout,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         )
         .select_related(
             "talent",
@@ -514,9 +525,10 @@ def scout_followed_talents(request):
 
 @login_required
 @require_POST
+@never_cache
 def update_bookmark_notes(request, talent_id):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
 
         return render(
             request,
@@ -528,7 +540,7 @@ def update_bookmark_notes(request, talent_id):
     )
 
     talent = get_object_or_404(
-        TalentProfile,
+        public_talent_profiles_for(request.user),
         id=talent_id,
         profile_visibility="PUBLIC",
     )
@@ -558,9 +570,10 @@ def update_bookmark_notes(request, talent_id):
     
     
 @login_required
+@never_cache
 def select_scout_category(request):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -602,9 +615,10 @@ def select_scout_category(request):
     
     
 @login_required
+@never_cache
 def create_scout_profile(request):
 
-    if request.user.role != "SCOUT":
+    if not active_user_has_role(request.user, "SCOUT"):
         return render(
             request,
             "analytics/access_denied.html"

@@ -116,6 +116,11 @@ class SessionParticipantSerializer(serializers.ModelSerializer):
 class LiveSessionSerializer(serializers.ModelSerializer):
     my_participant = serializers.SerializerMethodField()
     capabilities = serializers.SerializerMethodField()
+    classroom_title = serializers.CharField(source="classroom.title", read_only=True)
+    course = serializers.IntegerField(source="classroom.course_id", read_only=True)
+    lesson_title = serializers.CharField(source="lesson.title", read_only=True)
+    module = serializers.IntegerField(source="lesson.module_id", read_only=True, allow_null=True)
+    module_title = serializers.CharField(source="lesson.module.title", read_only=True, allow_null=True)
 
     def get_capabilities(self, session):
         from django.core.exceptions import PermissionDenied
@@ -135,7 +140,8 @@ class LiveSessionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LiveSession
-        fields = ["id", "classroom", "lesson", "title", "status", "scheduled_start", "scheduled_end",
+        fields = ["id", "classroom", "classroom_title", "course", "lesson", "lesson_title", "module",
+                  "module_title", "title", "status", "scheduled_start", "scheduled_end",
                   "started_at", "ended_at", "created_at", "my_participant", "capabilities"]
         read_only_fields = fields
 

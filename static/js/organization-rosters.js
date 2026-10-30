@@ -35,7 +35,8 @@
     for (const row of rows) {
       const card = node('article', '', 'card p-3 my-3');
       card.append(node('h3', row.name), node('p', `${row.organization_name} · ${row.tag} · ${row.roster || 'General roster'} · ${row.status}`), node('p', row.talent_details));
-      const agreements = node('a', 'View roster agreements'); agreements.href = `/organizations/agreements/?entry=${row.id}`; card.append(agreements);
+      if (row.profile_type) card.append(node('p', `${{ TALENT: 'Talent', COACH: 'Coach', SCOUT: 'Scout' }[row.profile_type]} · ${row.category_name || 'Category not set'}`));
+      if (row.talent_id) { const agreements = node('a', 'View roster agreements'); agreements.href = `/organizations/agreements/?entry=${row.id}`; card.append(agreements); }
       let username;
       if (row.actions.includes('LINK')) {
         const label = node('label', 'Link to Awinlink username'); username = node('input', ''); username.maxLength = 150; username.className = 'form-control'; label.append(username); card.append(label);

@@ -18,7 +18,7 @@ Use [the non-secret Railway example](../deploy/turn/railway.env.example) as the 
 | `TURN_SHARED_SECRET` | A unique random secret, at least 32 characters, matching the relay's REST authentication secret exactly. Generate at least 32 random bytes through a password/secret manager and encode as hex or URL-safe text without whitespace. |
 | `TURN_REQUIRED` | `true`: invalid/missing relay configuration returns a controlled 503 at the ICE endpoint rather than silently issuing STUN-only configuration. Does not prove network availability. |
 | `TURN_CREDENTIAL_TTL_SECONDS` | `3600` by default; validated range 300?86400. Credentials are requested when a call starts. Test the maximum supported call duration; automatic renewal/re-negotiation is not implemented. |
-| `CALL_ICE_TRANSPORT_POLICY` | `all` normally. Use `relay` in staging for voice/video tests that must traverse TURN. Web and native call clients honor it; this switch does not configure classroom clients. |
+| `CALL_ICE_TRANSPORT_POLICY` | `all` by default to preserve direct calls. Optional `relay` forces TURN for peer-IP privacy in web/native calls and classrooms; missing or invalid TURN fails closed. Test relay reachability separately before enabling. |
 
 Only the backend holds the shared secret. Authenticated clients receive expiring usernames and derived passwords, not the secret. Treat those short-lived passwords as sensitive too: do not log/copy the raw ICE response, browser network export or WebRTC internals dump into tickets.
 

@@ -117,6 +117,7 @@ class ScoutTalentFollowSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "scout",
+            "talent",
             "created_at",
         ]
 
@@ -153,6 +154,7 @@ class ScoutTalentBookmarkSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "scout",
+            "talent",
             "created_at",
             "updated_at",
         ]

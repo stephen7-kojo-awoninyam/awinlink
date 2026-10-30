@@ -4,6 +4,7 @@ import { apiRequest } from '@/src/api/client';
 import { colors } from '@/src/theme';
 
 type Item = { id: number; title: string };
+type LessonItem = Item & { module_title?: string | null };
 type Invitation = { id: number; classroom_title: string; recipient: number; recipient_username: string; status: string; is_expired: boolean; message: string };
 type Staff = { id: number; user: number; username: string; display_name: string; role: string };
 export type Room = Item & { course: number; capacity: number; capabilities: { manage: boolean; staff: boolean } };
@@ -49,7 +50,7 @@ function UsernamePicker({ room, purpose, label, selected, onSelect }: { room: nu
     {selected && <Text>Selected @{selected.username}</Text>}
   </View>;
 }
-export function ClassroomSetup({ refresh }: { refresh: () => Promise<void> }) {
+export function ClassroomSetup({ refresh, initialCourseId }: { refresh: () => Promise<void>; initialCourseId?: number }) {
   const op = useOperation();
   const [courses, setCourses] = useState<Item[] | null>(null), [selected, setSelected] = useState<number | null>(null), [title, setTitle] = useState(''), [capacity, setCapacity] = useState('50');
   const [invitations, setInvitations] = useState<Invitation[]>([]), [next, setNext] = useState<string | null>(null);
@@ -62,7 +63,7 @@ export function ClassroomSetup({ refresh }: { refresh: () => Promise<void> }) {
       {invitation.status === 'PENDING' && !invitation.is_expired && <View style={styles.row}>{['accept', 'decline'].map(action => <Button key={action} label={action === 'accept' ? 'Accept invitation' : 'Decline invitation'} disabled={op.busy} action={() => void op.run(async () => { await apiRequest(`learning/classroom-invitations/${invitation.id}/${action}/`, { method: 'POST', body: {} }); await loadInvitations(); await refresh(); })} />)}</View>}
     </View>)}
     {!!next && <Button label="More invitations" disabled={op.busy} action={() => void op.run(() => loadInvitations(true))} />}
-    <Button label="Create classroom" disabled={op.busy} action={() => void op.run(async () => { setCourses(await apiRequest<Item[]>('learning/courses/me/')); })} />
+    <Button label="Create classroom" disabled={op.busy} action={() => void op.run(async () => { const available = await apiRequest<Item[]>('learning/courses/me/'); setCourses(available); if (initialCourseId && available.some(course => course.id === initialCourseId)) setSelected(initialCourseId); })} />
     {courses && <><Text style={styles.heading}>Choose your course</Text>{!courses.length && <Text>Create a course in Learning Studio first.</Text>}{courses.map(course => <Button key={course.id} label={`${selected === course.id ? '✓ ' : ''}${course.title}`} action={() => setSelected(course.id)} />)}
       <Input label="Classroom title" value={title} change={setTitle} /><Input label="Seats" value={capacity} change={setCapacity} numeric />
       <Button label="Save classroom" disabled={op.busy || !selected || !title.trim()} action={() => void op.run(async () => { await apiRequest('learning/classrooms/', { method: 'POST', body: { course: selected, title, capacity: positive(capacity) } }); setCourses(null); setTitle(''); await refresh(); })} />
@@ -72,7 +73,7 @@ export function ClassroomSetup({ refresh }: { refresh: () => Promise<void> }) {
 }
 export function RoomManagement({ room, refresh }: { room: Room; refresh: () => Promise<void> }) {
   const op = useOperation();
-  const [lessons, setLessons] = useState<Item[] | null>(null), [lesson, setLesson] = useState<number | null>(null), [title, setTitle] = useState(''), [start, setStart] = useState(''), [end, setEnd] = useState('');
+  const [lessons, setLessons] = useState<LessonItem[] | null>(null), [lesson, setLesson] = useState<number | null>(null), [title, setTitle] = useState(''), [start, setStart] = useState(''), [end, setEnd] = useState('');
   const [inviteOpen, setInviteOpen] = useState(false), [recipient, setRecipient] = useState<SearchUser | null>(null), [message, setMessage] = useState('');
   const [staffOpen, setStaffOpen] = useState(false), [user, setUser] = useState<SearchUser | null>(null), [staff, setStaff] = useState<Staff[]>([]), [staffNext, setStaffNext] = useState<string | null>(null);
   const [sent, setSent] = useState<Invitation[]>([]), [sentNext, setSentNext] = useState<string | null>(null);
@@ -83,7 +84,7 @@ export function RoomManagement({ room, refresh }: { room: Room; refresh: () => P
   return <View style={styles.panel}>
     {room.capabilities.manage && <>
       <Button label="Schedule session" disabled={op.busy} action={() => void op.run(async () => { setLessons(await apiRequest<Item[]>(`learning/courses/${room.course}/lessons/`)); })} />
-      {lessons && <><Text style={styles.heading}>Schedule session</Text>{!lessons.length && <Text>Add a course lesson before scheduling.</Text>}{lessons.map(item => <Button key={item.id} label={`${lesson === item.id ? '✓ ' : ''}${item.title}`} action={() => setLesson(item.id)} />)}
+      {lessons && <><Text style={styles.heading}>Schedule session</Text>{!lessons.length && <Text>Add a course lesson before scheduling.</Text>}{lessons.map(item => <Button key={item.id} label={`${lesson === item.id ? '✓ ' : ''}${item.module_title ? `${item.module_title} · ` : ''}${item.title}`} action={() => setLesson(item.id)} />)}
         <Input label="Session title" value={title} change={setTitle} /><Text>Enter local times as YYYY-MM-DDTHH:mm, or include an explicit timezone offset.</Text>
         <Input label="Starts" value={start} change={setStart} /><Input label="Ends" value={end} change={setEnd} />
         <Button label="Save session" disabled={op.busy || !lesson || !title.trim()} action={() => void op.run(async () => { await apiRequest(base + 'sessions/', { method: 'POST', body: { lesson, title, scheduled_start: date(start), scheduled_end: date(end) } }); setLessons(null); await refresh(); })} />

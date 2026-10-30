@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,8 +21,8 @@ export default function RecruitmentScreen() {
   const params = useLocalSearchParams<{ talentId?: string }>();
   const talentId = Number(params.talentId);
   const adding = Number.isInteger(talentId) && talentId > 0;
-  const [pipeline, setPipeline] = useState<PipelineEntry[]>([]);
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [pipeline, setPipeline] = usePagedState<PipelineEntry>([]);
+  const [opportunities, setOpportunities] = usePagedState<Opportunity>([]);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -80,6 +82,9 @@ export default function RecruitmentScreen() {
         </View>)}
       </>}
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+
+      <LoadMore items={pipeline} onChange={setPipeline} label="Load more pipeline" />
+      <LoadMore items={opportunities} onChange={setOpportunities} label="Load more opportunities" />
     </Page>
   </>;
 }

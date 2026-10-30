@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
 os.environ['DATABASE_URL'] = ''
 os.environ['REDIS_URL'] = ''
+os.environ.update(AWINLINK_ENV='development', DEBUG='true')
 from django.conf import settings
 settings.SECRET_KEY = 'local-vc-audit-only-not-a-release-secret'
 settings.DEBUG = True

@@ -6,6 +6,7 @@ import { useAuth } from '@/src/auth/AuthProvider';
 import { Page, ui } from '@/src/components/Page';
 import { apiRequest } from '@/src/api/client';
 import { colors } from '@/src/theme';
+import { OrganizationBadges } from '@/src/organizations/Badges';
 
 const ROLE_LABELS: Record<string, string> = {
   ATHLETE: 'Talent',
@@ -43,6 +44,7 @@ export default function ProfileScreen() {
 
   return (
     <Page eyebrow="YOUR ACCOUNT" title="Profile">
+      <Pressable accessibilityRole="button" onPress={() => router.push('/rising-talent')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Rising Talent</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => router.push('/organization-agreements')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Transfers, sponsorships and contracts</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => router.push('/organization-rosters')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Talent tags and rosters</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => router.push('/account-settings')} style={ui.primaryButton}><Text style={ui.primaryButtonText}>Account and safety</Text></Pressable>
@@ -59,6 +61,8 @@ export default function ProfileScreen() {
         <Text style={styles.username}>@{user.username}</Text>
         <Text style={styles.role}>{ROLE_LABELS[user.role] || user.role}</Text>
       </View>
+
+      {['ATHLETE', 'COACH', 'SCOUT'].includes(user.role) && <OrganizationBadges userId={user.id} />}
 
       <View style={styles.details}>
         {user.role === 'ATHLETE' && <Detail label="Specific talent" value={talentArea || 'Not provided; edit your profile'} />}

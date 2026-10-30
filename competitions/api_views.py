@@ -1,3 +1,5 @@
+from api.pagination import OrderedCursorPagination, PagedAPIView
+from api.search import search_queryset, filter_parent
 from organizations.permissions import (
     OrganizationCapability, has_organization_capability, require_active_organization,
 )
@@ -41,7 +43,7 @@ from .services import is_platform_admin, transition_competition
 User = get_user_model()
 
 
-class CompetitionListAPIView(APIView):
+class CompetitionListAPIView(PagedAPIView):
     permission_classes = (AllowAny,)
 
     def get(self, request):
@@ -50,17 +52,11 @@ class CompetitionListAPIView(APIView):
             organization__status="ACTIVE",
         ).select_related("organization")
         category = request.query_params.get("category")
-        search = request.query_params.get("search", "").strip()
         if isinstance(category, str) and category in dict(Competition.CATEGORIES):
             competitions = competitions.filter(category=category)
-        if search:
-            competitions = competitions.filter(
-                Q(title__icontains=search)
-                | Q(description__icontains=search)
-                | Q(discipline__icontains=search)
-                | Q(organization__name__icontains=search)
-            )
-        serializer = CompetitionSerializer(competitions.distinct(), many=True)
+        competitions = search_queryset(request, competitions,
+            ['title', 'description', 'discipline', 'organization__name', 'location', 'category'])
+        serializer = CompetitionSerializer(self.page(request, competitions.distinct()), many=True)
         return Response(serializer.data)
 
 
@@ -268,7 +264,7 @@ class CompetitionRegisterAPIView(APIView):
         )
 
 
-class MyCompetitionRegistrationsAPIView(APIView):
+class MyCompetitionRegistrationsAPIView(PagedAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
@@ -277,16 +273,17 @@ class MyCompetitionRegistrationsAPIView(APIView):
         talent = get_object_or_404(TalentProfile, user=request.user)
         participants = CompetitionParticipant.objects.filter(
             talent=talent,
-        ).select_related("competition", "competition__organization")
+        ).select_related("competition", "competition__organization", "talent__user")
+        participants = filter_parent(request, participants, 'competition')
         serializer_class = (
             PublicCompetitionParticipantSerializer
             if request.user.role == "SCOUT"
             else CompetitionParticipantSerializer
         )
-        return Response(serializer_class(participants, many=True).data)
+        return Response(serializer_class(self.page(request, participants), many=True).data)
 
 
-class MyOrganizationCompetitionsAPIView(APIView):
+class MyOrganizationCompetitionsAPIView(PagedAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
@@ -301,7 +298,7 @@ class MyOrganizationCompetitionsAPIView(APIView):
         competitions = Competition.objects.filter(
             organization=organization,
         ).select_related("organization")
-        return Response(CompetitionSerializer(competitions, many=True).data)
+        return Response(CompetitionSerializer(self.page(request, competitions), many=True).data)
 
 
 class CompetitionSubmissionAPIView(APIView):
@@ -347,7 +344,7 @@ class CompetitionSubmissionAPIView(APIView):
         return Response(CompetitionParticipantSerializer(participant).data)
 
 
-class CompetitionParticipantsAPIView(APIView):
+class CompetitionParticipantsAPIView(PagedAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, competition_id):
@@ -373,11 +370,11 @@ class CompetitionParticipantsAPIView(APIView):
         ):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         return Response(
-            CompetitionParticipantSerializer(participants, many=True).data
+            CompetitionParticipantSerializer(self.page(request, participants), many=True).data
         )
 
 
-class CompetitionJudgeAPIView(APIView):
+class CompetitionJudgeAPIView(PagedAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, competition_id):
@@ -394,7 +391,7 @@ class CompetitionJudgeAPIView(APIView):
         assignments = CompetitionJudge.objects.filter(
             competition=competition
         ).select_related("coach")
-        return Response(CompetitionJudgeSerializer(assignments, many=True).data)
+        return Response(CompetitionJudgeSerializer(self.page(request, assignments), many=True).data)
 
     def post(self, request, competition_id):
         competition = get_object_or_404(Competition, pk=competition_id)
@@ -431,7 +428,7 @@ class CompetitionJudgeAPIView(APIView):
         )
 
 
-class MyJudgingAssignmentsAPIView(APIView):
+class MyJudgingAssignmentsAPIView(PagedAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
@@ -440,7 +437,7 @@ class MyJudgingAssignmentsAPIView(APIView):
         assignments = CompetitionJudge.objects.filter(
             coach=request.user,
         ).select_related("competition", "competition__organization")
-        return Response(CompetitionJudgeSerializer(assignments, many=True).data)
+        return Response(CompetitionJudgeSerializer(self.page(request, assignments), many=True).data)
 
 
 class CompetitionEvaluationAPIView(APIView):
@@ -486,7 +483,12 @@ class CompetitionEvaluationAPIView(APIView):
         return Response(serializer.data)
 
 
-class CompetitionResultsAPIView(APIView):
+class CompetitionStandingPagination(OrderedCursorPagination):
+    ordering = ('position', 'pk')
+
+
+class CompetitionResultsAPIView(PagedAPIView):
+    pagination_class = CompetitionStandingPagination
     permission_classes = (AllowAny,)
 
     def get(self, request, competition_id):
@@ -510,7 +512,7 @@ class CompetitionResultsAPIView(APIView):
             "participant__talent",
             "participant__talent__user",
         )
-        return Response(CompetitionResultSerializer(results, many=True).data)
+        return Response(CompetitionResultSerializer(self.page(request, results), many=True).data)
 
     def put(self, request, competition_id, participant_id=None):
         if participant_id is None:
@@ -546,7 +548,7 @@ class CompetitionResultsAPIView(APIView):
         return Response(serializer.data)
 
 
-class CompetitionModerationAPIView(APIView):
+class CompetitionModerationAPIView(PagedAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, competition_id=None):
@@ -562,7 +564,7 @@ class CompetitionModerationAPIView(APIView):
         competitions = Competition.objects.filter(
             status="SUBMITTED"
         ).select_related("organization")
-        return Response(CompetitionSerializer(competitions, many=True).data)
+        return Response(CompetitionSerializer(self.page(request, competitions), many=True).data)
 
     def post(self, request, competition_id=None):
         if not is_platform_admin(request.user):

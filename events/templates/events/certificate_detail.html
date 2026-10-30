@@ -13,7 +13,7 @@
             </p>
 
             <h1 class="mb-4">
-                Certificate of Participation
+                {{ certificate.certificate_title|default:"Certificate of Participation" }}
             </h1>
 
             <p class="lead">
@@ -29,7 +29,7 @@
             </p>
 
             <h3 class="mb-4">
-                {{ certificate.event.title }}
+                {{ visible_event_title|default:"Event details are private" }}
             </h3>
 
             {% if certificate.description %}

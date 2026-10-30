@@ -17,7 +17,7 @@ class ClassroomModelTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username="classroom-host")
         self.learner = get_user_model().objects.create_user(username="classroom-learner")
-        category = LearningCategory.objects.create(name="Arts")
+        category, _ = LearningCategory.objects.get_or_create(name="Arts")
         self.course = Course.objects.create(creator=self.user, category=category,
                                             title="Drawing", slug="drawing", description="Drawing")
         self.lesson = Lesson.objects.create(course=self.course, title="Lines", order=1)

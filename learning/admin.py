@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django import forms
 
 # Register your models here.
 from .models import (
@@ -10,6 +11,24 @@ from .models import (
     Quiz,
     Question,
 )
+
+
+class CourseAdminForm(forms.ModelForm):
+    class Meta:
+        model = Course
+        fields = "__all__"
+
+    def clean(self):
+        cleaned = super().clean()
+        is_free = cleaned.get("is_free", getattr(self.instance, "is_free", True))
+        status = cleaned.get("status", getattr(self.instance, "status", "DRAFT"))
+        if not self.instance.pk and not is_free:
+            self.add_error("is_free", "Paid courses cannot be created until Learning billing is available.")
+        elif self.instance.pk and is_free != self.instance.is_free:
+            self.add_error("is_free", "A course's free or paid status cannot be changed after creation.")
+        elif not is_free and self.instance.status != "APPROVED" and status == "APPROVED":
+            self.add_error("status", "Paid courses cannot be published until Learning billing is available.")
+        return cleaned
 
 
 
@@ -35,6 +54,7 @@ class LessonInline(admin.TabularInline):
     
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
+    form = CourseAdminForm
 
     list_display = (
         "title",

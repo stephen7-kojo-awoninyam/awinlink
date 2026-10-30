@@ -15,6 +15,8 @@ export type AuthResponse = {
   refresh: string;
 };
 
+export type PublicUser = Omit<User, 'email'>;
+
 export type RegistrationData = {
   terms_accepted: boolean;
   terms_version: string;
@@ -52,7 +54,9 @@ export type FeedPost = {
 
 export type TalentProfile = {
   id: number;
-  user: User;
+  specialist_bookmark_id?: number | null;
+  specialist_follow_id?: number | null;
+  user: PublicUser;
   headline?: string;
   talent_area?: string;
   talent_category?: string;
@@ -104,6 +108,7 @@ export type Conversation = {
 };
 
 export type AppNotification = {
+  metadata?: { feature?: string };
   post_id?: number | null;
   conversation_id?: number | null;
   opportunity_id?: number | null;

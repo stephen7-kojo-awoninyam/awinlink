@@ -15,6 +15,10 @@
 
         {% csrf_token %}
 
+        {% if form.errors %}
+        <div class="alert alert-danger" role="alert">Choose a valid account type. Account permissions cannot be changed here.</div>
+        {% endif %}
+
         <div class="row g-4">
 
             <!-- Talent -->

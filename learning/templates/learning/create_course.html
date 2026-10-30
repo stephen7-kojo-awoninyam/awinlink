@@ -11,14 +11,14 @@
 <div>
 <span class="lc-eyebrow">Create course</span>
 <h1>Give your knowledge a home</h1>
-<p>Save a draft, add lessons, then submit for administrator approval.</p>
+<p>Courses are free for the initial release. Save a draft, add lessons, then submit for administrator approval.</p>
 </div>
 </header>
 <div class="lc-form-layout">
 <div>{% include "learning/form_panel.html" with save_label="Save draft" uploads=True %}</div>
 <aside class="lc-card">
 <h2>Make it clear. Make it useful.</h2>
-<p class="lc-prose">Save a draft, add lessons, then submit for administrator approval.</p>
+<p class="lc-prose">Courses are free for the initial release. Save a draft, add lessons, then submit for administrator approval.</p>
 <div class="lc-notice">Fields marked * are required. Your changes will be saved when you submit the form.</div>{% if course %}<p class="lc-muted">{{ course.title }}</p>{% endif %}</aside>
 </div>
 {% endblock %}

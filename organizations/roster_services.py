@@ -2,6 +2,7 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 
 from talents.models import TalentProfile
@@ -14,10 +15,26 @@ def require_manager(user, organization):
 
 
 def linked_talent(username):
-    talent = TalentProfile.objects.select_related("user").filter(user__username__iexact=username, user__is_active=True).first()
-    if talent is None:
-        raise ValidationError({"username": "Choose an active talent username."})
-    return talent
+    from coaches.models import CoachProfile
+    from scouts.models import ScoutProfile
+    user = get_user_model().objects.filter(username__iexact=username, is_active=True).first()
+    model = {"ATHLETE": TalentProfile, "COACH": CoachProfile, "SCOUT": ScoutProfile}.get(user.role) if user else None
+    profile = model.objects.select_related("user").filter(user=user).first() if model else None
+    if profile is None:
+        raise ValidationError({"username": "Choose an active talent, coach or scout with a profile."})
+    return profile
+
+
+def profile_link(profile):
+    field = {"talents": "talent", "coaches": "coach", "scouts": "scout"}[profile._meta.app_label]
+    return {field: profile}
+
+
+def recipient_filter(user):
+    return Q(talent__user=user) | Q(coach__user=user) | Q(scout__user=user)
+
+
+PROFILE_JOINS = ("organization", "talent__user", "coach__user", "scout__user")
 
 
 def require_unblocked_link(actor, organization, talent):
@@ -45,7 +62,7 @@ def create_entry(organization_id, actor, data):
         require_unblocked_link(actor, organization, talent)
     try:
         with transaction.atomic():
-            entry = OrganizationTalent.objects.create(organization=organization, talent=talent,
+            entry = OrganizationTalent.objects.create(organization=organization, **(profile_link(talent) if talent else {}),
                 status="PENDING" if talent else "UNCLAIMED", **data)
     except IntegrityError:
         raise ValidationError("This active tag already exists in this roster.") from None
@@ -59,13 +76,13 @@ def transition(entry_id, actor, action, username="", reason=""):
     organization = Organization.objects.select_for_update().get(pk=organization_id)
     # The talent join is nullable for unclaimed entries; PostgreSQL must lock
     # only the affiliation, not the nullable side of that outer join.
-    entry = OrganizationTalent.objects.select_for_update(of=("self",)).select_related("talent").get(pk=entry_id)
+    entry = OrganizationTalent.objects.select_for_update(of=("self",)).select_related(*PROFILE_JOINS).get(pk=entry_id)
     if not get_user_model().objects.filter(pk=actor.pk, is_active=True).exists():
         raise PermissionDenied("An active account is required.")
-    recipient = entry.talent_id is not None and entry.talent.user_id == actor.pk
+    recipient = entry.linked_user_id == actor.pk
     if action in {"CONFIRM", "DECLINE"}:
         if not recipient:
-            raise PermissionDenied("Only the linked talent can respond.")
+            raise PermissionDenied("Only the linked profile owner can respond.")
         if organization.status != "ACTIVE" or entry.status != "PENDING":
             raise ValidationError("This request is no longer pending for an active organization.")
         entry.status = "CONFIRMED" if action == "CONFIRM" else "DECLINED"
@@ -73,8 +90,10 @@ def transition(entry_id, actor, action, username="", reason=""):
         require_manager(actor, organization)
         if entry.status != "UNCLAIMED":
             raise ValidationError("Only unclaimed entries can be linked.")
-        entry.talent = linked_talent(username)
-        require_unblocked_link(actor, organization, entry.talent)
+        profile = linked_talent(username)
+        require_unblocked_link(actor, organization, profile)
+        for field, value in profile_link(profile).items():
+            setattr(entry, field, value)
         entry.status = "PENDING"
     elif action == "REMOVE":
         if not recipient:
@@ -86,7 +105,7 @@ def transition(entry_id, actor, action, username="", reason=""):
         raise ValidationError("Unknown roster action.")
     try:
         with transaction.atomic():
-            entry.save(update_fields=["talent", "status", "updated_at"])
+            entry.save(update_fields=["talent", "coach", "scout", "status", "updated_at"])
     except IntegrityError:
         raise ValidationError("This active tag already exists in this roster.") from None
     record(entry, actor, action, reason)
@@ -94,13 +113,15 @@ def transition(entry_id, actor, action, username="", reason=""):
 
 
 def public_entries(user=None):
-    rows = OrganizationTalent.objects.select_related("organization", "talent__user").filter(
-        status="CONFIRMED", organization__status="ACTIVE", talent__profile_visibility="PUBLIC", talent__user__is_active=True)
+    rows = OrganizationTalent.objects.select_related(*PROFILE_JOINS).filter(
+        Q(talent__profile_visibility="PUBLIC", talent__user__is_active=True)
+        | Q(coach__user__is_active=True) | Q(scout__user__is_active=True),
+        status="CONFIRMED", organization__status="ACTIVE")
     if user is not None and user.is_authenticated:
         from accounts.models import UserBlock
-        from django.db.models import Q
         blocks = UserBlock.objects.filter(Q(user=user) | Q(blocked_user=user))
         ids = set(blocks.values_list("user_id", flat=True)) | set(blocks.values_list("blocked_user_id", flat=True))
         ids.discard(user.pk)
-        rows = rows.exclude(talent__user_id__in=ids).exclude(organization__user_id__in=ids)
+        rows = rows.exclude(Q(talent__user_id__in=ids) | Q(coach__user_id__in=ids)
+                            | Q(scout__user_id__in=ids) | Q(organization__user_id__in=ids))
     return rows

@@ -2,12 +2,13 @@
 {% block title %}Creator studio | Awinlink learning{% endblock %}
 {% block learning_nav %}{% include "learning/nav.html" with active="studio" %}{% endblock %}
 {% block learning_content %}
-<section class="lc-hero">
+<div class="lc-studio-dashboard">
+<section class="lc-hero lc-studio-hero">
 <header class="lc-heading">
 <div>
-<span class="lc-eyebrow">What you know can help someone grow</span>
+<span class="lc-eyebrow">CREATOR DASHBOARD</span>
 <h1>Your ideas. Their next skill.</h1>
-<p>Create courses, build your lesson playlists, and share your knowledge with the community.</p>
+<p>Create a course, build its lesson curriculum, check readiness, preview the learner experience, and send it for moderation.</p>
 </div>
 <a class="lc-button" href="{% url 'create_course' %}">
 <i class="bi bi-plus-lg" aria-hidden="true">
@@ -25,4 +26,6 @@
 <p>You haven’t created any courses yet. Turn your experience into your first lesson.</p>
 <a class="lc-button" href="{% url 'create_course' %}">Create your first course</a>
 </section>{% endfor %}</div>
+<p class="lc-studio-dashboard-footer">Drafts remain editable, submitted courses stay locked during review, and moderator feedback appears on rejected courses.</p>
+</div>
 {% endblock %}

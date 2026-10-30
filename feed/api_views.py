@@ -1,3 +1,4 @@
+from api.pagination import PagedAPIView
 from organizations.permissions import require_active_organization, require_user_organization_active
 from django.db.models import Q
 
@@ -14,6 +15,7 @@ from recommendations.ecosystems import get_ecosystem_user_ids
 from accounts.safety import blocked_user_ids
 from organizations.permissions import OrganizationCapability, require_organization_capability
 from .permissions import authorize_post_associations
+from .privacy import visible_association_posts_for
 
 # ============================================================
 
@@ -66,7 +68,7 @@ class PostCreateAPIView(APIView):
 
 # ============================================================
 
-class PostListAPIView(APIView):
+class PostListAPIView(PagedAPIView):
 
     
     permission_classes = [IsAuthenticated]
@@ -80,7 +82,7 @@ class PostListAPIView(APIView):
         # POSTS THE USER CAN SEE
         # ----------------------------------------------------
 
-        posts = Post.objects.filter(
+        posts = visible_association_posts_for(request.user).filter(
 
             Q(
                 visibility="PUBLIC",
@@ -131,12 +133,12 @@ class PostListAPIView(APIView):
             | connected_user_ids
             | ecosystem_user_ids
         )
-        posts = posts | Post.objects.filter(
+        posts = posts | visible_association_posts_for(request.user).filter(
             visibility="PUBLIC",
             author_id__in=public_network_author_ids,
         )
 
-        posts = posts | Post.objects.filter(
+        posts = posts | visible_association_posts_for(request.user).filter(
             visibility="FOLLOWERS",
             author_id__in=followed_users,
         )
@@ -152,7 +154,7 @@ class PostListAPIView(APIView):
             flat=True
         )
 
-        posts = posts | Post.objects.filter(
+        posts = posts | visible_association_posts_for(request.user).filter(
             visibility="ORGANIZATIONS",
             organization_id__in=followed_organizations
         )
@@ -165,7 +167,7 @@ class PostListAPIView(APIView):
 
             organization = user.organization_profile
 
-            posts = posts | Post.objects.filter(
+            posts = posts | visible_association_posts_for(request.user).filter(
                 visibility="ORGANIZATIONS",
                 organization=organization
             )
@@ -193,7 +195,7 @@ class PostListAPIView(APIView):
         )
 
         serializer = PostSerializer(
-            posts,
+            self.page(request, posts),
             many=True,
             context={"request": request}
         )
@@ -219,7 +221,7 @@ class PostDetailAPIView(APIView):
         try:
 
             post = (
-                Post.objects
+                visible_association_posts_for(request.user)
                 .select_related(
                     "author",
                     "talent",
@@ -274,7 +276,8 @@ class PostDetailAPIView(APIView):
     # --------------------------------------------------------
 
     def can_view_post(self, user, post):
-
+        if not visible_association_posts_for(user).filter(pk=post.pk).exists():
+            return False
         if post.author_id in blocked_user_ids(user):
             return False
 
@@ -332,7 +335,7 @@ class PostUpdateAPIView(APIView):
 
         try:
 
-            post = Post.objects.get(
+            post = visible_association_posts_for(request.user).get(
                 id=post_id
             )
 
@@ -397,7 +400,7 @@ class PostDeleteAPIView(APIView):
 
         try:
 
-            post = Post.objects.get(
+            post = visible_association_posts_for(request.user).get(
                 id=post_id
             )
 
@@ -453,7 +456,7 @@ class PostLikeAPIView(APIView):
 
         try:
 
-            post = Post.objects.get(
+            post = visible_association_posts_for(request.user).get(
                 id=post_id
             )
 
@@ -550,7 +553,7 @@ class PostUnlikeAPIView(APIView):
 
 # ============================================================
 
-class PostLikesAPIView(APIView):
+class PostLikesAPIView(PagedAPIView):
 
 
     permission_classes = [IsAuthenticated]
@@ -559,7 +562,7 @@ class PostLikesAPIView(APIView):
 
         try:
 
-            post = Post.objects.get(
+            post = visible_association_posts_for(request.user).get(
                 id=post_id
             )
 
@@ -586,7 +589,7 @@ class PostLikesAPIView(APIView):
         )
 
         serializer = PostLikeSerializer(
-            likes,
+            self.page(request, likes),
             many=True,
             context={"request": request}
         )
@@ -604,7 +607,7 @@ class PostLikesAPIView(APIView):
 
 # ============================================================
 
-class PostCommentsAPIView(APIView):
+class PostCommentsAPIView(PagedAPIView):
 
 
     permission_classes = [IsAuthenticated]
@@ -621,7 +624,7 @@ class PostCommentsAPIView(APIView):
 
         try:
 
-            post = Post.objects.get(
+            post = visible_association_posts_for(request.user).get(
                 id=post_id
             )
 
@@ -649,7 +652,7 @@ class PostCommentsAPIView(APIView):
         )
 
         serializer = CommentSerializer(
-            comments,
+            self.page(request, comments),
             many=True,
             context={"request": request}
         )
@@ -663,7 +666,7 @@ class PostCommentsAPIView(APIView):
 
         try:
 
-            post = Post.objects.get(
+            post = visible_association_posts_for(request.user).get(
                 id=post_id
             )
 
@@ -787,7 +790,7 @@ class SavePostAPIView(APIView):
 
         try:
 
-            post = Post.objects.get(
+            post = visible_association_posts_for(request.user).get(
                 id=post_id
             )
 
@@ -881,7 +884,7 @@ class UnsavePostAPIView(APIView):
 
 # ============================================================
 
-class MySavedPostsAPIView(APIView):
+class MySavedPostsAPIView(PagedAPIView):
 
     
     permission_classes = [IsAuthenticated]
@@ -891,7 +894,8 @@ class MySavedPostsAPIView(APIView):
         saved_posts = (
             SavedPost.objects
             .filter(
-                user=request.user
+                user=request.user,
+                post__in=visible_association_posts_for(request.user),
             )
             .select_related(
                 "post",
@@ -906,7 +910,7 @@ class MySavedPostsAPIView(APIView):
         )
 
         serializer = SavedPostSerializer(
-            saved_posts,
+            self.page(request, saved_posts),
             many=True,
             context={"request": request}
         )

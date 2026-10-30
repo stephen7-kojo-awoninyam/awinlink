@@ -4,6 +4,9 @@ from django.conf import settings
 
 class TalentProfile(models.Model):
 
+    class Meta:
+        indexes = [models.Index(fields=["talent_category", "profile_visibility", "id"], name="rising_talent_scope_idx")]
+
     def clean(self):
         super().clean()
         from django.core.exceptions import ValidationError
@@ -395,6 +398,9 @@ class VerificationRequest(models.Model):
    
 class Achievement(models.Model):
 
+    class Meta:
+        indexes = [models.Index(fields=["talent", "date_received"], name="rising_achievement_date_idx")]
+
     talent = models.ForeignKey(
         TalentProfile,
         on_delete=models.CASCADE,
@@ -523,4 +529,4 @@ class Experience(models.Model):
 
     def __str__(self):
 
-        return f"{self.role} at {self.company}"    
+        return f"{self.role} at {self.company}"

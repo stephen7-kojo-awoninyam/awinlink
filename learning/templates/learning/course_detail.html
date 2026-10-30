@@ -3,12 +3,14 @@
 {% block title %}{{ course.title }} | Awinlink learning{% endblock %}
 {% block learning_nav %}{% include "learning/nav.html" with active="discover" %}{% endblock %}
 {% block learning_content %}
+<div class="lc-academy lc-course-detail">
 {% course_liked course user as liked %}
-<a class="lc-back" href="{% url 'courses' %}">
+<a class="lc-back" href="{% if preview %}{% url 'manage_course' course.id %}{% else %}{% url 'courses' %}{% endif %}">
 <i class="bi bi-arrow-left" aria-hidden="true">
-</i> Discover learning</a>
-<div class="lc-detail-cover">{% include "learning/course_cover.html" %}</div>
-<header class="lc-heading">
+</i> {% if preview %}Back to Creator Studio{% else %}Discover learning{% endif %}</a>
+{% if preview %}<div class="lc-notice lc-preview-notice" role="status"><strong>Learner preview</strong><span>This is how your course appears to learners. Previewing does not enroll you or change learner progress.</span></div>{% endif %}
+
+<header class="lc-heading lc-detail-hero">
 <div>
 <span class="lc-eyebrow">{{ course.category.name }} / {{ course.get_level_display }}</span>
 <h1>{{ course.title }}</h1>
@@ -16,21 +18,27 @@
 <span class="lc-avatar">{{ course.creator.username|slice:":1"|upper }}</span>
 <p class="lc-muted">Learn with {{ course.creator.get_full_name|default:course.creator.username }}</p>
 </div>
+<div class="lc-actions mt-3">
+{% if preview %}{% if lessons %}<a class="lc-button" href="{% learning_url 'lesson_detail' lessons.0.id %}">Preview first lesson <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}{% elif enrollment %}<a class="lc-button" href="{% learning_url 'course_progress' course.id %}">Continue learning <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% elif course.is_free %}<a class="lc-button" href="#enroll">Enroll in course <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% else %}<span class="lc-status">Paid enrollment unavailable</span>{% endif %}
+<a class="lc-text-link" href="#curriculum">View curriculum</a>
 </div>
-<a class="lc-button lc-button-secondary" href="#enroll">{% if enrollment %}Continue learning{% else %}Start learning{% endif %}</a>
+</div>
+<div class="lc-detail-cover">{% include "learning/course_cover.html" %}</div>
 </header>
+<nav class="lc-section-nav" aria-label="Course sections"><a href="#overview">Overview</a><a href="#curriculum">Curriculum</a><a href="#instructor">Instructor</a><a href="#reviews">Reviews</a><a href="#enroll">{% if preview %}Preview details{% elif enrollment %}Your progress{% else %}Enrollment{% endif %}</a></nav>
 <div class="lc-detail-grid">
 <div class="lc-detail-main">
-<section class="lc-card">
-<div class="lc-social-bar">
+<section class="lc-card" id="overview" aria-labelledby="overview-title">
+{% if not preview %}<div class="lc-social-bar">
 <form method="POST" action="{% url 'like_course' course.id %}">{% csrf_token %}<button class="lc-like" type="submit" aria-pressed="{% if liked %}true{% else %}false{% endif %}">
 <i class="bi {% if liked %}bi-heart-fill{% else %}bi-heart{% endif %}" aria-hidden="true">
 </i> {% if liked %}Unlike{% else %}Like{% endif %} <span>{{ course.likes.count }}</span>
 </button>
 </form>
 <span class="lc-muted">{{ total_reviews }} review{{ total_reviews|pluralize }}{% if average_rating %} &middot; {{ average_rating|floatformat:1 }} / 5{% endif %}</span>
-</div>
-<h2>About this course</h2>
+</div>{% endif %}
+<span class="lc-eyebrow">A NEW PERSPECTIVE STARTS HERE</span>
+<h2 id="overview-title">About this course</h2>
 <div class="lc-prose">{{ course.description|linebreaks }}</div>
 <div class="lc-facts">
 <span>
@@ -40,17 +48,19 @@
 <span>{{ course.get_level_display }}</span>
 </div>
 </section>
-<section class="lc-card">
-<h2>Your learning playlist</h2>{% for item in lessons %}{% if enrollment %}<a class="lc-lesson-row" href="{% learning_url 'lesson_detail' item.id %}">{% else %}<div class="lc-lesson-row">{% endif %}<span class="lc-lesson-number">{{ item.order }}</span>
+<section class="lc-card" id="curriculum" aria-labelledby="curriculum-title">
+<span class="lc-eyebrow">STEP BY STEP, AT YOUR PACE</span><h2 id="curriculum-title">Course curriculum</h2><p class="lc-muted lc-section-intro">{{ lessons|length }} lessons &middot; {{ course.duration }} minutes{% if not enrollment and not preview %} &middot; Enroll to access lessons{% endif %}</p>
+{% if curriculum_sections %}{% for section in curriculum_sections %}<h3 class="lc-module-title">{{ section.title }}</h3>{% for item in section.lessons %}{% if enrollment or preview %}<a class="lc-lesson-row" href="{% learning_url 'lesson_detail' item.id %}">{% else %}<div class="lc-lesson-row">{% endif %}<span class="lc-lesson-number">{{ item.order }}</span><span><strong>{{ item.title }}</strong><small>{{ item.duration }} min{% if item.quiz %} &middot; Quiz included{% endif %}</small></span><i class="bi {% if enrollment or preview %}bi-play-circle{% else %}bi-lock{% endif %}" aria-hidden="true"></i>{% if enrollment or preview %}</a>{% else %}</div>{% endif %}{% endfor %}{% endfor %}{% else %}{% for item in lessons %}{% if enrollment or preview %}<a class="lc-lesson-row" href="{% learning_url 'lesson_detail' item.id %}">{% else %}<div class="lc-lesson-row">{% endif %}<span class="lc-lesson-number">{{ item.order }}</span>
 <span>
 <strong>{{ item.title }}</strong>
 <small>{{ item.duration }} min{% if item.quiz %} &middot; Quiz included{% endif %}</small>
 </span>
-<i class="bi {% if enrollment %}bi-play-circle{% else %}bi-lock{% endif %}" aria-hidden="true">
-</i>{% if enrollment %}</a>{% else %}</div>{% endif %}{% empty %}<p class="lc-muted">Lessons are being prepared. Check back soon.</p>{% endfor %}</section>
-<section class="lc-card">
+<i class="bi {% if enrollment or preview %}bi-play-circle{% else %}bi-lock{% endif %}" aria-hidden="true">
+</i>{% if enrollment or preview %}</a>{% else %}</div>{% endif %}{% empty %}<p class="lc-muted">Lessons are being prepared. Check back soon.</p>{% endfor %}{% endif %}</section>
+<section class="lc-card" id="instructor" aria-labelledby="instructor-title"><span class="lc-eyebrow">LEARN FROM YOUR COMMUNITY</span><h2 id="instructor-title">Meet your instructor</h2><div class="lc-person lc-instructor"><span class="lc-avatar" aria-hidden="true">{{ course.creator.username|slice:":1"|upper }}</span><div><h3>{{ course.creator.get_full_name|default:course.creator.username }}</h3><p class="lc-muted">Course creator &middot; {{ course.category.name }}</p></div></div></section>
+<section class="lc-card" id="reviews" aria-labelledby="reviews-title">
 <div class="lc-results mt-0">
-<h2>Community reviews</h2>
+<h2 id="reviews-title">Learner reviews</h2>
 <span>{% if average_rating %}{{ average_rating|floatformat:1 }} / 5{% else %}No ratings yet{% endif %}</span>
 </div>{% for review in reviews %}<article class="lc-review">
 <div class="lc-person">
@@ -62,7 +72,7 @@
 </div>
 <div class="lc-prose">{{ review.review|linebreaks }}</div>
 </article>{% empty %}<p class="lc-muted">No reviews yet. Share your experience after enrolling.</p>{% endfor %}{% if enrollment %}<a class="lc-button lc-button-secondary mt-3" href="{% url 'review_course' course.id %}">Write or update your review</a>{% endif %}</section>
-<section class="lc-card">
+{% if not preview %}<section class="lc-card">
 <details class="lc-comments">
 <summary>
 <i class="bi bi-chat-dots" aria-hidden="true">
@@ -75,27 +85,30 @@
 <button class="lc-button mt-3" type="submit">Post comment</button>
 </form>
 </details>
-</section>
+</section>{% endif %}
 </div>
 <aside aria-label="Course enrollment">
-<section class="lc-card" id="enroll">
+<section class="lc-card lc-enroll-card" id="enroll">
 <span class="lc-eyebrow">Make time for your talent</span>
-<h2 class="mt-2">{% if enrollment %}You’re part of this course{% else %}Your next skill starts here{% endif %}</h2>{% if course.is_free %}<span class="lc-status lc-status--approved">Free course</span>{% endif %}<p class="lc-muted mt-3 mb-3">{{ lessons|length }} lessons &middot; {{ course.duration }} minutes</p>
-{% if enrollment %}<a class="lc-button w-100" href="{% learning_url 'course_progress' course.id %}">Continue learning <i class="bi bi-arrow-right" aria-hidden="true">
+<h2 class="mt-2">{% if preview %}Learner preview{% elif enrollment %}You’re part of this course{% else %}Your next skill starts here{% endif %}</h2>{% if course.is_free %}<span class="lc-status lc-status--approved">Free course</span>{% endif %}<p class="lc-muted mt-3 mb-3">{{ lessons|length }} lessons &middot; {{ course.duration }} minutes</p>
+{% if preview %}<div class="lc-notice">Preview mode · learner progress and enrollment are unchanged.</div>{% elif enrollment %}<div class="lc-progress"><label for="detail-progress">Your progress <strong>{{ enrollment.progress_percentage|default:0 }}%</strong></label><progress id="detail-progress" value="{{ enrollment.progress_percentage|default:0 }}" max="100">{{ enrollment.progress_percentage|default:0 }}%</progress></div><a class="lc-button w-100" href="{% learning_url 'course_progress' course.id %}">Continue learning <i class="bi bi-arrow-right" aria-hidden="true">
 </i>
 </a>{% if lessons %}<a class="lc-text-link mt-2" href="{% learning_url 'lesson_detail' lessons.0.id %}">Open the first lesson</a>{% endif %}{% if enrollment.completed %}<div class="lc-notice mt-3">You have completed this course.</div>{% if enrollment.certificate %}<a class="lc-button lc-button-secondary w-100" href="{% url 'certificate_detail' enrollment.certificate.certificate_id %}">View your certificate</a>{% endif %}{% endif %}
-{% else %}<form method="POST" action="{% url 'enroll_course' course.id %}">{% csrf_token %}<button class="lc-button w-100" type="submit">Enroll in course <i class="bi bi-arrow-right" aria-hidden="true">
+{% elif course.is_free %}<form method="POST" action="{% url 'enroll_course' course.id %}">{% csrf_token %}<button class="lc-button w-100" type="submit">Enroll in course <i class="bi bi-arrow-right" aria-hidden="true">
 </i>
 </button>
 </form>
-<p class="lc-help mt-3">Enroll to access the lessons and track your progress.</p>{% endif %}</section>
-<section class="lc-card">
-<h2>Learn at your pace</h2>
+<p class="lc-help mt-3">Enroll to access the lessons and track your progress.</p>{% else %}<button class="lc-button w-100" type="button" disabled>Paid enrollment unavailable</button><p class="lc-help mt-3">New paid enrollments are not available yet.</p>{% endif %}</section>
+<section class="lc-card lc-live-sessions" aria-labelledby="course-live-sessions-title">
+<span class="lc-eyebrow">LEARNING TOGETHER</span><h2 id="course-live-sessions-title">Live sessions for this course</h2>
+{% for session in learning_live_sessions %}<article class="lc-live-session"><span class="lc-session-status{% if session.status == 'LIVE' %} is-live{% endif %}">{% if session.status == 'LIVE' %}Live now{% else %}Scheduled{% endif %}</span><a href="{% url 'learning_classroom' session.id %}"><strong>{{ session.title }}</strong></a><p class="lc-muted">{{ session.lesson.title }}{% if session.lesson.module %} · {{ session.lesson.module.title }}{% endif %} · {{ session.classroom.title }}</p>{% if session.scheduled_start %}<time datetime="{{ session.scheduled_start|date:'c' }}">{{ session.scheduled_start|date:'M j, Y · g:i A T' }}</time>{% endif %}</article>{% empty %}<p class="lc-muted">No upcoming sessions are available to you for this course.</p>{% endfor %}
+{% if course.creator_id == user.id %}<a class="lc-text-link" href="{% url 'learning_classrooms' %}?course={{ course.id }}">Manage this course’s classrooms <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a class="lc-text-link" href="{% url 'learning_classrooms' %}">View live classrooms <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>{% endif %}</section><section class="lc-card"><h2>Learn at your pace</h2>
 <p class="lc-prose">Work through the lessons, use the learning materials, and test your understanding with any included quizzes.</p>
 <a class="lc-text-link" href="{% url 'my_learning' %}">Your learning journey <i class="bi bi-arrow-right" aria-hidden="true">
 </i>
 </a>
 </section>
 </aside>
+</div>
 </div>
 {% endblock %}

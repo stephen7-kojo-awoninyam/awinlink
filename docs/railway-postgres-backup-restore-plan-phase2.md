@@ -7,6 +7,8 @@ who has the required Railway access.
 
 ## Current readiness
 
+Updated offline assessment and recovery checklist: [backup/restore readiness audit, 2026-10-28](backup-restore-readiness-audit-2026-10-28.md). The snapshot/PITR target distinction below corrects the older drill wording; it is not permission to access production.
+
 The last metadata-only readiness check, recorded in `security-phase1.md` on
 2026-10-20, found no Railway volume backups or backup schedule, PITR disabled,
 and no verified restore drill. This phase did not repeat that check or connect to
@@ -32,11 +34,15 @@ restore, recovery readiness is unproven.
 
 ## Restore drill in isolation
 
-1. Select a recent retained snapshot, or an approved PITR timestamp. Use Railway's
-   restore workflow to provision a **new sibling PostgreSQL service in an isolated
-   non-production environment/project**. Never select the production service as
-   the restore target. Railway's volume restore stages a restore against its
-   selected volume, so verify the target service and environment before starting.
+1. Choose the recovery method before selecting a target. Railway's documented
+   **volume snapshot restore applies to the existing service**; it is not an
+   isolated sibling-service drill. Do not stage or apply a production snapshot
+   restore for a rehearsal. Its documented PITR workflow creates a sibling beside
+   the source, not automatically an isolated environment. For a drill, prefer an
+   approved existing logical archive restored into a separately provisioned,
+   isolated non-production target. Any PITR sibling needs separately approved
+   provisioning and verified network/application isolation before use. Verify
+   the current provider workflow and target identity with an authorized operator.
 2. For a logical backup workflow, an authorized operator may create a custom-format
    `pg_dump` using a least-privilege credential and restore it with `pg_restore`
    into that isolated target. This step reads source data and is outside this

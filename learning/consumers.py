@@ -16,6 +16,7 @@ from django.db import DatabaseError
 from redis.exceptions import RedisError
 
 from . import classroom_signaling as signaling
+from . import classroom_chat as chat
 from .classroom_events import participant_group, session_group
 
 
@@ -49,6 +50,7 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
             await self.terminate(4400)
             return
         self.room_group = session_group(self.session_id)
+        self.chat_group = chat.chat_group(self.session_id)
         try:
             result = await database_sync_to_async(signaling.prepare_connection)(
                 actor=self.user, session_id=self.session_id, connection_id=self.connection_id, channel_name=self.channel_name)
@@ -58,7 +60,7 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
             self.peer_group = participant_group(self.session_id, self.participant_id)
             if self.channel_layer is None:
                 raise RuntimeError("A Channels layer is required.")
-            for group in [self.room_group, self.peer_group]:
+            for group in [self.room_group, self.peer_group, self.chat_group]:
                 await self.channel_layer.group_add(group, self.channel_name)
                 self.joined_groups.append(group)
             if not await self.credential_valid():
@@ -127,9 +129,25 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
             if text_data is None or len(text_data.encode("utf-8")) > signaling.MAX_FRAME_BYTES:
                 await self.terminate(4400)
                 return
-            data = signaling.parse_message(text_data)
+            try:
+                chat_data = chat.parse_frame(text_data)
+            except (ValueError, TypeError, RecursionError, UnicodeError):
+                chat_data = None
+            data = None if chat_data is not None else signaling.parse_message(text_data)
         except (ValueError, TypeError, RecursionError, UnicodeError):
             await self.send_json({"type": "error", "code": "invalid_message", "detail": "Invalid classroom signaling message."})
+            return
+        if chat_data is not None:
+            try:
+                result = await database_sync_to_async(chat.send)(actor=self.user, session_id=self.session_id,
+                    data=chat_data, publish=False)
+                await self.channel_layer.group_send(self.chat_group, {
+                    "type": "classroom_chat", "session_id": self.session_id,
+                    "message_id": result["id"],
+                })
+                await self.send_json({"type": "chat", "message": result})
+            except (PermissionDenied, ValidationError, ObjectDoesNotExist):
+                await self.send_json({"type": "error", "code": "invalid_request", "detail": "The classroom chat message was rejected."})
             return
         if data["type"] == "ping":
             await self.send_json({"type": "pong"})
@@ -163,6 +181,16 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
             event["recipient_connection"], event["recipient_channel"])
         if current and (event.get("sender_deadline") is None or time.time() < event["sender_deadline"]):
             await self.send_json(event["payload"])
+
+    async def classroom_chat(self, event):
+        if event.get("session_id") != self.session_id or not await self.authorized():
+            return
+        try:
+            message = await database_sync_to_async(chat.delivery)(actor=self.user,
+                session_id=self.session_id, message_id=event["message_id"])
+        except (PermissionDenied, ValidationError, ObjectDoesNotExist):
+            return
+        await self.send_json({"type": "chat", "message": message})
 
     async def classroom_control(self, event):
         if event.get("session_id") == self.session_id and await self.authorized():

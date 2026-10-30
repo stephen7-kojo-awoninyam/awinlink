@@ -164,6 +164,8 @@ class ConversationSerializer(serializers.ModelSerializer):
         ]
 
     def get_unread_count(self, obj):
+        if hasattr(obj, '_page_unread_count'):
+            return obj._page_unread_count
         request = self.context.get("request")
         if not request:
             return 0
@@ -177,7 +179,7 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def get_last_message(self, obj):
 
-        message = obj.last_message
+        message = obj._page_last_message if hasattr(obj, '_page_last_message') else obj.last_message
 
         if not message:
             return None

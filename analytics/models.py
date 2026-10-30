@@ -117,6 +117,8 @@ class RecommendationHistory(models.Model):
 
     class Meta:
 
+        indexes = [models.Index(fields=['organization', 'opportunity', '-score', '-id'], name='rec_history_rank_page_idx')]
+
         ordering = [
             "-created_at"
         ]

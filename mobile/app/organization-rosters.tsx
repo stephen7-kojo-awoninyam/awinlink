@@ -20,8 +20,9 @@ export function TagCard({ entry, working, act }: { entry: TalentTag; working: bo
   }
   return <View style={[ui.card, { gap: 10 }]}>
     <Text style={{ fontWeight: '700' }}>{entry.name} · {entry.organization_name}</Text>
-    <Link href={{ pathname: '/organization-agreements', params: { entry: entry.id } }}>View roster agreements</Link>
+    {!!entry.talent_id && <Link href={{ pathname: '/organization-agreements', params: { entry: entry.id } }}>View roster agreements</Link>}
     <Text>{entry.tag} · {entry.roster || 'General roster'} · {entry.status}</Text>
+    {!!entry.profile_type && <Text>{entry.profile_type === 'COACH' ? 'Coach' : entry.profile_type === 'SCOUT' ? 'Scout' : 'Talent'} · {entry.category_name || 'Category not set'}</Text>}
     {!!entry.talent_details && <Text>{entry.talent_details}</Text>}
     {!!entry.talent_id && <Link href={{ pathname: '/talent/[id]', params: { id: entry.talent_id } }}>View talent profile</Link>}
     {entry.actions?.includes('LINK') && <TextInput accessibilityLabel="Link username" placeholder="Awinlink username" autoCapitalize="none" value={username} onChangeText={setUsername} maxLength={150} style={{ minHeight: 44, padding: 12, borderWidth: 1, borderColor: '#889', borderRadius: 8 }} />}
@@ -78,7 +79,7 @@ export default function OrganizationRosters() {
   const act = async (id: number, action: string, linkedUsername: string, reason: string) => mutate(() => updateTag(id, action, linkedUsername, reason));
   const input = (label: string, value: string, setter: (value: string) => void, maxLength: number) => <TextInput accessibilityLabel={label} placeholder={label} value={value} onChangeText={setter} maxLength={maxLength} style={{ borderWidth: 1, borderColor: '#889', borderRadius: 8, padding: 12 }} />;
   return <><Stack.Screen options={{ headerShown: true, title: 'Talent tags and rosters' }} /><Page title="Talent tags and rosters" eyebrow="ORGANIZATION AFFILIATIONS">
-    <Text>Confirm organization tags for your profile, or manage a team roster. Unclaimed entries stay private until linked and confirmed.</Text>
+    <Text>Confirm organization tags for your profile, or manage talents, coaches and scouts across all categories. Unclaimed entries stay private until linked and confirmed.</Text>
     {!!error && <Text accessibilityRole="alert">{error}</Text>}
     <Button title="Refresh rosters" disabled={working || loading} onPress={() => void load()} />
     {loading ? <ActivityIndicator /> : <>
@@ -90,7 +91,7 @@ export default function OrganizationRosters() {
       {selected && <>
         <Text>{selected.name}</Text>
         {workspaces.find(space => space.id === selected.id)?.can_manage && <View style={[ui.card, { gap: 10 }]}>
-          <Text>Add talent; leave username empty for an unclaimed entry.</Text>
+          <Text>Add a talent, coach or scout; leave username empty for an unclaimed entry.</Text>
           {input('Talent name', name, setName, 200)}{input('Talent details', details, setDetails, 300)}
           {input('Tag', tag, setTag, 80)}{input('Roster', roster, setRoster, 100)}{input('Awinlink username (optional)', username, setUsername, 150)}
           <Button title="Add talent" disabled={working || !name.trim() || !tag.trim()} onPress={() => void mutate(async () => { await apiRequest(`organizations/${selected.id}/roster/`, { method: 'POST', body: { name: name.trim(), talent_details: details.trim(), tag: tag.trim(), roster: roster.trim(), username: username.trim() } }); setName(''); setDetails(''); setTag(''); setRoster(''); setUsername(''); })} />
@@ -99,5 +100,7 @@ export default function OrganizationRosters() {
         {entries.map(entry => <TagCard key={entry.id} entry={entry} working={working} act={act} />)}
       </>}
     </>}
+
+
   </Page></>;
 }

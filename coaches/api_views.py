@@ -1,3 +1,8 @@
+from accounts.roles import active_user_has_role
+from api.search import BoundedSearchFilter, TALENT_SEARCH_FIELDS
+from django.utils.decorators import method_decorator
+from talents.visibility import public_talent_profiles_for
+from django.views.decorators.cache import never_cache
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, status
@@ -6,7 +11,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from talents.models import TalentProfile
-from api.serializers import TalentProfileSerializer
+from api.serializers import TalentProfileSerializer, SpecialistTalentProfileSerializer
+from django.db.models import OuterRef, Subquery
 
 from .models import (
     CoachProfile,
@@ -27,13 +33,14 @@ from .serializers import (
 # MY COACH PROFILE
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyCoachProfileAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
 
-        if request.user.role != "COACH":
+        if not active_user_has_role(request.user, "COACH"):
 
             return Response(
                 {
@@ -56,13 +63,14 @@ class MyCoachProfileAPIView(APIView):
 # UPDATE MY COACH PROFILE
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyCoachProfileUpdateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def patch(self, request):
 
-        if request.user.role != "COACH":
+        if not active_user_has_role(request.user, "COACH"):
 
             return Response(
                 {
@@ -101,27 +109,34 @@ class MyCoachProfileUpdateAPIView(APIView):
 # TALENT DISCOVERY
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class CoachTalentListAPIView(generics.ListAPIView):
+    filter_backends = [BoundedSearchFilter]
+    search_fields = TALENT_SEARCH_FIELDS
 
     permission_classes = [IsAuthenticated]
 
-    serializer_class = TalentProfileSerializer
+    serializer_class = SpecialistTalentProfileSerializer
 
     def get_queryset(self):
 
-        if self.request.user.role != "COACH":
+        if not active_user_has_role(self.request.user, "COACH"):
 
-            return TalentProfile.objects.none()
+            return public_talent_profiles_for(self.request.user).none()
 
-        return TalentProfile.objects.select_related(
-            "user"
+        return public_talent_profiles_for(self.request.user).select_related(
+            "user", "other_profile"
         ).prefetch_related(
             "skills",
             "domains",
+            "achievements", "certifications", "experiences",
         ).filter(
             profile_visibility="PUBLIC"
         ).order_by(
             "-created_at"
+        ).annotate(
+            _viewer_bookmark_id=Subquery(CoachTalentBookmark.objects.filter(coach__user=self.request.user, talent_id=OuterRef('pk')).values('pk')[:1]),
+            _viewer_follow_id=Subquery(CoachTalentFollow.objects.filter(coach__user=self.request.user, talent_id=OuterRef('pk')).values('pk')[:1]),
         )
 
 
@@ -129,13 +144,14 @@ class CoachTalentListAPIView(generics.ListAPIView):
 # VIEW TALENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class CoachViewTalentAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, talent_id):
 
-        if request.user.role != "COACH":
+        if not active_user_has_role(request.user, "COACH"):
 
             return Response(
                 {
@@ -153,7 +169,7 @@ class CoachViewTalentAPIView(APIView):
         )
 
         talent = get_object_or_404(
-            TalentProfile,
+            public_talent_profiles_for(self.request.user),
             id=talent_id,
             profile_visibility="PUBLIC",
         )
@@ -175,6 +191,7 @@ class CoachViewTalentAPIView(APIView):
 # MY TALENT VIEWS
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyCoachTalentViewsAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -183,7 +200,7 @@ class MyCoachTalentViewsAPIView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        if self.request.user.role != "COACH":
+        if not active_user_has_role(self.request.user, "COACH"):
 
             return CoachTalentView.objects.none()
 
@@ -199,7 +216,7 @@ class MyCoachTalentViewsAPIView(generics.ListAPIView):
 
         return CoachTalentView.objects.filter(
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(self.request.user),
         ).select_related(
             "talent",
             "talent__user"
@@ -210,13 +227,14 @@ class MyCoachTalentViewsAPIView(generics.ListAPIView):
 # FOLLOW TALENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class CoachFollowTalentAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, talent_id):
 
-        if request.user.role != "COACH":
+        if not active_user_has_role(request.user, "COACH"):
 
             return Response(
                 {
@@ -234,7 +252,7 @@ class CoachFollowTalentAPIView(APIView):
         )
 
         talent = get_object_or_404(
-            TalentProfile,
+            public_talent_profiles_for(self.request.user),
             id=talent_id,
             profile_visibility="PUBLIC",
         )
@@ -256,13 +274,14 @@ class CoachFollowTalentAPIView(APIView):
 # UNFOLLOW TALENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class CoachUnfollowTalentAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, talent_id):
 
-        if request.user.role != "COACH":
+        if not active_user_has_role(request.user, "COACH"):
 
             return Response(
                 {
@@ -296,6 +315,7 @@ class CoachUnfollowTalentAPIView(APIView):
 # MY FOLLOWED TALENTS
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyFollowedTalentsAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -304,7 +324,7 @@ class MyFollowedTalentsAPIView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        if self.request.user.role != "COACH":
+        if not active_user_has_role(self.request.user, "COACH"):
 
             return CoachTalentFollow.objects.none()
 
@@ -320,7 +340,7 @@ class MyFollowedTalentsAPIView(generics.ListAPIView):
 
         return CoachTalentFollow.objects.filter(
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(self.request.user),
         ).select_related(
             "talent",
             "talent__user"
@@ -331,13 +351,14 @@ class MyFollowedTalentsAPIView(generics.ListAPIView):
 # BOOKMARK TALENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class CoachBookmarkTalentAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, talent_id):
 
-        if request.user.role != "COACH":
+        if not active_user_has_role(request.user, "COACH"):
 
             return Response(
                 {
@@ -355,7 +376,7 @@ class CoachBookmarkTalentAPIView(APIView):
         )
 
         talent = get_object_or_404(
-            TalentProfile,
+            public_talent_profiles_for(self.request.user),
             id=talent_id,
             profile_visibility="PUBLIC",
         )
@@ -395,13 +416,14 @@ class CoachBookmarkTalentAPIView(APIView):
 # UPDATE BOOKMARK
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class CoachBookmarkUpdateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, bookmark_id):
 
-        if request.user.role != "COACH":
+        if not active_user_has_role(request.user, "COACH"):
 
             return Response(
                 {
@@ -422,7 +444,7 @@ class CoachBookmarkUpdateAPIView(APIView):
             CoachTalentBookmark,
             id=bookmark_id,
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(self.request.user),
         )
 
         serializer = CoachTalentBookmarkSerializer(
@@ -447,13 +469,14 @@ class CoachBookmarkUpdateAPIView(APIView):
 # DELETE BOOKMARK
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class CoachBookmarkDeleteAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, bookmark_id):
 
-        if request.user.role != "COACH":
+        if not active_user_has_role(request.user, "COACH"):
 
             return Response(
                 {
@@ -490,6 +513,7 @@ class CoachBookmarkDeleteAPIView(APIView):
 # MY BOOKMARKS
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyCoachBookmarksAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -498,7 +522,7 @@ class MyCoachBookmarksAPIView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        if self.request.user.role != "COACH":
+        if not active_user_has_role(self.request.user, "COACH"):
 
             return CoachTalentBookmark.objects.none()
 
@@ -514,7 +538,7 @@ class MyCoachBookmarksAPIView(generics.ListAPIView):
 
         return CoachTalentBookmark.objects.filter(
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(self.request.user),
         ).select_related(
             "talent",
             "talent__user"

@@ -2,6 +2,7 @@ from django.urls import path
 
 from .api_views import (
     MyConversationsAPIView,
+    UnreadMessageCountAPIView,
     ConversationCreateAPIView,
     ConversationDetailAPIView,
     ConversationMessagesAPIView,
@@ -23,6 +24,8 @@ app_name = "messaging_api"
 
 
 urlpatterns = [
+
+    path('conversations/unread-count/', UnreadMessageCountAPIView.as_view(), name='unread_count'),
 
     path("calls/ice-servers/", CallIceServersAPIView.as_view(), name="call_ice_servers"),
 

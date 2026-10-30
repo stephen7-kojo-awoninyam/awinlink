@@ -28,7 +28,7 @@
 
                     <p class="mb-1">
                         <strong>Event:</strong>
-                        {{ certificate.event.title }}
+                        {{ certificate.visible_event_title|default:"Event details are private" }}
                     </p>
 
                     <p class="mb-1">

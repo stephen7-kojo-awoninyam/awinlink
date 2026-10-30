@@ -7,7 +7,8 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 function compile(source) { return ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText; }
 
-function nativeScreen({ incoming = false, media = null, accepting = null, ending = null, iceFailure = false } = {}) {
+function nativeScreen({ incoming = false, media = null, accepting = null, ending = null, iceFailure = false,
+  iceServers = [{ urls: 'turn:relay.test:3478', username: 'fixture', credential: 'fixture' }], icePolicy = 'relay' } = {}) {
   const effects = [], timers = new Map(), sockets = [], peers = [], requests = [], alerts = [];
   const tracks = [{ stopped: false, stop() { this.stopped = true; }, enabled: true }];
   const stream = { getTracks: () => tracks, getAudioTracks: () => tracks, getVideoTracks: () => [] };
@@ -28,8 +29,10 @@ function nativeScreen({ incoming = false, media = null, accepting = null, ending
   class Stream { tracks = []; getTracks() { return this.tracks; } addTrack(track) { this.tracks.push(track); } }
   const lifecycle = { callHasEnded: () => false, finishCallRequest: (_id, work) => work(), onCallEnded: fn => { ended = fn; return () => {}; } };
   const exports = {};
+  const iceModule = {};
+  vm.runInNewContext(compile(fs.readFileSync(require.resolve('../src/calls/iceServers.ts'), 'utf8')), { exports: iceModule });
   vm.runInNewContext(compile(fs.readFileSync(require.resolve('../app/call/[id].tsx'), 'utf8')), {
-    exports, WebSocket: Socket, console: { info() {} },
+    exports, __DEV__: false, WebSocket: Socket, console: { info() {} },
     setTimeout: fn => { const id = timers.size + 1; timers.set(id, fn); return id; },
     setInterval: fn => { const id = timers.size + 1; timers.set(id, fn); return id; },
     clearTimeout: id => timers.delete(id), clearInterval: id => timers.delete(id),
@@ -41,8 +44,8 @@ function nativeScreen({ incoming = false, media = null, accepting = null, ending
       '@/src/auth/AuthProvider': { useAuth: () => ({ user: { id: incoming ? 2 : 1 } }) },
       '@/src/api/socketAuthentication': { socketAccessToken: async () => 'token', maintainSocketAuthentication() {} },
       '@/src/api/client': { getAccessToken: async () => 'token', getWebSocketUrl: value => value,
-        apiRequest: async (url, options) => { requests.push(url); if (iceFailure && url.endsWith('/ice-servers/')) throw new Error('Call connectivity is temporarily unavailable.'); if (url.endsWith('/accept/')) return accepting?.promise || { id: 42, participants: [] }; if (url.endsWith('/end/')) return ending?.promise || {}; if (url.endsWith('/incoming/')) return [{ id: 42 }]; return { ice_servers: [], ice_transport_policy: 'relay' }; } },
-      '@/src/calls/iceServers': { validatedIceServers: () => [] }, '@/src/theme': { colors: {} },
+        apiRequest: async (url, options) => { requests.push(url); if (iceFailure && url.endsWith('/ice-servers/')) throw new Error('Call connectivity is temporarily unavailable.'); if (url.endsWith('/accept/')) return accepting?.promise || { id: 42, participants: [] }; if (url.endsWith('/end/')) return ending?.promise || {}; if (url.endsWith('/incoming/')) return [{ id: 42 }]; return { ice_servers: iceServers, ice_transport_policy: icePolicy }; } },
+      '@/src/calls/iceServers': iceModule, '@/src/theme': { colors: {} },
       '@/src/calls/nativeCallUI': { bindNativeCall: (_id, _in, _name, _video, value) => { controls = value; return () => {}; }, endNativeCall() {}, nativeCallConnected() {}, syncNativeMute() {} },
       '@/src/calls/callLifecycle': lifecycle,
     })[name],
@@ -225,4 +228,22 @@ test('native ICE configuration failure shows an alert and ends without capturing
   assert.equal(screen.captures(), 0); assert.equal(screen.sockets.length, 0);
   assert.equal(screen.alerts.length, 1); assert.equal(screen.back(), 1);
   assert.ok(screen.requests.some(url => url.endsWith('/end/')));
+});
+
+test('native relay-only startup refuses missing TURN and invalid policies before media capture', async () => {
+  for (const options of [{ iceServers: [] }, { iceServers: [{ urls: 'stun:stun.test' }] }, { icePolicy: 'invalid' }]) {
+    const screen = nativeScreen(options); await flush();
+    assert.equal(screen.captures(), 0); assert.equal(screen.sockets.length, 0);
+    assert.equal(screen.alerts.length, 1); assert.equal(screen.back(), 1);
+    screen.unmount();
+  }
+});
+
+test('native all policy preserves direct-call startup without TURN', async () => {
+  const screen = nativeScreen({ iceServers: [], icePolicy: 'all' }); await flush();
+  assert.equal(screen.captures(), 1); assert.equal(screen.alerts.length, 0);
+  const socket = screen.sockets[0]; socket.onopen();
+  socket.onmessage({ data: JSON.stringify({ type: 'participant_joined', user_id: 2 }) }); await flush();
+  assert.equal(screen.peers[0].config.iceTransportPolicy, 'all');
+  screen.unmount();
 });

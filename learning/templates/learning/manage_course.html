@@ -3,6 +3,7 @@
 {% block title %}Manage {{ course.title }} | Awinlink{% endblock %}
 {% block learning_nav %}{% include "learning/nav.html" with active="studio" %}{% endblock %}
 {% block learning_content %}
+<div class="lc-studio-dashboard">
 <a class="lc-back" href="{% learning_url 'my_courses' %}">
 <i class="bi bi-arrow-left" aria-hidden="true">
 </i> Creator studio</a>
@@ -11,6 +12,7 @@
 <span class="lc-eyebrow">Shape your learning experience</span>
 <h1>{{ course.title }}</h1>
 <p>{{ course.category.name }} &middot; {{ course.get_level_display }} &middot; {{ course.duration }} min</p>
+<p class="lc-studio-summary">{{ lessons|length }} lesson{{ lessons|length|pluralize }} · {% if submission_checklist.1.ready %}Ready to review{% else %}Build your curriculum{% endif %}</p>
 </div>
 <span class="lc-status lc-status--{{ course.status|lower }}">{{ course.get_status_display }}</span>
 </header>
@@ -22,15 +24,17 @@
 <section class="lc-card">
 <div class="lc-results mt-0">
 <h2>Build your lesson playlist</h2>{% if course.status == "DRAFT" or course.status == "REJECTED" %}<a class="lc-button" href="{% url 'add_lesson' course.id %}">Add lesson</a>{% endif %}</div>
+{% if course.status == "DRAFT" or course.status == "REJECTED" %}<form method="POST" action="{% url 'create_course_module' course.id %}" class="lc-card">{% csrf_token %}<h3>Add optional section</h3><label for="new-module-title">Section title</label><input id="new-module-title" name="title" maxlength="180" required><label for="new-module-description">Description (optional)</label><textarea id="new-module-description" name="description" rows="2"></textarea><button class="lc-button mt-3" type="submit">Add section</button></form>{% endif %}
+{% for module in modules %}<form method="POST" action="{% url 'edit_course_module' module.id %}" class="lc-card">{% csrf_token %}<label for="module-title-{{ module.id }}">Section title</label><input id="module-title-{{ module.id }}" name="title" value="{{ module.title }}" maxlength="180" required><label for="module-order-{{ module.id }}">Section order</label><input id="module-order-{{ module.id }}" name="order" type="number" min="1" value="{{ module.order }}" required>{% if course.status == "DRAFT" or course.status == "REJECTED" %}<button class="lc-button lc-button-secondary mt-2" type="submit">Save section</button>{% else %}<span class="lc-status">Read only</span>{% endif %}</form>{% endfor %}
 {% for lesson in lessons %}<article class="lc-card lc-studio-row">
 <div>
-<span class="lc-eyebrow">Lesson {{ lesson.order }} &middot; {{ lesson.duration }} min</span>
+<span class="lc-eyebrow">{% if lesson.module %}{{ lesson.module.title }} &middot; {% endif %}Lesson {{ lesson.order }} &middot; {{ lesson.duration }} min</span>
 <h3 class="mt-2">{{ lesson.title }}</h3>
-<p class="lc-muted">{{ lesson.description|truncatewords:25 }}</p>{% if lesson.video %}<p class="lc-help">Video uploaded</p>{% endif %}</div>
+<p class="lc-muted">{{ lesson.description|truncatewords:25 }}</p>{% if lesson.video %}<p class="lc-help">Video uploaded</p>{% endif %}{% if lesson.quiz %}<p class="lc-studio-quiz">Quiz · {{ lesson.quiz.questions.count }} question{{ lesson.quiz.questions.count|pluralize }} · pass {{ lesson.quiz.passing_score }}%{% if not lesson.quiz.questions.exists %} · Add questions before publishing{% endif %}</p>{% else %}<p class="lc-help">Quiz optional</p>{% endif %}</div>
 <div class="lc-actions">
 {% if course.status == "DRAFT" or course.status == "REJECTED" %}<a class="lc-button lc-button-secondary" href="{% url 'edit_lesson' lesson.id %}">Edit</a>
-<form method="POST" action="{% url 'delete_lesson' lesson.id %}" onsubmit="return confirm('Delete this lesson?');">{% csrf_token %}<button class="lc-button lc-button-danger" type="submit">Delete</button>
-</form>{% if lesson.quiz %}<a class="lc-button lc-button-secondary" href="{% url 'manage_quiz' lesson.quiz.id %}">Manage quiz</a>{% else %}<a class="lc-button lc-button-secondary" href="{% url 'create_quiz' lesson.id %}">Create quiz</a>{% endif %}{% else %}<span class="lc-status">Read only</span>{% if lesson.quiz %}<a class="lc-text-link" href="{% url 'manage_quiz' lesson.quiz.id %}">View quiz</a>{% endif %}{% endif %}</div>
+{% if lesson.has_learner_history %}<span class="lc-help">Learner history exists · deletion protected</span>{% else %}<form method="POST" action="{% url 'delete_lesson' lesson.id %}" onsubmit="return confirm('Delete this lesson?');">{% csrf_token %}<button class="lc-button lc-button-danger" type="submit">Delete</button>
+</form>{% endif %}{% if lesson.quiz %}<a class="lc-button lc-button-secondary" href="{% url 'manage_quiz' lesson.quiz.id %}">Manage quiz</a>{% else %}<a class="lc-button lc-button-secondary" href="{% url 'create_quiz' lesson.id %}">Create quiz</a>{% endif %}{% else %}<span class="lc-status">Read only</span>{% if lesson.quiz %}<a class="lc-text-link" href="{% url 'manage_quiz' lesson.quiz.id %}">View quiz</a>{% endif %}{% endif %}</div>
 </article>{% empty %}<div class="lc-empty">
 <i class="bi bi-play-circle" aria-hidden="true">
 </i>
@@ -39,10 +43,12 @@
 </div>{% endfor %}</section>
 </div>
 <aside>
-<section class="lc-card">{% include "learning/course_cover.html" %}<h2 class="mt-4">Before you share it</h2>
-<p class="lc-prose">Use a clear course description, helpful lesson titles, and accessible resources. Add quizzes where they support the learning.</p>
-<div class="lc-notice">{% if course.status == "PENDING" %}Your course is waiting for administrator approval. Content is locked during review.{% elif course.status == "APPROVED" %}Your course is published. Content is read only.{% else %}Add at least one lesson, then submit the course for approval.{% endif %}</div>
+<section class="lc-card lc-studio-checklist">{% include "learning/course_cover.html" %}<h2 class="mt-4">Publishing checklist</h2>
+{% for check in submission_checklist %}<div class="lc-studio-check"><span class="lc-check-icon {% if check.ready %}is-ready{% endif %}" aria-hidden="true">{% if check.ready %}✓{% else %}!{% endif %}</span><span><strong>{{ check.label }}</strong><small>{{ check.detail }}</small></span></div>{% endfor %}
+<div class="lc-notice">{% if course.status == "PENDING" %}Your course is waiting for administrator approval. Content is locked during review.{% elif course.status == "APPROVED" %}Your course is published. Content is read only.{% elif course.status == "REJECTED" %}Review feedback is shown above. Update the requested items and resubmit when the checklist is ready.{% else %}Complete the checklist, preview the learner view, then submit for approval.{% endif %}</div>
+{% if course.status != "PENDING" and course.status != "APPROVED" %}<a class="lc-button lc-button-secondary w-100 mt-3{% if not lessons %} is-disabled{% endif %}" {% if lessons %}href="{% url 'course_detail' course.slug %}"{% else %}aria-disabled="true"{% endif %}>Preview as learner</a>{% endif %}
 </section>
 </aside>
+</div>
 </div>
 {% endblock %}

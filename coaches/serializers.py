@@ -123,6 +123,7 @@ class CoachTalentFollowSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "coach",
+            "talent",
             "created_at",
         ]
 
@@ -159,6 +160,7 @@ class CoachTalentBookmarkSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "coach",
+            "talent",
             "created_at",
             "updated_at",
         ]

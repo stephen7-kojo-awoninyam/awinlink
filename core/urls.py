@@ -1,10 +1,10 @@
 from django.urls import path
 from . import views
 from .public_views import public_page
-from django.contrib.auth.views import LoginView
+from accounts.login_views import SharedLimitLoginView
 
 urlpatterns = [
-    path('delete-account/sign-in/', LoginView.as_view(template_name='core/deletion_login.html', next_page='/delete-account/'), name='deletion_login'),
+    path('delete-account/sign-in/', SharedLimitLoginView.as_view(template_name='core/deletion_login.html', next_page='/delete-account/'), name='deletion_login'),
     path('privacy/', public_page, {'page': 'privacy'}, name='privacy'),
     path('terms/', public_page, {'page': 'terms'}, name='terms'),
     path('community-guidelines/', public_page, {'page': 'community-guidelines'}, name='community_guidelines'),

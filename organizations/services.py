@@ -173,13 +173,14 @@ def revoke_team_invitation(*, invitation, actor):
 
 
 @transaction.atomic
-def list_team_members(*, organization, actor):
+def list_team_members(*, organization, actor, paginate=None):
     """Return the scoped roster, including suspended and removed memberships."""
     organization = Organization.objects.select_for_update().get(pk=organization.pk)
     _require_owner(actor, organization)
     # Evaluate inside the permission-checked transaction, rather than returning
     # a lazy queryset whose data is fetched after the owner check.
-    return list(organization.memberships.select_related("user").order_by("pk"))
+    members = organization.memberships.select_related("user").order_by("pk")
+    return list(paginate(members) if paginate else members)
 
 
 def _locked_team_member(organization, actor, membership):

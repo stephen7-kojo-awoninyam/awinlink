@@ -1,18 +1,22 @@
 from django import template
 from django.core.paginator import Paginator
 from django.http import QueryDict
-from organizations.roster_services import public_entries
+from organizations.roster_services import public_entries, recipient_filter
 
 register = template.Library()
 
 
 @register.inclusion_tag("organizations/roster_badges.html", takes_context=True)
-def organization_talent_badges(context, talent_id=None, organization_id=None):
+def organization_talent_badges(context, talent_id=None, organization_id=None, user_id=None):
     request = context.get("request")
     rows = public_entries(request.user if request else None)
-    if talent_id is not None:
+    if not talent_id and not organization_id and not user_id:
+        rows = rows.none()
+    if user_id:
+        rows = rows.filter(recipient_filter(user_id))
+    if talent_id:
         rows = rows.filter(talent_id=talent_id)
-    if organization_id is not None:
+    if organization_id:
         rows = rows.filter(organization_id=organization_id)
     page = Paginator(rows, 50).get_page(request.GET.get("roster_page", 1) if request else 1)
     def page_url(number):

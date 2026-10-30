@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 const flush = () => new Promise(resolve => setImmediate(resolve));
-function browser(userId = 1) {
+function browser(userId = 1, callDebug = false) {
   const peers = [], sent = [], elements = new Map(), diagnostics = [];
   class Stream { tracks = []; getTracks() { return this.tracks; } addTrack(track) { this.tracks.push(track); } }
   class Peer {
@@ -29,8 +29,8 @@ function browser(userId = 1) {
   elements.set('remoteVideos', element('div'));
   elements.set('awinlinkCallContainer', element('section'));
   const context = vm.createContext({
-    console: { log() {}, warn() {}, error() {}, info: (...args) => diagnostics.push(args) },
-    window: { awinlinkCurrentUserId: userId, location: { host: 'app.test' } }, location: { protocol: 'https:' },
+    console: { log() {}, warn() {}, error() {}, info() {}, debug: (...args) => diagnostics.push(args) },
+    window: { awinlinkCurrentUserId: userId, AWINLINK_CALL_DEBUG: callDebug, location: { host: 'app.test' } }, location: { protocol: 'https:' },
     document: { cookie: '', getElementById: id => elements.get(id), createElement: element, querySelectorAll: () => [] },
     RTCPeerConnection: Peer, MediaStream: Stream, WebSocket: { OPEN: 1 },
     fetch: async () => ({ ok: true, json: async () => ({ ice_transport_policy: 'relay', ice_servers: [ { urls: 'stun:stun.test' }, { urls: ['turn:relay.test:3478', 'turns:relay.test:5349'], username: 'temporary', credential: 'secret' } ] }) }),
@@ -44,7 +44,7 @@ function browser(userId = 1) {
 }
 
 test('web uses authenticated TURN configuration and canonical signaling for mobile', async () => {
-  const call = browser(); await call.run('loadCallIceServers()');
+  const call = browser(1, true); await call.run('loadCallIceServers()');
   await call.signal({ type: 'participant_joined', user_id: 2 });
   const peer = call.peers[0];
   assert.equal(peer.config.iceServers[1].credential, 'secret');
@@ -99,7 +99,7 @@ test('mobile ICE validation preserves TURN credentials and rejects unusable URLs
 });
 
 test('web offerer drains ICE after mobile answer and reports media counters without addresses', async () => {
-  const call = browser(); await call.signal({ type: 'ready', sender_id: 2, to_user_id: 1 });
+  const call = browser(1, true); await call.signal({ type: 'ready', sender_id: 2, to_user_id: 1 });
   await call.signal({ type: 'ice_candidate', sender_id: 2, candidate: { candidate: 'early-remote' } });
   await call.signal({ type: 'answer', sender_id: 2, description: { type: 'answer', sdp: 'mobile-answer' } });
   const peer = call.peers[0]; assert.equal(peer.candidates.length, 1);
@@ -118,9 +118,39 @@ test('web offerer drains ICE after mobile answer and reports media counters with
 });
 
 test('web refuses failed ICE configuration without exposing response credentials', async () => {
-  const call = browser();
+  const call = browser(1, true);
   call.run("fetch = async () => ({ ok: false, json: async () => ({ credential: 'private-value' }) });");
   await assert.rejects(call.run('loadCallIceServers()'), /Unable to load call network configuration/);
   assert.equal(call.peers.length, 0);
   assert.equal(JSON.stringify(call.run('window.getAwinlinkCallDiagnostics()')).includes('private-value'), false);
+});
+
+test('web preserves direct ICE by default and rejects broken relay privacy configuration', async () => {
+  for (const policy of [undefined, 'all', 'relay', 'invalid']) {
+    const call = browser();
+    call.run(`fetch = async () => ({ ok: true, json: async () => ({ ice_transport_policy: ${JSON.stringify(policy) || 'undefined'}, ice_servers: [{ urls: 'stun:stun.test' }] }) });`);
+    if (policy === 'relay' || policy === 'invalid') {
+      await assert.rejects(call.run('loadCallIceServers()'), /policy|Relay/);
+      assert.equal(call.peers.length, 0);
+    } else {
+      await call.run('loadCallIceServers()');
+      await call.signal({ type: 'participant_joined', user_id: 2 });
+      assert.equal(call.peers[0].config.iceTransportPolicy, 'all');
+    }
+  }
+});
+
+test('web diagnostics stay disabled by default and never retain call or peer IDs when enabled', async () => {
+  const call = browser();
+  await call.run('loadCallIceServers()');
+  await call.signal({ type: 'participant_joined', user_id: 987654 });
+  assert.equal(call.run('window.getAwinlinkCallDiagnostics()').length, 0);
+  assert.equal(call.diagnostics.length, 0);
+
+  const debug = browser(1, true);
+  await debug.signal({ type: 'participant_joined', user_id: 987654 });
+  const rows = JSON.stringify(debug.run('window.getAwinlinkCallDiagnostics()'));
+  assert.equal(rows.includes('987654'), false);
+  assert.equal(rows.includes('callId'), false);
+  assert.equal(rows.includes('peerId'), false);
 });

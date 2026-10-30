@@ -2,18 +2,26 @@
 {% block title %}Discover learning | Awinlink{% endblock %}
 {% block learning_nav %}{% include "learning/nav.html" with active="discover" %}{% endblock %}
 {% block learning_content %}
-<section class="lc-hero">
-<header class="lc-heading">
+<div class="lc-academy">
+<section class="lc-hero lc-home-hero" aria-labelledby="learning-home-title">
 <div>
-<span class="lc-eyebrow">Stay curious. Keep growing.</span>
-<h1>A little inspiration.<br>A whole new skill.</h1>
-<p>Discover ideas, learn from your community, and turn your talent into something more.</p>
+<span class="lc-eyebrow">AWINLINK LEARNING</span>
+<h1 id="learning-home-title">Build your skills.<br><span>Shape what comes next.</span></h1>
+<p>Learn at your pace, put new ideas into practice, and grow alongside your community.</p>
+<div class="lc-actions"><a class="lc-button" href="#explore-courses">Explore courses <i class="bi bi-arrow-right" aria-hidden="true"></i></a><a class="lc-text-link" href="{% url 'my_learning' %}">My learning</a></div>
 </div>
-<a class="lc-button lc-button-secondary" href="{% url 'my_learning' %}">Keep learning <i class="bi bi-arrow-right" aria-hidden="true">
-</i>
-</a>
-</header>
+<div class="lc-hero-path" aria-hidden="true"><span class="lc-path-label">YOUR NEXT CHAPTER</span><div><span>01</span><strong>Discover a new perspective</strong></div><div><span>02</span><strong>Learn. Practise. Make progress.</strong></div><div><span>03</span><strong>Put your talent to work</strong></div><p>Small steps. Lasting skills.</p></div>
 </section>
+<section class="lc-home-section" aria-labelledby="continue-title">
+<div class="lc-results"><div><span class="lc-eyebrow">PICK UP WHERE YOU LEFT OFF</span><h2 id="continue-title">Continue Learning</h2></div><a class="lc-text-link" href="{% url 'my_learning' %}">View my learning <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+<div class="lc-continue-grid">{% for enrollment in continue_enrollments %}<article class="lc-card lc-continue-card">
+<span class="lc-eyebrow">{{ enrollment.course.category.name }}</span><h3>{{ enrollment.course.title }}</h3><p class="lc-muted">{{ enrollment.completed_lessons }} of {{ enrollment.total_lessons }} lessons complete</p>
+<div class="lc-progress"><label for="home-progress-{{ enrollment.id }}">Your progress <strong>{{ enrollment.progress_percentage }}%</strong></label><progress id="home-progress-{{ enrollment.id }}" value="{{ enrollment.progress_percentage }}" max="100">{{ enrollment.progress_percentage }}%</progress></div>
+<a class="lc-button lc-button-secondary" href="{% url 'course_detail' enrollment.course.slug %}">Continue learning <span class="visually-hidden">{{ enrollment.course.title }}</span><i class="bi bi-arrow-right" aria-hidden="true"></i></a></article>
+{% empty %}<div class="lc-card lc-start-card"><span class="lc-start-icon" aria-hidden="true"><i class="bi bi-play-circle"></i></span><div><h3>Your next skill starts here</h3><p class="lc-muted">Explore a course to begin. Your progress will be waiting here when you return.</p></div><a class="lc-button lc-button-secondary" href="#explore-courses">Find a course</a></div>{% endfor %}</div>
+</section>
+<section class="lc-live-banner" aria-labelledby="live-title"><span class="lc-start-icon" aria-hidden="true"><i class="bi bi-camera-video"></i></span><div><span class="lc-eyebrow">BETTER TOGETHER</span><h2 id="live-title">Live sessions</h2><p class="lc-muted">Explore your classrooms and find sessions with your learning community.</p></div><a class="lc-button lc-button-secondary" href="{% url 'learning_classrooms' %}">View live classrooms <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a></section>
+<section class="lc-home-section" id="explore-courses" aria-labelledby="explore-title"><div class="lc-results"><div><span class="lc-eyebrow">MAKE ROOM FOR SOMETHING NEW</span><h2 id="explore-title">Explore Courses</h2></div><span>{{ courses|length }} course{{ courses|length|pluralize }}</span></div>
 <form method="GET" class="lc-card lc-search-form">
 <div class="lc-search-grid">
 <div>
@@ -50,10 +58,6 @@
 <i class="bi bi-lightning-charge" aria-hidden="true">
 </i>
 </span>{{ category.name }}</a>{% endfor %}</nav>
-<div class="lc-results">
-<h2>Fresh perspectives, practical skills</h2>
-<span>{{ courses|length }} course{{ courses|length|pluralize }}</span>
-</div>
 <div class="lc-grid">{% for course in courses %}{% include "learning/course_card.html" %}{% empty %}<section class="lc-card lc-empty">
 <i class="bi bi-search" aria-hidden="true">
 </i>
@@ -61,4 +65,6 @@
 <p>Try another keyword, category, or level.</p>
 <a class="lc-button lc-button-secondary" href="{% url 'courses' %}">Reset filters</a>
 </section>{% endfor %}</div>
+</section>
+</div>
 {% endblock %}

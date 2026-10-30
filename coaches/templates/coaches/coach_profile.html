@@ -1,9 +1,12 @@
 
 {% extends "base.html" %}
+{% load roster_tags %}
 
 {% block content %}
 
 <div class="container py-5">
+    {% organization_talent_badges user_id=profile.user_id %}
+    <a href="{% url 'organization_talent_rosters' %}" class="btn btn-light">Manage organization tags</a>
 
     <div class="row justify-content-center">
 

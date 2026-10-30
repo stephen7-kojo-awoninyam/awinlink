@@ -90,6 +90,9 @@ urlpatterns = [
         name="manage_course"
     ),
 
+    path("course/<int:course_id>/module/add/", views.create_course_module, name="create_course_module"),
+    path("module/<int:module_id>/edit/", views.edit_course_module, name="edit_course_module"),
+
     path(
         "course/<int:course_id>/lesson/add/",
         views.add_lesson,

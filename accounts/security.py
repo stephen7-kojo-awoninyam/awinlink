@@ -4,8 +4,8 @@ from unicodedata import normalize
 
 from django.conf import settings
 from django.core.cache import caches
-from django.core.cache.backends.locmem import LocMemCache
-from django.core.cache.backends.dummy import DummyCache
+from django.core.cache.backends.redis import RedisCache
+from django.core.cache.backends.memcached import BaseMemcachedCache
 from django.utils.crypto import salted_hmac
 from rest_framework.exceptions import APIException, Throttled
 from rest_framework.throttling import BaseThrottle
@@ -18,16 +18,26 @@ class AuthenticationUnavailable(APIException):
     default_detail = 'Authentication protection is temporarily unavailable. Please try again later.'
 
 
+def is_shared_auth_cache(cache):
+    # File/database caches and arbitrary cache backends do not guarantee atomic
+    # counters across workers. These supported backends provide add/incr semantics.
+    return isinstance(cache, (RedisCache, BaseMemcachedCache))
+
+
 def enforce_auth_limit(request, scope, identifier='', *, dimensions=None):
-    policy = settings.AUTH_RATE_LIMITS[scope]
     values = {'ip': client_address(request)}
     if isinstance(identifier, str) and identifier.strip():
-        values['identity'] = normalize('NFKC', identifier.strip()).casefold()[:256]
+        values['identity'] = normalize('NFKC', identifier.strip()[:256]).casefold()[:256]
     elif getattr(request.user, 'is_authenticated', False):
         values['identity'] = 'user:' + str(request.user.pk)
     try:
+        policy = settings.AUTH_RATE_LIMITS[scope]
+        if not policy or any(dimension not in ('ip', 'identity') or len(budget) != 2 or
+                any(type(value) is not int or value <= 0 for value in budget)
+                for dimension, budget in policy.items()):
+            raise AuthenticationUnavailable()
         cache = caches[settings.AUTH_RATE_LIMIT_CACHE_ALIAS]
-        if settings.AUTH_RATE_LIMIT_REQUIRE_SHARED_CACHE and isinstance(cache, (LocMemCache, DummyCache)):
+        if settings.AUTH_RATE_LIMIT_REQUIRE_SHARED_CACHE and not is_shared_auth_cache(cache):
             raise AuthenticationUnavailable()
         for dimension, (limit, seconds) in policy.items():
             if dimension not in values or (dimensions is not None and dimension not in dimensions):

@@ -7,11 +7,11 @@
 <a class="lc-back" href="{% url 'course_detail' course.slug %}">
 <i class="bi bi-arrow-left" aria-hidden="true">
 </i> {{ course.title }}</a>
-<div class="lc-watch-grid" data-lesson-viewer data-user-id="{{ user.id }}" data-lesson-id="{{ lesson.id }}">
+<div class="lc-watch-grid lc-workspace" data-lesson-viewer data-user-id="{{ user.id }}" data-lesson-id="{{ lesson.id }}">
 <div>
 {% if lesson.video %}<div class="lc-watch">
-<video controls playsinline preload="metadata" {% if course.thumbnail %}poster="{{ course.thumbnail.url }}"{% endif %} aria-label="{{ lesson.title }}">
-<source src="{{ lesson.video.url }}">Your browser does not support video playback.</video>
+<video id="lesson-video" controls playsinline preload="metadata" {% if course.thumbnail %}poster="{{ course.thumbnail.url }}"{% endif %} aria-label="{{ lesson.title }}">
+<source src="{{ lesson.video.url }}">{% if lesson.captions %}<track kind="captions" src="{{ lesson.captions.url }}" srclang="{{ lesson.caption_language|default:'en' }}" label="{{ lesson.caption_language|default:'English' }}" default>{% endif %}Your browser does not support video playback.</video>
 <div class="lc-video-tools">
 <div>
 <label for="lesson-playback-speed">Playback speed</label>
@@ -23,7 +23,7 @@
 <option value="2">2x</option>
 </select>
 </div>
-<button type="button" data-focus-video aria-pressed="false">Focus view</button>
+<button type="button" data-focus-video aria-pressed="false">Focus view</button>{% if lesson.captions %}<button type="button" data-caption-toggle aria-pressed="true" aria-controls="lesson-video">Captions on</button>{% endif %}
 </div>
 <div class="lc-resume" data-video-resume hidden>Pick up at <strong data-resume-time>
 </strong>
@@ -35,7 +35,7 @@
 <header class="lc-heading">
 <div>
 <span class="lc-eyebrow">Lesson {{ lesson.order }} &middot; {{ lesson.duration }} min</span>
-<h1>{{ lesson.title }}</h1>{% if lesson.description %}<div class="lc-prose">{{ lesson.description|linebreaks }}</div>{% endif %}</div>
+<h1>{{ lesson.title }}</h1>{% if lesson.description %}<div class="lc-prose">{{ lesson.description|linebreaks }}</div>{% endif %}</div><span class="lc-status {% if progress.completed %}lc-status--complete{% endif %}">{% if progress.completed %}Completed{% else %}In progress{% endif %}</span>
 </header>
 {% if not lesson.video %}<div class="lc-notice">
 <i class="bi bi-journal-text" aria-hidden="true">
@@ -47,17 +47,19 @@
 <i class="bi bi-download" aria-hidden="true">
 </i> Download notes</a>
 </section>{% endif %}
+{% if lesson.transcript %}<section class="lc-card"><details><summary>Read transcript</summary><div class="lc-prose">{{ lesson.transcript|linebreaks }}</div></details></section>{% endif %}
+{% if learning_live_sessions %}<section class="lc-card lc-live-sessions" aria-labelledby="lesson-live-sessions-title"><span class="lc-eyebrow">LEARN WITH YOUR COURSE COMMUNITY</span><h2 id="lesson-live-sessions-title">Live sessions for this lesson</h2>{% for session in learning_live_sessions %}<article class="lc-live-session"><span class="lc-session-status{% if session.status == 'LIVE' %} is-live{% endif %}">{% if session.status == 'LIVE' %}Live now{% else %}Scheduled{% endif %}</span><a href="{% url 'learning_classroom' session.id %}"><strong>{{ session.title }}</strong></a><p class="lc-muted">{{ session.classroom.title }}{% if lesson.module %} · {{ lesson.module.title }}{% endif %}</p>{% if session.scheduled_start %}<time datetime="{{ session.scheduled_start|date:'c' }}">{{ session.scheduled_start|date:'M j, Y · g:i A T' }}</time>{% endif %}</article>{% endfor %}</section>{% endif %}
 {% if quiz %}<section class="lc-card">
 <div class="lc-heading mb-0">
 <div>
 <span class="lc-eyebrow">Put it into practice</span>
 <h2 class="mt-2">{{ quiz.title }}</h2>
-<p class="lc-muted">Passing score: {{ quiz.passing_score }}%</p>
+<p class="lc-muted">{% if preview %}Quiz included · Pass {{ quiz.passing_score }}% to complete{% elif latest_attempt.passed %}Passed · {{ latest_attempt.percentage }}%{% elif latest_attempt %}Latest attempt · {{ latest_attempt.percentage }}%{% else %}Not attempted{% endif %}{% if not preview %} · Pass {{ quiz.passing_score }}% to complete{% endif %}</p>
 </div>
-<a class="lc-button" href="{% url 'take_quiz' quiz.id %}">Take quiz</a>
+{% if not preview %}<a class="lc-button" href="{% url 'take_quiz' quiz.id %}">{% if latest_attempt.passed %}Review quiz{% else %}Take quiz{% endif %}</a>{% endif %}
 </div>
 </section>{% endif %}
-<section class="lc-card">{% if progress.completed %}<span class="lc-status lc-status--complete">
+<section class="lc-card">{% if preview %}<span class="lc-eyebrow">LEARNER PREVIEW</span><p class="lc-muted">This lesson is shown as learners will see it. No completion or learner history is recorded.</p>{% elif progress.completed %}<span class="lc-status lc-status--complete">
 <i class="bi bi-check2-circle" aria-hidden="true">
 </i> Lesson completed</span>
 <p class="lc-muted mt-3">Keep going, or revisit this lesson whenever you need it.</p>{% else %}<h2>Ready for the next step?</h2>{% if quiz %}<p class="lc-muted mb-3">Pass the lesson quiz before marking this lesson complete.</p>{% endif %}<form method="POST" data-learning-return="{% learning_url 'lesson_detail' lesson.id %}" data-learning-legacy-return="{% url 'lesson_detail' lesson.id %}" action="{% url 'complete_lesson' lesson.id %}">{% csrf_token %}<button class="lc-button" type="submit">
@@ -74,13 +76,15 @@
 <aside aria-label="Course playlist">
 <section class="lc-card">
 <span class="lc-eyebrow">Your learning playlist</span>
-<h2 class="mt-2">{{ course.title }}</h2>{% for item in lessons %}<a class="lc-lesson-row" href="{% learning_url 'lesson_detail' item.id %}" {% if item.id == lesson.id %}aria-current="page"{% endif %}>
+<h2 class="mt-2">{{ course.title }}</h2><p class="lc-muted">{{ course_progress_percent }}% complete · {{ lessons|length }} lessons</p><div class="lc-track" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ course_progress_percent }}"><span style="width:{{ course_progress_percent }}%"></span></div>{% if curriculum_sections %}{% for section in curriculum_sections %}<h3 class="lc-module-title">{{ section.title }}</h3>{% for item in section.lessons %}<a class="lc-lesson-row" href="{% learning_url 'lesson_detail' item.id %}" {% if item.id == lesson.id %}aria-current="page"{% endif %}>
 <span class="lc-lesson-number">{{ item.order }}</span>
 <span>
 <strong>{{ item.title }}</strong>
-<small>{{ item.duration }} min</small>
+{% if item.module %}<small>{{ item.module.title }}</small>{% endif %}
+<small>{{ item.duration }} min · {% if item.workspace_progress.completed %}Completed{% elif item.id == lesson.id %}In progress{% else %}Up next{% endif %}</small>
 </span>{% if item.id == lesson.id %}<i class="bi bi-play-circle" aria-hidden="true">
-</i>{% endif %}</a>{% empty %}<p class="lc-muted">No lessons available.</p>{% endfor %}<a class="lc-button lc-button-secondary w-100 mt-4" href="{% learning_url 'course_progress' course.id %}">View course progress</a>
+</i>{% elif item.workspace_progress.completed %}<i class="bi bi-check-circle" aria-hidden="true"></i>{% endif %}</a>{% endfor %}{% endfor %}{% else %}{% for item in lessons %}<a class="lc-lesson-row" href="{% learning_url 'lesson_detail' item.id %}" {% if item.id == lesson.id %}aria-current="page"{% endif %}>
+<span class="lc-lesson-number">{{ item.order }}</span><span><strong>{{ item.title }}</strong><small>{{ item.duration }} min · {% if item.workspace_progress.completed %}Completed{% elif item.id == lesson.id %}In progress{% else %}Up next{% endif %}</small></span>{% if item.id == lesson.id %}<i class="bi bi-play-circle" aria-hidden="true"></i>{% elif item.workspace_progress.completed %}<i class="bi bi-check-circle" aria-hidden="true"></i>{% endif %}</a>{% empty %}<p class="lc-muted">No lessons available.</p>{% endfor %}{% endif %}<a class="lc-button lc-button-secondary w-100 mt-4" href="{% learning_url 'course_progress' course.id %}">View course progress</a>
 </section>
 </aside>
 </div>

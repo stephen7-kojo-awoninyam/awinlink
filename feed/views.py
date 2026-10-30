@@ -1,3 +1,4 @@
+from .privacy import visible_association_posts_for
 from django.views.decorators.http import require_POST
 from organizations.permissions import require_active_organization
 from django.shortcuts import render
@@ -113,7 +114,7 @@ def create_post(request):
 def like_post(request, post_id):
 
     post = get_object_or_404(
-        Post,
+        visible_association_posts_for(request.user),
         id=post_id
     )
 
@@ -170,7 +171,7 @@ def like_post(request, post_id):
 def add_comment(request, post_id):
 
     post = get_object_or_404(
-        Post,
+        visible_association_posts_for(request.user),
         id=post_id
     )
 
@@ -244,7 +245,7 @@ def add_comment(request, post_id):
 def save_post(request, post_id):
 
     post = get_object_or_404(
-        Post,
+        visible_association_posts_for(request.user),
         id=post_id
     )
 
@@ -279,7 +280,7 @@ def save_post(request, post_id):
 def share_post(request, post_id):
 
     post = get_object_or_404(
-        Post,
+        visible_association_posts_for(request.user),
         id=post_id
     )
 

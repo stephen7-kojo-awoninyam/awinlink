@@ -375,7 +375,11 @@ class ClassroomSocketSecurityTests(SocketFixture, TransactionTestCase):
             await self.close_code(source)
             await self.drain(target)
             await get_channel_layer().group_send(participant_group(self.session.pk, self.second_participant.pk), event)
-            self.assertTrue(await target.receive_nothing(timeout=0.1))
+            # Revoking the source can legitimately update peer presence. Drain
+            # those events while asserting the queued offer never crosses.
+            while not await target.receive_nothing(timeout=0.05):
+                message = await target.receive_json_from(timeout=0.05)
+                self.assertNotIn(message.get("type"), {"offer", "answer", "ice"})
             await source.disconnect()
             await target.disconnect()
         async_to_sync(run)()

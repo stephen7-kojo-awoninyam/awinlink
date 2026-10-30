@@ -1,3 +1,5 @@
+from talents.visibility import visible_talent_profiles_for
+from django.views.decorators.cache import never_cache
 from organizations.permissions import OrganizationCapability, require_request_organization
 from organizations.permissions import require_active_organization
 from django.shortcuts import render, redirect, get_object_or_404
@@ -51,6 +53,7 @@ User = get_user_model()
 # =========================================================
 
 @login_required
+@never_cache
 def talent_analytics(request):
     
     if request.user.role != "ATHLETE":
@@ -63,7 +66,7 @@ def talent_analytics(request):
     # GET TALENT PROFILE
     # -----------------------------------------------------
 
-    talent = TalentProfile.objects.filter(
+    talent = visible_talent_profiles_for(request.user).filter(
         user=request.user
     ).first()
 
@@ -312,6 +315,7 @@ def talent_analytics(request):
 # ORGANIZATION ANALYTICS DASHBOARD
 # =========================================================
 @login_required
+@never_cache
 def organization_analytics(request):
 
     organization = require_request_organization(request, OrganizationCapability.VIEW_ANALYTICS)
@@ -490,7 +494,7 @@ def organization_analytics(request):
     ]
 
     most_viewed_queryset = (
-        TalentProfile.objects
+        visible_talent_profiles_for(request.user)
         .filter(
             id__in=most_viewed_ids
         )
@@ -577,7 +581,7 @@ def organization_analytics(request):
     ]
 
     top_talents_queryset = (
-        TalentProfile.objects
+        visible_talent_profiles_for(request.user)
         .filter(
             id__in=top_talent_ids
         )
@@ -836,6 +840,7 @@ def organization_analytics(request):
 # =========================================================
 
 @login_required
+@never_cache
 def admin_analytics(request):
 
     # -----------------------------------------------------
@@ -1167,6 +1172,7 @@ def admin_analytics(request):
 # =========================================================
 
 @login_required
+@never_cache
 def analytics_dashboard(request):
 
     role = request.user.role
@@ -1203,6 +1209,7 @@ def analytics_dashboard(request):
 # =========================================================
 
 @login_required
+@never_cache
 def coach_analytics(request):
 
     # =====================================================
@@ -1248,7 +1255,8 @@ def coach_analytics(request):
     # =====================================================
 
     talent_views = CoachTalentView.objects.filter(
-        coach=coach
+        coach=coach,
+        talent__in=visible_talent_profiles_for(request.user)
     )
 
     total_talent_views = talent_views.count()
@@ -1265,7 +1273,8 @@ def coach_analytics(request):
     # =====================================================
 
     followed_talents = CoachTalentFollow.objects.filter(
-        coach=coach
+        coach=coach,
+        talent__in=visible_talent_profiles_for(request.user)
     )
 
     total_followed_talents = followed_talents.count()
@@ -1275,7 +1284,8 @@ def coach_analytics(request):
     # =====================================================
 
     bookmarked_talents = CoachTalentBookmark.objects.filter(
-        coach=coach
+        coach=coach,
+        talent__in=visible_talent_profiles_for(request.user)
     )
 
     total_bookmarked_talents = bookmarked_talents.count()
@@ -1301,7 +1311,7 @@ def coach_analytics(request):
     ]
 
     most_viewed_queryset = (
-        TalentProfile.objects
+        visible_talent_profiles_for(request.user)
         .filter(
             id__in=most_viewed_ids
         )
@@ -1354,7 +1364,7 @@ def coach_analytics(request):
     ]
 
     most_followed_queryset = (
-        TalentProfile.objects
+        visible_talent_profiles_for(request.user)
         .filter(
             id__in=most_followed_ids
         )
@@ -1407,7 +1417,7 @@ def coach_analytics(request):
     ]
 
     most_bookmarked_queryset = (
-        TalentProfile.objects
+        visible_talent_profiles_for(request.user)
         .filter(
             id__in=most_bookmarked_ids
         )
@@ -1545,6 +1555,7 @@ def coach_analytics(request):
 # =========================================================
 
 @login_required
+@never_cache
 def scout_analytics(request):
 
     if request.user.role != "SCOUT":
@@ -1564,7 +1575,8 @@ def scout_analytics(request):
     # =====================================================
 
     talent_views = ScoutTalentView.objects.filter(
-        scout=scout
+        scout=scout,
+        talent__in=visible_talent_profiles_for(request.user)
     )
 
     total_talent_views = talent_views.count()
@@ -1581,7 +1593,8 @@ def scout_analytics(request):
     # =====================================================
 
     followed_talents = ScoutTalentFollow.objects.filter(
-        scout=scout
+        scout=scout,
+        talent__in=visible_talent_profiles_for(request.user)
     )
 
     total_followed_talents = followed_talents.count()
@@ -1591,7 +1604,8 @@ def scout_analytics(request):
     # =====================================================
 
     bookmarked_talents = ScoutTalentBookmark.objects.filter(
-        scout=scout
+        scout=scout,
+        talent__in=visible_talent_profiles_for(request.user)
     )
 
     total_bookmarked_talents = bookmarked_talents.count()

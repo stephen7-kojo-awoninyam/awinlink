@@ -59,6 +59,9 @@ def notification_detail(
         update_fields=["is_read"]
     )
 
+    if isinstance(notification.metadata, dict) and notification.metadata.get("feature") == "rising_talent":
+        return redirect("rising_talent")
+
     # MESSAGE
     if (
         notification.notification_type == "MESSAGE"

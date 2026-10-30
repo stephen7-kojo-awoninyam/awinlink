@@ -1,3 +1,7 @@
+from api.pagination import OrderedCursorPagination, PagedAPIView
+from api.search import search_queryset, TALENT_SEARCH_FIELDS
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 from connections.services import ConnectionResponseError, respond_to_connection
 from django.http import Http404
 from organizations.models import OrganizationMembership
@@ -225,7 +229,8 @@ class MeAPIView(APIView):
 # TALENT LIST API
 # =====================================================
 
-class TalentListAPIView(APIView):
+@method_decorator(never_cache, name='dispatch')
+class TalentListAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -233,10 +238,6 @@ class TalentListAPIView(APIView):
 
         talents = (
             visible_talent_profiles_for(request.user)
-            .annotate(
-                actual_followers_count=models.Count("user__followers", distinct=True),
-                actual_following_count=models.Count("user__following", distinct=True),
-            )
             .select_related("user")
             .select_related("other_profile")
             .prefetch_related(
@@ -248,8 +249,17 @@ class TalentListAPIView(APIView):
             )
         )
 
+        page = self.page(request, search_queryset(request, talents, TALENT_SEARCH_FIELDS))
+        user_ids = [talent.user_id for talent in page]
+        followers = dict(Follow.objects.filter(following_id__in=user_ids).order_by().values('following_id')
+                         .annotate(total=models.Count('pk')).values_list('following_id', 'total'))
+        following = dict(Follow.objects.filter(follower_id__in=user_ids).order_by().values('follower_id')
+                         .annotate(total=models.Count('pk')).values_list('follower_id', 'total'))
+        for talent in page:
+            talent.actual_followers_count = followers.get(talent.user_id, 0)
+            talent.actual_following_count = following.get(talent.user_id, 0)
         serializer = TalentProfileSerializer(
-            talents,
+            page,
             many=True
         )
 
@@ -263,6 +273,7 @@ class TalentListAPIView(APIView):
 # TALENT DETAIL API
 # =====================================================
 
+@method_decorator(never_cache, name='dispatch')
 class TalentDetailAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -312,6 +323,7 @@ class TalentDetailAPIView(APIView):
 # MY TALENT PROFILE
 # =====================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyTalentProfileAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
@@ -524,7 +536,7 @@ class MyOtherTalentProfileAPIView(APIView):
 # ORGANIZATION LIST API
 # =====================================================
 
-class OrganizationListAPIView(APIView):
+class OrganizationListAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -538,17 +550,27 @@ class OrganizationListAPIView(APIView):
                 "sports_profile",
                 "sports_profile__sport",
             )
-            .prefetch_related("organization_followers")
             .filter(status="ACTIVE")
         )
 
+        page = self.page(request, search_queryset(request, organizations,
+            ['name', 'category__name', 'domain__name', 'country', 'city', 'description']))
+        followers = dict(OrganizationFollow.objects.filter(organization_id__in=[org.pk for org in page])
+                         .order_by().values('organization_id').annotate(total=models.Count('pk'))
+                         .values_list('organization_id', 'total'))
+        for organization in page:
+            organization.actual_followers_count = followers.get(organization.pk, 0)
         serializer = OrganizationSerializer(
-            organizations,
+            page,
             many=True
         )
-
+        followed = set(OrganizationFollow.objects.filter(user=request.user, organization_id__in=[org.pk for org in page])
+                       .values_list('organization_id', flat=True))
+        data = serializer.data
+        for row in data:
+            row['is_followed'] = row['id'] in followed
         return Response(
-            serializer.data,
+            data,
             status=status.HTTP_200_OK
         )
 
@@ -683,7 +705,7 @@ class MyOrganizationAPIView(APIView):
 # OPPORTUNITY LIST API
 # =====================================================
 
-class OpportunityListAPIView(APIView):
+class OpportunityListAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -709,13 +731,19 @@ class OpportunityListAPIView(APIView):
             )
         )
 
+        page = self.page(request, search_queryset(request, opportunities,
+                ['title', 'description', 'organization__name', 'domain__name', 'location']))
         serializer = OpportunitySerializer(
-            opportunities,
+            page,
             many=True
         )
-
+        applied = set(Application.objects.filter(talent__user=request.user, opportunity_id__in=[item.pk for item in page])
+                      .values_list('opportunity_id', flat=True))
+        data = serializer.data
+        for row in data:
+            row['has_applied'] = row['id'] in applied
         return Response(
-            serializer.data,
+            data,
             status=status.HTTP_200_OK
         )
 
@@ -935,7 +963,7 @@ class ApplicationCreateAPIView(APIView):
 # APPLICATION LIST API
 # =====================================================
 
-class ApplicationListAPIView(APIView):
+class ApplicationListAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -950,7 +978,7 @@ class ApplicationListAPIView(APIView):
             organization = require_request_organization(request, OrganizationCapability.VIEW_RECRUITMENT)
             applications = applications.filter(opportunity__organization=organization)
         return Response(
-            ApplicationSerializer(applications.order_by("-created_at"), many=True).data,
+            ApplicationSerializer(self.page(request, applications.order_by("-created_at")), many=True).data,
             status=status.HTTP_200_OK,
         )
 
@@ -1018,7 +1046,7 @@ class ApplicationStatusUpdateAPIView(APIView):
 # MY APPLICATIONS API
 # =====================================================
 
-class MyApplicationsAPIView(APIView):
+class MyApplicationsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -1057,7 +1085,7 @@ class MyApplicationsAPIView(APIView):
         )
 
         serializer = ApplicationSerializer(
-            applications,
+            self.page(request, applications),
             many=True
         )
 
@@ -1166,7 +1194,7 @@ class ShortlistCreateAPIView(APIView):
 # SHORTLIST LIST API
 # =====================================================
 
-class ShortlistListAPIView(APIView):
+class ShortlistListAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -1175,7 +1203,7 @@ class ShortlistListAPIView(APIView):
         shortlists = Shortlist.objects.filter(organization=organization).select_related(
             "organization", "talent", "talent__user",
         ).order_by("-created_at")
-        return Response(ShortlistSerializer(shortlists, many=True).data, status=status.HTTP_200_OK)
+        return Response(ShortlistSerializer(self.page(request, shortlists), many=True).data, status=status.HTTP_200_OK)
         
         
 # =====================================================
@@ -1274,7 +1302,7 @@ class ShortlistDetailAPIView(APIView):
 # MY SHORTLISTS API
 # =====================================================
 
-class MyShortlistsAPIView(APIView):
+class MyShortlistsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -1318,7 +1346,7 @@ class MyShortlistsAPIView(APIView):
         )
 
         serializer = ShortlistSerializer(
-            shortlists,
+            self.page(request, shortlists),
             many=True
         )
 
@@ -1442,7 +1470,7 @@ class RecruitmentStageCreateAPIView(APIView):
 # RECRUITMENT PIPELINE LIST API
 # =====================================================
 
-class RecruitmentStageListAPIView(APIView):
+class RecruitmentStageListAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -1451,7 +1479,7 @@ class RecruitmentStageListAPIView(APIView):
         stages = RecruitmentStage.objects.filter(organization=organization).select_related(
             "organization", "talent", "talent__user", "opportunity",
         ).order_by("-updated_at")
-        return Response(RecruitmentStageSerializer(stages, many=True).data, status=status.HTTP_200_OK)
+        return Response(RecruitmentStageSerializer(self.page(request, stages), many=True).data, status=status.HTTP_200_OK)
         
 # =====================================================
 # RECRUITMENT PIPELINE DETAIL API
@@ -1818,7 +1846,13 @@ class RecommendationGenerateAPIView(APIView):
 # RECOMMENDATIONS LIST API
 # =====================================================
 
-class RecommendationListAPIView(APIView):
+class RankedRecommendationPagination(OrderedCursorPagination):
+    ordering = ('-score', '-pk')
+
+
+@method_decorator(never_cache, name='dispatch')
+class RecommendationListAPIView(PagedAPIView):
+    pagination_class = RankedRecommendationPagination
 
     permission_classes = [IsAuthenticated]
 
@@ -1892,7 +1926,8 @@ class RecommendationListAPIView(APIView):
             RecommendationHistory.objects
             .filter(
                 organization=organization,
-                opportunity=opportunity
+                opportunity=opportunity,
+                talent__in=visible_talent_profiles_for(request.user),
             )
             .select_related(
                 "talent",
@@ -1905,7 +1940,7 @@ class RecommendationListAPIView(APIView):
 
         results = []
 
-        for recommendation in recommendations:
+        for recommendation in self.page(request, recommendations):
 
             talent = recommendation.talent
 
@@ -2001,7 +2036,7 @@ class TalentAnalyticsAPIView(APIView):
 # RECOMMENDATION HISTORY API
 # =====================================================
 
-class RecommendationHistoryAPIView(APIView):
+class RecommendationHistoryAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -2010,13 +2045,13 @@ class RecommendationHistoryAPIView(APIView):
         history = RecommendationHistory.objects.filter(organization=organization).select_related(
             "organization", "talent", "talent__user", "opportunity",
         ).order_by("-score")
-        return Response(RecommendationHistorySerializer(history, many=True).data, status=status.HTTP_200_OK)
+        return Response(RecommendationHistorySerializer(self.page(request, history), many=True).data, status=status.HTTP_200_OK)
         
 # =====================================================
 # TALENT PROFILE VIEWS API
 # =====================================================
 
-class TalentProfileViewsAPIView(APIView):
+class TalentProfileViewsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -2064,7 +2099,7 @@ class TalentProfileViewsAPIView(APIView):
         )
 
         serializer = TalentProfileViewSerializer(
-            views,
+            self.page(request, views),
             many=True
         )
 
@@ -2291,7 +2326,7 @@ class InvitationCreateAPIView(APIView):
 # SENT INVITATIONS API
 # =====================================================
 
-class SentInvitationsAPIView(APIView):
+class SentInvitationsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -2339,7 +2374,7 @@ class SentInvitationsAPIView(APIView):
         )
 
         serializer = InvitationSerializer(
-            invitations,
+            self.page(request, invitations),
             many=True
         )
 
@@ -2354,7 +2389,7 @@ class SentInvitationsAPIView(APIView):
 # RECEIVED INVITATIONS API
 # =====================================================
 
-class ReceivedInvitationsAPIView(APIView):
+class ReceivedInvitationsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -2404,7 +2439,7 @@ class ReceivedInvitationsAPIView(APIView):
         )
 
         serializer = InvitationSerializer(
-            invitations,
+            self.page(request, invitations),
             many=True
         )
 
@@ -2890,7 +2925,7 @@ class ConnectionCreateAPIView(APIView):
 # MY CONNECTIONS API
 # =====================================================
 
-class MyConnectionsAPIView(APIView):
+class MyConnectionsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -2913,7 +2948,7 @@ class MyConnectionsAPIView(APIView):
         )
 
         serializer = ConnectionSerializer(
-            connections,
+            self.page(request, connections),
             many=True
         )
 
@@ -2927,7 +2962,7 @@ class MyConnectionsAPIView(APIView):
 # INCOMING CONNECTION REQUESTS
 # =====================================================
 
-class IncomingConnectionsAPIView(APIView):
+class IncomingConnectionsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -2949,7 +2984,7 @@ class IncomingConnectionsAPIView(APIView):
         )
 
         serializer = ConnectionSerializer(
-            connections,
+            self.page(request, connections),
             many=True
         )
 
@@ -2963,7 +2998,7 @@ class IncomingConnectionsAPIView(APIView):
 # OUTGOING CONNECTION REQUESTS
 # =====================================================
 
-class OutgoingConnectionsAPIView(APIView):
+class OutgoingConnectionsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -2985,7 +3020,7 @@ class OutgoingConnectionsAPIView(APIView):
         )
 
         serializer = ConnectionSerializer(
-            connections,
+            self.page(request, connections),
             many=True
         )
 
@@ -3346,7 +3381,7 @@ class UnfollowUserAPIView(APIView):
 # MY FOLLOWING API
 # =====================================================
 
-class MyFollowingAPIView(APIView):
+class MyFollowingAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -3366,7 +3401,7 @@ class MyFollowingAPIView(APIView):
         )
 
         serializer = FollowSerializer(
-            follows,
+            self.page(request, follows),
             many=True
         )
 
@@ -3379,7 +3414,7 @@ class MyFollowingAPIView(APIView):
 # MY FOLLOWERS API
 # =====================================================
 
-class MyFollowersAPIView(APIView):
+class MyFollowersAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -3399,7 +3434,7 @@ class MyFollowersAPIView(APIView):
         )
 
         serializer = FollowSerializer(
-            follows,
+            self.page(request, follows),
             many=True
         )
 
@@ -3484,7 +3519,7 @@ class UnfollowOrganizationAPIView(APIView):
 # MY FOLLOWED ORGANIZATIONS API
 # =====================================================
 
-class MyFollowedOrganizationsAPIView(APIView):
+class MyFollowedOrganizationsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -3504,7 +3539,7 @@ class MyFollowedOrganizationsAPIView(APIView):
         )
 
         serializer = OrganizationFollowSerializer(
-            follows,
+            self.page(request, follows),
             many=True
         )
 
@@ -3518,7 +3553,7 @@ class MyFollowedOrganizationsAPIView(APIView):
 # NOTIFICATION LIST API
 # =====================================================
 
-class NotificationListAPIView(APIView):
+class NotificationListAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -3541,7 +3576,7 @@ class NotificationListAPIView(APIView):
         )
 
         serializer = NotificationSerializer(
-            notifications,
+            self.page(request, notifications),
             many=True
         )
 
@@ -3556,7 +3591,7 @@ class NotificationListAPIView(APIView):
 # UNREAD NOTIFICATIONS API
 # =====================================================
 
-class UnreadNotificationsAPIView(APIView):
+class UnreadNotificationsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -3580,7 +3615,7 @@ class UnreadNotificationsAPIView(APIView):
         )
 
         serializer = NotificationSerializer(
-            notifications,
+            self.page(request, notifications),
             many=True
         )
 
@@ -3844,7 +3879,7 @@ class ShortlistCreateAPIView(APIView):
 # MY SHORTLISTS API
 # =====================================================
 
-class MyShortlistsAPIView(APIView):
+class MyShortlistsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -3882,7 +3917,7 @@ class MyShortlistsAPIView(APIView):
         )
 
         serializer = ShortlistSerializer(
-            shortlists,
+            self.page(request, shortlists),
             many=True
         )
 
@@ -4269,7 +4304,7 @@ class RecruitmentStageCreateAPIView(APIView):
 # MY RECRUITMENT PIPELINE API
 # =====================================================
 
-class MyRecruitmentPipelineAPIView(APIView):
+class MyRecruitmentPipelineAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -4320,7 +4355,7 @@ class MyRecruitmentPipelineAPIView(APIView):
         )
 
         serializer = RecruitmentStageSerializer(
-            pipeline,
+            self.page(request, pipeline),
             many=True
         )
 
@@ -4772,7 +4807,7 @@ class InvitationCreateAPIView(APIView):
 # RECEIVED INVITATIONS API
 # =====================================================
 
-class ReceivedInvitationsAPIView(APIView):
+class ReceivedInvitationsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -4818,7 +4853,7 @@ class ReceivedInvitationsAPIView(APIView):
         )
 
         serializer = InvitationSerializer(
-            invitations,
+            self.page(request, invitations),
             many=True
         )
 
@@ -4833,7 +4868,7 @@ class ReceivedInvitationsAPIView(APIView):
 # SENT INVITATIONS API
 # =====================================================
 
-class SentInvitationsAPIView(APIView):
+class SentInvitationsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -4872,7 +4907,7 @@ class SentInvitationsAPIView(APIView):
         )
 
         serializer = InvitationSerializer(
-            invitations,
+            self.page(request, invitations),
             many=True
         )
 
@@ -5200,7 +5235,7 @@ class ConnectionSendAPIView(APIView):
 # MY CONNECTIONS API
 # =====================================================
 
-class MyConnectionsAPIView(APIView):
+class MyConnectionsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -5229,7 +5264,7 @@ class MyConnectionsAPIView(APIView):
         )
 
         serializer = ConnectionSerializer(
-            connections,
+            self.page(request, connections),
             many=True
         )
 
@@ -5243,7 +5278,7 @@ class MyConnectionsAPIView(APIView):
 # RECEIVED CONNECTION REQUESTS API
 # =====================================================
 
-class ReceivedConnectionsAPIView(APIView):
+class ReceivedConnectionsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -5265,7 +5300,7 @@ class ReceivedConnectionsAPIView(APIView):
         )
 
         serializer = ConnectionSerializer(
-            connections,
+            self.page(request, connections),
             many=True
         )
 
@@ -5280,7 +5315,7 @@ class ReceivedConnectionsAPIView(APIView):
 # SENT CONNECTION REQUESTS API
 # =====================================================
 
-class SentConnectionsAPIView(APIView):
+class SentConnectionsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -5301,7 +5336,7 @@ class SentConnectionsAPIView(APIView):
         )
 
         serializer = ConnectionSerializer(
-            connections,
+            self.page(request, connections),
             many=True
         )
 
@@ -5393,7 +5428,7 @@ class ConnectionDetailAPIView(APIView):
 # =====================================================
 
 
-class RoleModelAssignmentListAPIView(APIView):
+class RoleModelAssignmentListAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -5419,7 +5454,7 @@ class RoleModelAssignmentListAPIView(APIView):
         )
 
         serializer = RoleModelAssignmentSerializer(
-            assignments,
+            self.page(request, assignments),
             many=True
         )
 

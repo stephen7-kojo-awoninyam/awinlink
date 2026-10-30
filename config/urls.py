@@ -18,12 +18,11 @@ from connections import views as connection_views
 from django.contrib import admin
 from .media_views import playback_media
 from django.urls import path,include,re_path
-from django.conf import settings
-from django.conf.urls.static import static
-from django.views.static import serve
 from notifications.views import service_worker
+from recommendations.rising_views import rising_page
 
 urlpatterns = [
+    path("rising-talent/", rising_page, name="rising_talent"),
     path("marketplace/", include("marketplace.urls")),
     path("api/marketplace/", include("marketplace.api_urls")),
     # Preserve POST bodies from older clients using the capitalized prefix.
@@ -76,18 +75,7 @@ urlpatterns = [
 ]
 
 urlpatterns += [
-    re_path(
-        r"^media/(?P<path>(?:feed/(?:images|videos)|messages/(?:groups|images|audio|videos|files)|learning/(?:videos|notes))/.+)$",
-        playback_media,
-        name="playback_media",
-    ),
-    re_path(
-        r"^media/(?P<path>(?:talents/(?:profile|cover)|organizations/(?:logos|covers))/[^/]+)$",
-        serve,
-        {"document_root": settings.MEDIA_ROOT},
-        name="public_talent_media",
-    ),
+    re_path(r"^media/(?P<path>(?:talents/(?:profile|cover)|organizations/(?:logos|covers))/[^/]+)$",
+            playback_media, name='public_talent_media'),
+    re_path(r"^media/(?P<path>.+)$", playback_media, name="playback_media"),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

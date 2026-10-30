@@ -4,6 +4,8 @@ Status: **blocked for APK creation and Play Store release**. No backend deployme
 
 ## Prepared locally
 
+Later security consolidation: [final release checklist](../docs/final-security-release-checklist-2026-10-28.md). The dependency-high counts below describe this October 19 snapshot and were subsequently resolved locally as documented there. Signing, real native/device verification and store/distribution approval are not established by that dependency fix.
+
 - Added `android-apk` in `eas.json`: internal distribution, standalone release APK, preview environment, medium worker, existing remote signing credentials. It embeds the existing public Railway API origin and public policy links. It does not increment versions or change the production AAB profile.
 - Added `npm run build:android:apk`. `--freeze-credentials` prevents silently generating/replacing signing material. A missing key must be resolved deliberately by the account owner.
 - APK configuration rejects missing/insecure API origins, common localhost/private development addresses, `/api/` suffixes, missing public policy links, missing EAS project UUID, and missing/mismatched Android Firebase client configuration.

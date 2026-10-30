@@ -202,7 +202,7 @@ class OrganizationSuspensionTests(TestCase):
         for method, path, body in requests:
             with self.subTest(path=path):
                 response = getattr(self.api, method)(path, body, format="json")
-                self.assertEqual(response.status_code, 403)
+                self.assertEqual(response.status_code, 404 if path.startswith(f'/api/events/{self.event.pk}/') else 403)
         self.assert_records_preserved()
 
     def test_existing_jwt_and_session_lose_org_access_but_keep_personal_access(self):
@@ -289,7 +289,7 @@ class OrganizationSuspensionTests(TestCase):
         ]
         for path, body in requests:
             with self.subTest(path=path):
-                self.assertEqual(self.api.post(path, body, format="json").status_code, 403)
+                self.assertEqual(self.api.post(path, body, format="json").status_code, 404 if path.startswith('/api/events/') else 403)
         self.assertFalse(CompetitionParticipant.objects.filter(competition=self.competition).exists())
         self.assert_records_preserved()
 

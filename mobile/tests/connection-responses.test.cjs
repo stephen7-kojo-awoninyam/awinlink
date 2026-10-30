@@ -24,6 +24,8 @@ function screen({ fail = false } = {}) {
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../app/connections.tsx'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, { exports, require: name => ({
+    '@/src/paged-state': require('./pagination-helpers.cjs').pagedState(react),
+    '@/src/components/LoadMore': { LoadMore: 'LoadMore' },
     react, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     'react-native': { Pressable: 'Pressable', Text: 'Text', View: 'View', StyleSheet: { create: x => x } },
     'expo-router': { Stack: { Screen: 'Screen' }, useLocalSearchParams: () => ({ id: '4' }), useRouter: () => ({ push: url => routes.push(url) }), useFocusEffect: fn => focuses.push(fn) },

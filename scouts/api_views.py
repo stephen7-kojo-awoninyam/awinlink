@@ -1,3 +1,8 @@
+from accounts.roles import active_user_has_role
+from api.search import BoundedSearchFilter, TALENT_SEARCH_FIELDS
+from django.utils.decorators import method_decorator
+from talents.visibility import public_talent_profiles_for
+from django.views.decorators.cache import never_cache
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, status
@@ -20,20 +25,23 @@ from .serializers import (
 )
 
 from talents.models import TalentProfile
-from api.serializers import TalentProfileSerializer
+from api.serializers import TalentProfileSerializer, SpecialistTalentProfileSerializer
+from api.pagination import OrderedCursorPagination
+from django.db.models import OuterRef, Subquery
 
 
 # ============================================================
 # MY SCOUT PROFILE
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyScoutProfileAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
 
-        if request.user.role != "SCOUT":
+        if not active_user_has_role(request.user, "SCOUT"):
 
             return Response(
                 {
@@ -56,13 +64,14 @@ class MyScoutProfileAPIView(APIView):
 # UPDATE MY SCOUT PROFILE
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyScoutProfileUpdateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def patch(self, request):
 
-        if request.user.role != "SCOUT":
+        if not active_user_has_role(request.user, "SCOUT"):
 
             return Response(
                 {
@@ -98,28 +107,40 @@ class MyScoutProfileUpdateAPIView(APIView):
 # SCOUT TALENT DIRECTORY
 # ============================================================
 
+class ScoutDirectoryPagination(OrderedCursorPagination):
+    ordering = ('-verified', 'user__username', 'pk')
+
+
+@method_decorator(never_cache, name='dispatch')
 class ScoutTalentListAPIView(generics.ListAPIView):
+    pagination_class = ScoutDirectoryPagination
+    filter_backends = [BoundedSearchFilter]
+    search_fields = TALENT_SEARCH_FIELDS
 
     permission_classes = [IsAuthenticated]
 
-    serializer_class = TalentProfileSerializer
+    serializer_class = SpecialistTalentProfileSerializer
 
     def get_queryset(self):
 
-        if self.request.user.role != "SCOUT":
+        if not active_user_has_role(self.request.user, "SCOUT"):
 
-            return TalentProfile.objects.none()
+            return public_talent_profiles_for(self.request.user).none()
 
-        return TalentProfile.objects.filter(
+        return public_talent_profiles_for(self.request.user).filter(
             profile_visibility="PUBLIC",
         ).select_related(
-            "user",
+            "user", "other_profile",
         ).prefetch_related(
             "skills",
             "domains",
+            "achievements", "certifications", "experiences",
         ).order_by(
             "-verified",
             "user__username",
+        ).annotate(
+            _viewer_bookmark_id=Subquery(ScoutTalentBookmark.objects.filter(scout__user=self.request.user, talent_id=OuterRef('pk')).values('pk')[:1]),
+            _viewer_follow_id=Subquery(ScoutTalentFollow.objects.filter(scout__user=self.request.user, talent_id=OuterRef('pk')).values('pk')[:1]),
         )
 
 
@@ -127,13 +148,14 @@ class ScoutTalentListAPIView(generics.ListAPIView):
 # VIEW TALENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class ScoutViewTalentAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, talent_id):
 
-        if request.user.role != "SCOUT":
+        if not active_user_has_role(request.user, "SCOUT"):
 
             return Response(
                 {
@@ -148,7 +170,7 @@ class ScoutViewTalentAPIView(APIView):
         )
 
         talent = get_object_or_404(
-            TalentProfile,
+            public_talent_profiles_for(self.request.user),
             id=talent_id,
             profile_visibility="PUBLIC",
         )
@@ -170,6 +192,7 @@ class ScoutViewTalentAPIView(APIView):
 # MY TALENT VIEWS
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyScoutTalentViewsAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -178,7 +201,7 @@ class MyScoutTalentViewsAPIView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        if self.request.user.role != "SCOUT":
+        if not active_user_has_role(self.request.user, "SCOUT"):
 
             return ScoutTalentView.objects.none()
 
@@ -194,7 +217,7 @@ class MyScoutTalentViewsAPIView(generics.ListAPIView):
 
         return ScoutTalentView.objects.filter(
             scout=scout,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(self.request.user),
         ).select_related(
             "talent",
             "talent__user"
@@ -205,13 +228,14 @@ class MyScoutTalentViewsAPIView(generics.ListAPIView):
 # FOLLOW TALENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class ScoutFollowTalentAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, talent_id):
 
-        if request.user.role != "SCOUT":
+        if not active_user_has_role(request.user, "SCOUT"):
 
             return Response(
                 {
@@ -226,7 +250,7 @@ class ScoutFollowTalentAPIView(APIView):
         )
 
         talent = get_object_or_404(
-            TalentProfile,
+            public_talent_profiles_for(self.request.user),
             id=talent_id,
             profile_visibility="PUBLIC",
         )
@@ -248,13 +272,14 @@ class ScoutFollowTalentAPIView(APIView):
 # UNFOLLOW TALENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class ScoutUnfollowTalentAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, talent_id):
 
-        if request.user.role != "SCOUT":
+        if not active_user_has_role(request.user, "SCOUT"):
 
             return Response(
                 {
@@ -285,6 +310,7 @@ class ScoutUnfollowTalentAPIView(APIView):
 # MY FOLLOWED TALENTS
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyFollowedTalentsAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -293,7 +319,7 @@ class MyFollowedTalentsAPIView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        if self.request.user.role != "SCOUT":
+        if not active_user_has_role(self.request.user, "SCOUT"):
 
             return ScoutTalentFollow.objects.none()
 
@@ -309,7 +335,7 @@ class MyFollowedTalentsAPIView(generics.ListAPIView):
 
         return ScoutTalentFollow.objects.filter(
             scout=scout,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(self.request.user),
         ).select_related(
             "talent",
             "talent__user"
@@ -320,13 +346,14 @@ class MyFollowedTalentsAPIView(generics.ListAPIView):
 # BOOKMARK TALENT
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class ScoutBookmarkTalentAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, talent_id):
 
-        if request.user.role != "SCOUT":
+        if not active_user_has_role(request.user, "SCOUT"):
 
             return Response(
                 {
@@ -341,7 +368,7 @@ class ScoutBookmarkTalentAPIView(APIView):
         )
 
         talent = get_object_or_404(
-            TalentProfile,
+            public_talent_profiles_for(self.request.user),
             id=talent_id,
             profile_visibility="PUBLIC",
         )
@@ -378,13 +405,14 @@ class ScoutBookmarkTalentAPIView(APIView):
 # UPDATE BOOKMARK
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class ScoutBookmarkUpdateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, bookmark_id):
 
-        if request.user.role != "SCOUT":
+        if not active_user_has_role(request.user, "SCOUT"):
 
             return Response(
                 {
@@ -402,7 +430,7 @@ class ScoutBookmarkUpdateAPIView(APIView):
             ScoutTalentBookmark,
             id=bookmark_id,
             scout=scout,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(self.request.user),
         )
 
         serializer = ScoutTalentBookmarkSerializer(
@@ -427,13 +455,14 @@ class ScoutBookmarkUpdateAPIView(APIView):
 # REMOVE BOOKMARK
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class ScoutBookmarkDeleteAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, bookmark_id):
 
-        if request.user.role != "SCOUT":
+        if not active_user_has_role(request.user, "SCOUT"):
 
             return Response(
                 {
@@ -467,6 +496,7 @@ class ScoutBookmarkDeleteAPIView(APIView):
 # MY BOOKMARKS
 # ============================================================
 
+@method_decorator(never_cache, name='dispatch')
 class MyScoutBookmarksAPIView(generics.ListAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -475,7 +505,7 @@ class MyScoutBookmarksAPIView(generics.ListAPIView):
 
     def get_queryset(self):
 
-        if self.request.user.role != "SCOUT":
+        if not active_user_has_role(self.request.user, "SCOUT"):
 
             return ScoutTalentBookmark.objects.none()
 
@@ -491,7 +521,7 @@ class MyScoutBookmarksAPIView(generics.ListAPIView):
 
         return ScoutTalentBookmark.objects.filter(
             scout=scout,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(self.request.user),
         ).select_related(
             "talent",
             "talent__user"

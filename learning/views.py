@@ -1,22 +1,27 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Avg
+from django.db import transaction
+from django.db.models import Avg, Max
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 import uuid
 from io import BytesIO
 from django.core.files.base import ContentFile
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 
 from .utils import generate_certificate
+from .services import LearningService
+from .curriculum import group_course_lessons
+from .classroom_learning import visible_learning_sessions
 
 from .models import (
     LearningCategory,
     Course,
+    CourseModule,
     Lesson,
     Enrollment,
     LessonProgress,
@@ -33,6 +38,7 @@ from .forms import (
     LearningCategoryForm,
     CourseForm,
     LessonForm,
+    CourseModuleForm,
     CourseReviewForm,
     QuizForm,
     QuestionForm,
@@ -50,32 +56,7 @@ from recommendations.unified import (
 # =========================================================
 
 def is_course_creator(user):
-    """
-    All authenticated Awinlink roles can create and
-    manage their own learning content.
-
-    Awinlink does not have an INSTRUCTOR account role.
-
-    Course creators:
-        ATHLETE
-        ORGANIZATION
-        SCOUT
-        COACH
-        ADMIN
-
-    Course approval remains an ADMIN responsibility.
-    """
-
-    return (
-        user.is_authenticated
-        and user.role in [
-            "ATHLETE",
-            "ORGANIZATION",
-            "SCOUT",
-            "COACH",
-            "ADMIN",
-        ]
-    )
+    return LearningService.can_create_course(user)
 
 
 def is_admin(user):
@@ -86,6 +67,16 @@ def is_admin(user):
         user.is_authenticated
         and user.role == "ADMIN"
     )
+
+
+def _display_learning_progress(enrollment):
+    """Read-only lesson progress for discovery/detail presentation."""
+    enrollment.total_lessons = enrollment.course.lessons.count()
+    enrollment.completed_lessons = enrollment.lesson_progress.filter(
+        completed=True, lesson__course_id=enrollment.course_id,
+    ).count()
+    enrollment.progress_percentage = round(100 * enrollment.completed_lessons / enrollment.total_lessons) if enrollment.total_lessons else 0
+    return enrollment
 
 
 # =========================================================
@@ -138,12 +129,20 @@ def course_list(request):
             course.recommendation_explanation = row["explanation"]
             courses.append(course)
 
+    continue_enrollments = [
+        _display_learning_progress(enrollment)
+        for enrollment in Enrollment.objects.filter(
+            user=request.user, course__status='APPROVED', completed=False,
+        ).select_related('course', 'course__creator', 'course__category').order_by('-enrolled_at', '-pk')[:3]
+    ]
+
     return render(
         request,
         "learning/course_list.html",
         {
             "courses": courses,
             "categories": categories,
+            "continue_enrollments": continue_enrollments,
         }
     )
 
@@ -202,16 +201,13 @@ def add_course_comment(request, course_id):
 @login_required
 def course_detail(request, slug):
 
-    course = get_object_or_404(
-        Course.objects.select_related(
-            "category",
-            "creator"
-        ),
-        slug=slug,
-        status="APPROVED"
-    )
+    course = get_object_or_404(Course.objects.select_related("category", "creator"), slug=slug)
+    preview = course.status != "APPROVED"
+    if preview and course.creator_id != request.user.pk and request.user.role != "ADMIN":
+        from django.http import Http404
+        raise Http404
 
-    lessons = course.lessons.all()
+    lessons, curriculum_sections = group_course_lessons(course, course.lessons.all().order_by("order", "pk").select_related("quiz", "module"))
 
     enrollment = Enrollment.objects.filter(
         user=request.user,
@@ -227,6 +223,8 @@ def course_detail(request, slug):
     )["average"]
 
     total_reviews = reviews.count()
+    if enrollment:
+        _display_learning_progress(enrollment)
 
     return render(
         request,
@@ -234,10 +232,14 @@ def course_detail(request, slug):
         {
             "course": course,
             "lessons": lessons,
+            "modules": course.modules.all(),
+            "curriculum_sections": curriculum_sections,
+            "learning_live_sessions": visible_learning_sessions(request.user, course.pk),
             "enrollment": enrollment,
             "reviews": reviews,
             "average_rating": average_rating,
             "total_reviews": total_reviews,
+            "preview": preview,
         }
     )
 
@@ -265,6 +267,7 @@ def create_course(request):
 
             course.creator = request.user
             course.status = "DRAFT"
+            course.is_free = True
 
             course.save()
 
@@ -280,7 +283,7 @@ def create_course(request):
 
     else:
 
-        form = CourseForm()
+        form = CourseForm(creator=request.user)
 
     return render(
         request,
@@ -298,36 +301,14 @@ def create_course(request):
 @login_required
 @require_POST
 def enroll_course(request, course_id):
-
-    course = get_object_or_404(
-        Course,
-        id=course_id,
-        status="APPROVED"
-    )
-
-    enrollment, created = Enrollment.objects.get_or_create(
-        user=request.user,
-        course=course
-    )
-
-    if created:
-
-        messages.success(
-            request,
-            f"You have enrolled in {course.title}."
-        )
-
+    course = get_object_or_404(Course, id=course_id, status='APPROVED')
+    try:
+        enrollment, created = LearningService.enroll(course, request.user)
+    except ValueError as error:
+        messages.warning(request, str(error))
     else:
-
-        messages.info(
-            request,
-            "You are already enrolled in this course."
-        )
-
-    return redirect(
-        "course_detail",
-        slug=course.slug
-    )
+        messages.success(request, f'You have enrolled in {course.title}.' if created else 'You are already enrolled in this course.')
+    return redirect('course_detail', slug=course.slug)
 
 
 # =========================================================
@@ -418,18 +399,27 @@ def lesson_detail(request, lesson_id):
         id=lesson_id
     )
 
-    enrollment = get_object_or_404(
-        Enrollment,
-        user=request.user,
-        course=lesson.course
-    )
+    enrollment = Enrollment.objects.filter(user=request.user, course=lesson.course).first()
+    preview = enrollment is None
+    if preview and lesson.course.creator_id != request.user.pk and request.user.role != "ADMIN":
+        from django.http import Http404
+        raise Http404
 
-    progress, created = LessonProgress.objects.get_or_create(
-        enrollment=enrollment,
-        lesson=lesson
-    )
-
-    lessons = lesson.course.lessons.all()
+    progress = None
+    progress_by_lesson = {}
+    if enrollment:
+        progress, _ = LessonProgress.objects.get_or_create(enrollment=enrollment, lesson=lesson)
+        progress_by_lesson = {
+            item.lesson_id: item
+            for item in LessonProgress.objects.filter(enrollment=enrollment, lesson__course=lesson.course)
+        }
+    lessons, curriculum_sections = group_course_lessons(lesson.course, lesson.course.lessons.all().order_by("order", "pk").select_related("quiz", "module"))
+    for item in lessons:
+        item.workspace_progress = progress_by_lesson.get(item.id)
+    quiz = getattr(lesson, "quiz", None)
+    latest_attempt = None
+    if quiz and enrollment:
+        latest_attempt = QuizAttempt.objects.filter(enrollment=enrollment, quiz=quiz).first()
 
     return render(
         request,
@@ -440,7 +430,15 @@ def lesson_detail(request, lesson_id):
             "enrollment": enrollment,
             "progress": progress,
             "lessons": lessons,
-            "quiz": getattr(lesson, "quiz", None),
+            "curriculum_sections": curriculum_sections,
+            "learning_live_sessions": visible_learning_sessions(request.user, lesson.course_id, lesson_id=lesson.pk),
+            "quiz": quiz,
+            "latest_attempt": latest_attempt,
+            "preview": preview,
+            "course_progress_percent": round(
+                sum(1 for item in progress_by_lesson.values() if item.completed)
+                / max(len(lessons), 1) * 100
+            ),
         }
     )
 
@@ -452,215 +450,23 @@ def lesson_detail(request, lesson_id):
 
 @login_required
 def complete_lesson(request, lesson_id):
-
-    lesson = get_object_or_404(
-        Lesson.objects.select_related(
-            "course"
-        ),
-        id=lesson_id
-    )
-
-    course = lesson.course
-
-    enrollment = get_object_or_404(
-        Enrollment,
-        user=request.user,
-        course=course
-    )
-
-    # -----------------------------------------------------
-    # ONLY POST
-    # -----------------------------------------------------
-
-    if request.method != "POST":
-
-        return redirect(
-            lesson_detail,
-            lesson_id=lesson.id
-        )
-
-    # -----------------------------------------------------
-    # GET CURRENT PROGRESS
-    # -----------------------------------------------------
-
-    progress, created = LessonProgress.objects.get_or_create(
-        enrollment=enrollment,
-        lesson=lesson
-    )
-
-    # -----------------------------------------------------
-    # LESSON WITH QUIZ
-    # -----------------------------------------------------
-
-    # If the lesson has a quiz, the learner must have
-    # passed the quiz before the lesson can be completed.
-
-    if hasattr(lesson, "quiz"):
-
-        quiz = lesson.quiz
-
-        passed_quiz = QuizAttempt.objects.filter(
-            enrollment=enrollment,
-            quiz=quiz,
-            passed=True
-        ).exists()
-
-        if not passed_quiz:
-
-            messages.warning(
-                request,
-                "You must pass the quiz for this lesson before completing it."
-            )
-
-            return redirect(
-                "take_quiz",
-                quiz_id=quiz.id
-            )
-
-    # -----------------------------------------------------
-    # MARK LESSON COMPLETE
-    # -----------------------------------------------------
-
-    if not progress.completed:
-
-        progress.completed = True
-        progress.completed_at = timezone.now()
-
-        progress.save(
-            update_fields=[
-                "completed",
-                "completed_at"
-            ]
-        )
-
-    # -----------------------------------------------------
-    # COURSE PROGRESS
-    # -----------------------------------------------------
-
-    total_lessons = course.lessons.count()
-
-    completed_lessons = LessonProgress.objects.filter(
-        enrollment=enrollment,
-        lesson__course=course,
-        completed=True
-    ).count()
-
-    # -----------------------------------------------------
-    # CHECK REQUIRED QUIZZES
-    # -----------------------------------------------------
-
-    quizzes = Quiz.objects.filter(
-        lesson__course=course
-    )
-
-    total_quizzes = quizzes.count()
-
-    passed_quizzes = QuizAttempt.objects.filter(
-        enrollment=enrollment,
-        quiz__in=quizzes,
-        passed=True
-    ).values(
-        "quiz_id"
-    ).distinct().count()
-
-    # -----------------------------------------------------
-    # DETERMINE LESSON COMPLETION
-    # -----------------------------------------------------
-
-    lessons_completed = (
-        total_lessons > 0
-        and completed_lessons >= total_lessons
-    )
-
-    # -----------------------------------------------------
-    # DETERMINE QUIZ COMPLETION
-    # -----------------------------------------------------
-
-    quizzes_completed = (
-        passed_quizzes >= total_quizzes
-    )
-
-    # -----------------------------------------------------
-    # DETERMINE COURSE COMPLETION
-    # -----------------------------------------------------
-
-    course_completed = (
-        lessons_completed
-        and quizzes_completed
-    )
-
-    # -----------------------------------------------------
-    # COURSE COMPLETED
-    # -----------------------------------------------------
-
-    if course_completed:
-
-        # -------------------------------------------------
-        # MARK ENROLLMENT COMPLETED
-        # -------------------------------------------------
-
-        if not enrollment.completed:
-
-            enrollment.completed = True
-
-            enrollment.save(
-                update_fields=[
-                    "completed"
-                ]
-            )
-
-        # -------------------------------------------------
-        # GENERATE CERTIFICATE
-        # -------------------------------------------------
-
-        certificate = generate_certificate(
-            enrollment
-        )
-
-        if certificate:
-
-            messages.success(
-                request,
-                "Congratulations! You have completed the course and earned your certificate."
-            )
-
-        else:
-
-            messages.warning(
-                request,
-                "Course completed, but the certificate could not be generated."
-            )
-
+    lesson = get_object_or_404(Lesson.objects.select_related('course'), id=lesson_id)
+    if request.method != 'POST':
+        return redirect(lesson_detail, lesson_id=lesson.id)
+    try:
+        progress, certificate = LearningService.set_lesson_completion(lesson, request.user)
+    except ValueError as error:
+        messages.warning(request, str(error))
+        if hasattr(lesson, 'quiz'):
+            return redirect('take_quiz', quiz_id=lesson.quiz.id)
+        return redirect(lesson_detail, lesson_id=lesson.id)
+    try:
+        certificate = LearningService.ensure_certificate_pdf(certificate, writer=generate_certificate)
+    except Exception:
+        messages.warning(request, 'Progress saved; certificate PDF is temporarily unavailable. Retry completion to generate it.')
     else:
-
-        # -------------------------------------------------
-        # COURSE STILL IN PROGRESS
-        # -------------------------------------------------
-
-        if total_quizzes > passed_quizzes:
-
-            remaining_quizzes = (
-                total_quizzes - passed_quizzes
-            )
-
-            messages.success(
-                request,
-                f"Lesson marked as complete. "
-                f"You still need to pass {remaining_quizzes} "
-                f"quiz(es) to complete the course."
-            )
-
-        else:
-
-            messages.success(
-                request,
-                "Lesson marked as complete."
-            )
-
-    return redirect(
-        lesson_detail,
-        lesson_id=lesson.id
-    )
+        messages.success(request, 'Congratulations! You have completed the course and earned your certificate.' if certificate else 'Lesson marked as complete.')
+    return redirect(lesson_detail, lesson_id=lesson.id)
     
     
 # =========================================================
@@ -764,68 +570,14 @@ def edit_course(request, course_id):
 @user_passes_test(is_course_creator)
 @require_POST
 def submit_course(request, course_id):
-
-    course = get_object_or_404(
-        Course,
-        id=course_id,
-        creator=request.user
-    )
-
-    # -----------------------------------------------------
-    # ONLY DRAFT OR REJECTED COURSES CAN BE SUBMITTED
-    # -----------------------------------------------------
-
-    if course.status not in ["DRAFT", "REJECTED"]:
-
-        messages.warning(
-            request,
-            "Only draft or rejected courses can be submitted."
-        )
-
-        return redirect(
-            my_courses
-        )
-
-    # -----------------------------------------------------
-    # COURSE MUST HAVE AT LEAST ONE LESSON
-    # -----------------------------------------------------
-
-    if not course.lessons.exists():
-
-        messages.warning(
-            request,
-            "Add at least one lesson before submitting the course."
-        )
-
-        return redirect(
-            my_courses
-        )
-
-    # -----------------------------------------------------
-    # SUBMIT COURSE
-    # -----------------------------------------------------
-
-    course.status = "PENDING"
-
-    # Clear the previous rejection reason when
-    # a rejected course is resubmitted.
-    course.rejection_reason = ""
-
-    course.save(
-        update_fields=[
-            "status",
-            "rejection_reason"
-        ]
-    )
-
-    messages.success(
-        request,
-        "Course submitted for approval."
-    )
-
-    return redirect(
-        my_courses
-    )
+    course = get_object_or_404(Course, id=course_id, creator=request.user)
+    try:
+        LearningService.submit_course(course, request.user)
+    except (PermissionError, ValueError) as error:
+        messages.warning(request, str(error))
+    else:
+        messages.success(request, 'Course submitted for approval.')
+    return redirect(my_courses)
 
 
 # =========================================================
@@ -863,10 +615,7 @@ def add_lesson(request, course_id):
 
     if request.method == "POST":
 
-        form = LessonForm(
-            request.POST,
-            request.FILES
-        )
+        form = LessonForm(request.POST, request.FILES, course=course)
 
         if form.is_valid():
 
@@ -892,11 +641,7 @@ def add_lesson(request, course_id):
 
         next_order = course.lessons.count() + 1
 
-        form = LessonForm(
-            initial={
-                "order": next_order
-            }
-        )
+        form = LessonForm(initial={"order": next_order}, course=course)
 
     return render(
         request,
@@ -921,16 +666,65 @@ def manage_course(request, course_id):
         creator=request.user
     )
 
-    lessons = course.lessons.all()
+    lessons, curriculum_sections = group_course_lessons(course, course.lessons.all().order_by("order", "pk").select_related("quiz", "module").prefetch_related("quiz__questions"))
+    progress_lesson_ids = set(LessonProgress.objects.filter(lesson__course=course).values_list("lesson_id", flat=True))
+    attempt_lesson_ids = set(QuizAttempt.objects.filter(quiz__lesson__course=course).values_list("quiz__lesson_id", flat=True))
+    for lesson in lessons:
+        lesson.has_learner_history = lesson.id in progress_lesson_ids or lesson.id in attempt_lesson_ids
 
     return render(
         request,
         "learning/manage_course.html",
         {
             "course": course,
-            "lessons": lessons
+            "lessons": lessons,
+            "modules": course.modules.all(),
+            "curriculum_sections": curriculum_sections,
+            "submission_checklist": LearningService.submission_checklist(course),
         }
     )
+
+
+@login_required
+@user_passes_test(is_course_creator)
+@require_POST
+@transaction.atomic
+def create_course_module(request, course_id):
+    course = get_object_or_404(Course.objects.select_for_update(), pk=course_id, creator=request.user)
+    if course.status not in {'DRAFT', 'REJECTED'}:
+        messages.warning(request, 'Course sections can only be changed while a course is editable.')
+        return redirect('manage_course', course_id=course.pk)
+    data = request.POST.copy()
+    if not data.get('order'):
+        data['order'] = (course.modules.aggregate(last=Max('order'))['last'] or 0) + 1
+    form = CourseModuleForm(data)
+    if form.is_valid():
+        module = form.save(commit=False)
+        module.course = course
+        module.save()
+        messages.success(request, 'Course section added.')
+    else:
+        messages.error(request, 'Enter a valid section title and order.')
+    return redirect('manage_course', course_id=course.pk)
+
+
+@login_required
+@user_passes_test(is_course_creator)
+@require_POST
+@transaction.atomic
+def edit_course_module(request, module_id):
+    module = get_object_or_404(CourseModule.objects.select_related('course').select_for_update(), pk=module_id, course__creator=request.user)
+    course = Course.objects.select_for_update().get(pk=module.course_id)
+    if course.status not in {'DRAFT', 'REJECTED'}:
+        messages.warning(request, 'Course sections can only be changed while a course is editable.')
+        return redirect('manage_course', course_id=course.pk)
+    form = CourseModuleForm(request.POST, instance=module)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Course section updated.')
+    else:
+        messages.error(request, 'Enter a valid section title and order.')
+    return redirect('manage_course', course_id=course.pk)
 
 
 # =========================================================
@@ -988,11 +782,7 @@ def edit_lesson(request, lesson_id):
 
     if request.method == "POST":
 
-        form = LessonForm(
-            request.POST,
-            request.FILES,
-            instance=lesson
-        )
+        form = LessonForm(request.POST, request.FILES, instance=lesson, course=course)
 
         if form.is_valid():
 
@@ -1010,9 +800,7 @@ def edit_lesson(request, lesson_id):
 
     else:
 
-        form = LessonForm(
-            instance=lesson
-        )
+        form = LessonForm(instance=lesson, course=course)
 
     return render(
         request,
@@ -1079,6 +867,10 @@ def delete_lesson(request, lesson_id):
     # -----------------------------------------------------
 
     if request.method == "POST":
+
+        if LessonProgress.objects.filter(lesson=lesson).exists() or QuizAttempt.objects.filter(quiz__lesson=lesson).exists():
+            messages.warning(request, "This lesson has learner history and cannot be deleted.")
+            return redirect("manage_course", course_id=course.id)
 
         lesson.delete()
 
@@ -1166,159 +958,29 @@ def review_course(request, course_id):
 
 @login_required
 def take_quiz(request, quiz_id):
-
-    quiz = get_object_or_404(
-        Quiz.objects.select_related(
-            "lesson",
-            "lesson__course"
-        ),
-        id=quiz_id
-    )
-
-    lesson = quiz.lesson
-    course = lesson.course
-
-    # -----------------------------------------------------
-    # VERIFY ENROLLMENT
-    # -----------------------------------------------------
-
-    enrollment = get_object_or_404(
-        Enrollment,
-        user=request.user,
-        course=course
-    )
-
-    # -----------------------------------------------------
-    # GET QUESTIONS
-    # -----------------------------------------------------
-
-    questions = quiz.questions.all().order_by("id")
-
-    # -----------------------------------------------------
-    # QUIZ MUST HAVE QUESTIONS
-    # -----------------------------------------------------
-
-    if not questions.exists():
-
-        messages.warning(
-            request,
-            "This quiz does not have any questions yet."
-        )
-
-        return redirect(
-            lesson_detail,
-            lesson_id=lesson.id
-        )
-
-    # -----------------------------------------------------
-    # SUBMIT QUIZ
-    # -----------------------------------------------------
-
-    if request.method == "POST":
-
-        score = 0
-
-        total_questions = questions.count()
-
-        # -------------------------------------------------
-        # CHECK ANSWERS
-        # -------------------------------------------------
-
-        for question in questions:
-
-            answer = request.POST.get(
-                f"question_{question.id}"
-            )
-
-            if answer == question.correct_answer:
-
-                score += 1
-
-        # -------------------------------------------------
-        # CALCULATE PERCENTAGE
-        # -------------------------------------------------
-
-        percentage = round(
-            (score / total_questions) * 100
-        )
-
-        # -------------------------------------------------
-        # DETERMINE PASS / FAIL
-        # -------------------------------------------------
-
-        passed = (
-            percentage >= quiz.passing_score
-        )
-
-        # -------------------------------------------------
-        # SAVE QUIZ ATTEMPT
-        # -------------------------------------------------
-
-        attempt = QuizAttempt.objects.create(
-            enrollment=enrollment,
-            quiz=quiz,
-            score=score,
-            total_questions=total_questions,
-            percentage=percentage,
-            passed=passed
-        )
-
-        # -------------------------------------------------
-        # IF QUIZ PASSED
-        # -------------------------------------------------
-
-        if passed:
-
-            messages.success(
-                request,
-                f"Congratulations! You passed the quiz with "
-                f"{percentage}%."
-            )
-
+    quiz = get_object_or_404(Quiz.objects.select_related('lesson__course'), id=quiz_id)
+    lesson, course = quiz.lesson, quiz.lesson.course
+    LearningService.require_quiz_access(request.user, course)
+    enrollment = get_object_or_404(Enrollment, user=request.user, course=course)
+    questions = list(quiz.questions.all().order_by('id'))
+    if not questions:
+        messages.warning(request, 'This quiz does not have any questions yet.')
+        return redirect(lesson_detail, lesson_id=lesson.id)
+    if request.method == 'POST':
+        answers = {key.removeprefix('question_'): value for key, value in request.POST.items() if key.startswith('question_')}
+        try:
+            attempt = LearningService.record_quiz_attempt(quiz, request.user, answers)
+        except ValueError as error:
+            messages.error(request, str(error))
         else:
-
-            messages.warning(
-                request,
-                f"You scored {percentage}%. "
-                f"You need {quiz.passing_score}% to pass. "
-                f"You can try again."
-            )
-
-        # -------------------------------------------------
-        # RENDER QUIZ RESULT
-        # -------------------------------------------------
-
-        return render(
-            request,
-            "learning/quiz_result.html",
-            {
-                "quiz": quiz,
-                "lesson": lesson,
-                "course": course,
-                "enrollment": enrollment,
-                "attempt": attempt,
-                "score": score,
-                "total_questions": total_questions,
-                "percentage": percentage,
-                "passed": passed,
-            }
-        )
-
-    # -----------------------------------------------------
-    # DISPLAY QUIZ
-    # -----------------------------------------------------
-
-    return render(
-        request,
-        "learning/take_quiz.html",
-        {
-            "quiz": quiz,
-            "lesson": lesson,
-            "course": course,
-            "questions": questions,
-            "enrollment": enrollment,
-        }
-    )
+            return render(request, 'learning/quiz_result.html', {
+                'quiz': quiz, 'lesson': lesson, 'course': course, 'enrollment': enrollment,
+                'attempt': attempt, 'score': attempt.score, 'total_questions': attempt.total_questions,
+                'percentage': attempt.percentage, 'passed': attempt.passed,
+                'question_feedback': attempt.question_feedback,
+            })
+    return render(request, 'learning/take_quiz.html', {'quiz': quiz, 'lesson': lesson, 'course': course,
+        'questions': questions, 'enrollment': enrollment})
 
    
 
@@ -1470,9 +1132,7 @@ def course_progress(request, course_id):
     # GET COURSE LESSONS
     # -----------------------------------------------------
 
-    lessons = list(
-        course.lessons.all()
-    )
+    lessons, curriculum_sections = group_course_lessons(course, course.lessons.all().order_by('order', 'pk').select_related('module'))
 
     # -----------------------------------------------------
     # GET LESSON PROGRESS FOR THIS ENROLLMENT
@@ -1542,6 +1202,7 @@ def course_progress(request, course_id):
             "course": course,
             "enrollment": enrollment,
             "lessons": lessons,
+            "curriculum_sections": curriculum_sections,
             "total_lessons": total_lessons,
             "completed_lessons": completed_lessons,
             "progress_percentage": progress_percentage,
@@ -1613,27 +1274,14 @@ def admin_course_detail(request, course_id):
 @user_passes_test(is_admin)
 @require_POST
 def approve_course(request, course_id):
-
-    course = get_object_or_404(
-        Course,
-        id=course_id,
-        status="PENDING"
-    )
-
-    course.status = "APPROVED"
-
-    course.save(
-        update_fields=["status"]
-    )
-
-    messages.success(
-        request,
-        f'"{course.title}" has been approved successfully.'
-    )
-
-    return redirect(
-        "admin_courses"
-    )
+    course = get_object_or_404(Course, id=course_id, status='PENDING')
+    try:
+        LearningService.approve_course(course)
+    except ValueError as error:
+        messages.warning(request, str(error))
+        return redirect('admin_course_detail', course_id=course.id)
+    messages.success(request, f'"{course.title}" has been approved successfully.')
+    return redirect('admin_courses')
 
 
 # =========================================================
@@ -1644,49 +1292,14 @@ def approve_course(request, course_id):
 @user_passes_test(is_admin)
 @require_POST
 def reject_course(request, course_id):
-
-    course = get_object_or_404(
-        Course,
-        id=course_id,
-        status="PENDING"
-    )
-
-    reason = request.POST.get(
-        "rejection_reason",
-        ""
-    ).strip()
-
-    if not reason:
-
-        messages.error(
-            request,
-            "Please provide a reason for rejecting the course."
-        )
-
-        return redirect(
-            "admin_course_detail",
-            course_id=course.id
-        )
-
-    course.status = "REJECTED"
-
-    course.rejection_reason = reason
-
-    course.save(
-        update_fields=[
-            "status",
-            "rejection_reason"
-        ]
-    )
-
-    messages.warning(
-        request,
-        f'"{course.title}" has been rejected.'
-    )
-
-    return redirect(
-        "admin_courses"
-    )
+    course = get_object_or_404(Course, id=course_id, status='PENDING')
+    try:
+        LearningService.reject_course(course, request.POST.get('rejection_reason', ''))
+    except ValueError as error:
+        messages.error(request, str(error))
+        return redirect('admin_course_detail', course_id=course.id)
+    messages.warning(request, f'"{course.title}" has been rejected.')
+    return redirect('admin_courses')
     
     
  # =========================================================
@@ -1997,6 +1610,10 @@ def delete_question(request, question_id):
 
     if request.method == "POST":
 
+        if QuizAttempt.objects.filter(quiz=quiz).exists():
+            messages.warning(request, "This quiz has learner attempts and cannot be deleted.")
+            return redirect("manage_quiz", quiz_id=quiz.id)
+
         question.delete()
 
         messages.success(
@@ -2180,6 +1797,10 @@ def delete_quiz(request, quiz_id):
             "manage_quiz",
             quiz_id=quiz.id
         )
+
+    if QuizAttempt.objects.filter(quiz=quiz).exists():
+        messages.warning(request, "This quiz has learner attempts and cannot be deleted.")
+        return redirect("manage_quiz", quiz_id=quiz.id)
 
     # -----------------------------------------------------
     # DELETE QUIZ
@@ -2566,9 +2187,10 @@ def download_certificate(request, certificate_id):
 
     if not certificate.pdf:
 
-        certificate = generate_certificate(
-            certificate.enrollment
-        )
+        try:
+            certificate = LearningService.ensure_certificate_pdf(certificate, writer=generate_certificate)
+        except Exception:
+            return HttpResponse('Certificate PDF is temporarily unavailable. Please retry.', status=503)
 
     # -----------------------------------------------------
     # RETURN SAVED PDF

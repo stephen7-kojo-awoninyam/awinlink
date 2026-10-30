@@ -1,4 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useScopedState } from '@/src/privacy-state';
+import { LoadMore } from '@/src/components/LoadMore';
+import { useSearchPath } from '@/src/search-query';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -21,16 +24,20 @@ type Opportunity = {
   deadline: string | null;
   skills: string[];
   active: boolean;
+  has_applied?: boolean;
 };
 type Application = { opportunity: number };
 
 export default function OpportunitiesScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [items, setItems] = useState<Opportunity[]>([]);
-  const [applied, setApplied] = useState<Set<number>>(new Set());
-  const [selected, setSelected] = useState<Opportunity | null>(null);
+  const scope = `${user?.id}:${user?.role}`;
+  const [items, setItems] = useScopedState<Opportunity[]>(scope, []);
+  const [applied, setApplied] = useScopedState<Set<number>>(scope, new Set());
+  const [selected, setSelected] = useScopedState<Opportunity | null>(scope, null);
   const [query, setQuery] = useState('');
+  const endpoint = useSearchPath('opportunities/', query);
+  const revision = useRef(0);
   const [message, setMessage] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
@@ -39,23 +46,25 @@ export default function OpportunitiesScreen() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
+    const generation = ++revision.current;
     setError('');
     try {
-      const opportunities = await apiRequest<Opportunity[]>('opportunities/');
+      const opportunities = await apiRequest<Opportunity[]>(endpoint);
+      if (generation !== revision.current) return;
       setItems(opportunities);
       if (user?.role === 'ATHLETE') {
         const applications = await apiRequest<Application[]>('applications/me/');
+        if (generation !== revision.current) return;
         setApplied(new Set(applications.map((application) => application.opportunity)));
       }
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load opportunities.');
+      if (generation === revision.current) setError(loadError instanceof Error ? loadError.message : 'Unable to load opportunities.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (generation === revision.current) { setLoading(false); setRefreshing(false); }
     }
-  }, [user?.role]);
+  }, [user?.id, user?.role, endpoint]);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => { void load(); return () => { ++revision.current; }; }, [load]));
 
   const matches = items.filter((item) =>
     [item.title, item.organization_name, item.domain_name, item.location, item.description]
@@ -110,7 +119,7 @@ export default function OpportunitiesScreen() {
               <Text style={styles.description}>{selected.description}</Text>
               {!!selected.skills?.length && <Text style={styles.meta}>Skills: {selected.skills.join(' | ')}</Text>}
               {user?.role === 'ATHLETE' && (
-                applied.has(selected.id) ? <Text style={styles.success}>You have applied.</Text> : (
+                applied.has(selected.id) || selected.has_applied ? <Text style={styles.success}>You have applied.</Text> : (
                   <>
                     <TextInput accessibilityLabel="Application message" value={message} onChangeText={setMessage}
                       placeholder="Message to the organization (optional)" placeholderTextColor={colors.muted}
@@ -138,6 +147,8 @@ export default function OpportunitiesScreen() {
             ))
       }
       {user?.role !== 'ATHLETE' && <Text style={styles.meta}>Applications are available to talent accounts.</Text>}
+
+      <LoadMore items={items} onChange={setItems} label="Load more items" />
     </Page>
   );
 }

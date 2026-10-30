@@ -6,16 +6,24 @@ from unittest.mock import patch
 from django.test import SimpleTestCase, override_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 from .api_views import CallIceServersAPIView
+from django.core.cache import caches
 
 
+@override_settings(AWINLINK_ENV='development', HOSTED_PRODUCTION=False, AWINLINK_RESOURCE_CACHE_ALIAS='default',
+    TURN_REQUIRED=False, CALL_ICE_TRANSPORT_POLICY='all', TURN_SERVER_URLS='', TURN_SHARED_SECRET='',
+    TURN_CREDENTIAL_TTL_SECONDS=3600,
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}})
 class CallIceConfigurationTests(SimpleTestCase):
-    def request(self, authenticated=True):
+    def setUp(self):
+        caches['default'].clear()
+
+    def request(self, authenticated=True, user_id=7):
         request = APIRequestFactory().get('/api/messaging/calls/ice-servers/')
         if authenticated:
-            force_authenticate(request, user=SimpleNamespace(pk=7, is_authenticated=True))
+            force_authenticate(request, user=SimpleNamespace(pk=user_id, is_authenticated=True))
         return CallIceServersAPIView.as_view()(request)
 
-    @override_settings(TURN_SERVER_URLS='turn:relay.test:3478, turns:relay.test:5349,https://invalid.test', TURN_SHARED_SECRET='test-secret')
+    @override_settings(TURN_SERVER_URLS='turn:relay.test:3478, turns:relay.test:5349', TURN_SHARED_SECRET='a' * 64)
     @patch('messaging.api_views.time.time', return_value=1000)
     def test_relay_credentials_expire_and_cannot_be_cached(self, _time):
         response = self.request()
@@ -25,14 +33,72 @@ class CallIceConfigurationTests(SimpleTestCase):
         relay = response.data['ice_servers'][1]
         self.assertEqual(relay['urls'], ['turn:relay.test:3478', 'turns:relay.test:5349'])
         self.assertEqual(relay['username'], '4600:7')
-        expected = base64.b64encode(hmac.new(b'test-secret', b'4600:7', hashlib.sha1).digest()).decode()
+        expected = base64.b64encode(hmac.new(b'a' * 64, b'4600:7', hashlib.sha1).digest()).decode()
         self.assertEqual(relay['credential'], expected)
 
-    @override_settings(TURN_SERVER_URLS='turn:relay.test', TURN_SHARED_SECRET='')
-    def test_missing_secret_reports_stun_only(self):
+    def test_unconfigured_optional_turn_preserves_stun_only_calls(self):
         response = self.request()
         self.assertFalse(response.data['relay_configured'])
         self.assertEqual(len(response.data['ice_servers']), 1)
+        self.assertEqual(response.data['ice_transport_policy'], 'all')
+
+    @override_settings(TURN_SERVER_URLS='turn:relay.test', TURN_SHARED_SECRET='a' * 64)
+    def test_optional_turn_rejects_invalid_configuration_without_partial_credentials(self):
+        for values in [
+            {'TURN_SHARED_SECRET': ''}, {'TURN_SHARED_SECRET': 'short'},
+            {'TURN_SHARED_SECRET': 'a' * 40 + '\n'},
+            {'TURN_SHARED_SECRET': 'a' * 40 + '\x00'},
+            {'TURN_SERVER_URLS': ''}, {'TURN_SERVER_URLS': 'turn:relay.test,https://invalid.test'},
+            {'TURN_SERVER_URLS': 'turn:relay.test,'}, {'TURN_SERVER_URLS': 'turn:[:::1]'},
+            {'TURN_SERVER_URLS': 'turn:bad..test'},
+            {'TURN_SERVER_URLS': 'turn:999.999.999.999'},
+            {'TURN_CREDENTIAL_TTL_SECONDS': 300.5}, {'TURN_CREDENTIAL_TTL_SECONDS': True},
+            {'CALL_ICE_TRANSPORT_POLICY': 'invalid'},
+        ]:
+            with self.subTest(fields=list(values)), override_settings(**values):
+                response = self.request()
+                self.assertEqual(response.status_code, 503)
+                self.assertNotIn('ice_servers', response.data)
+                self.assertEqual(response['Cache-Control'], 'no-store')
+
+    @override_settings(CALL_ICE_TRANSPORT_POLICY='relay')
+    def test_optional_relay_mode_never_falls_back_to_stun(self):
+        self.assertEqual(self.request().status_code, 503)
+
+    @override_settings(TURN_SERVER_URLS='turn:relay.test', TURN_SHARED_SECRET='a' * 64,
+        AWINLINK_RESOURCE_LIMITS={'turn_credentials_burst': (2, 60), 'turn_credentials_hour': (3, 3600)})
+    def test_credential_burst_is_per_account_and_has_retry_after(self):
+        self.assertEqual(self.request().status_code, 200)
+        self.assertEqual(self.request().status_code, 200)
+        response = self.request()
+        self.assertEqual(response.status_code, 429)
+        self.assertGreater(int(response['Retry-After']), 0)
+        self.assertEqual(response['Cache-Control'], 'no-store')
+        self.assertNotIn('ice_servers', response.data)
+        self.assertEqual(self.request(user_id=8).status_code, 200)
+
+    @override_settings(TURN_SERVER_URLS='turn:relay.test', TURN_SHARED_SECRET='a' * 64,
+        AWINLINK_RESOURCE_LIMITS={'turn_credentials_burst': (10, 60), 'turn_credentials_hour': (1, 3600)})
+    def test_hourly_budget_is_enforced(self):
+        self.assertEqual(self.request().status_code, 200)
+        self.assertEqual(self.request().status_code, 429)
+
+    @override_settings(TURN_SERVER_URLS='turn:relay.test', TURN_SHARED_SECRET='a' * 64,
+        AWINLINK_RESOURCE_LIMITS={'turn_credentials_burst': (3, 60), 'turn_credentials_hour': (30, 3600)})
+    def test_concurrent_credential_requests_cannot_exceed_burst_budget(self):
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            statuses = list(executor.map(lambda _: self.request().status_code, range(12)))
+        self.assertEqual(statuses.count(200), 3)
+        self.assertEqual(statuses.count(429), 9)
+
+    @override_settings(TURN_SERVER_URLS='turn:relay.test', TURN_SHARED_SECRET='a' * 64,
+        AWINLINK_ENV='production', HOSTED_PRODUCTION=True)
+    def test_production_without_shared_limiter_fails_closed(self):
+        response = self.request()
+        self.assertEqual(response.status_code, 503)
+        self.assertNotIn('ice_servers', response.data)
+        self.assertEqual(response['Cache-Control'], 'no-store')
 
     def test_credentials_require_authentication(self):
         self.assertEqual(self.request(False).status_code, 401)

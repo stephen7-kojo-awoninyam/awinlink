@@ -58,9 +58,17 @@ function fixture(overrides = {}) {
 test('browser bundle matches the shared native controller exactly', () => {
   assert.equal(readFileSync(resolve(__dirname, '../../static/js/classroom-client.js'), 'utf8'), readFileSync(resolve(__dirname, '../src/classrooms/client.js'), 'utf8'));
 });
+test('web learning-room device controls are unchecked until selected', () => {
+  const template = readFileSync(resolve(__dirname, '../../learning/templates/learning/classroom.html'), 'utf8');
+  for (const device of ['camera', 'microphone']) {
+    assert.match(template, new RegExp(`<input type="checkbox" id="vc-${device}"(?![^>]*checked)`));
+  }
+  assert.match(template, /Camera and microphone start off/);
+});
 test('join uses authenticated services, participant signaling and deterministic offers', async () => {
   const f = fixture(); const { socket } = await f.ready([{ participant_id: 20, user_id: 200, generation: 'new', role: 'LEARNER' }]);
   assert.equal(f.client.state.connected, true);
+  assert.deepEqual(f.captures[0].getTracks(), []);
   assert.equal(f.requests.find(r => r.path.endsWith('join/')).body.connection_id, 'uuid-1');
   assert.deepEqual(socket.sent[0], { type: 'offer', recipient_id: 20, description: { type: 'offer', sdp: 'offer-sdp' } });
   assert.equal(f.peers[0].senders.length, 2);
@@ -120,14 +128,14 @@ test('an early offer arriving before presence is buffered for its matching gener
   assert.equal(socket.sent.at(-1).type, 'answer'); await f.client.dispose();
 });
 test('viewer joins reserve audio/video receivers and can enable a device later', async () => {
-  const f = fixture(); await f.client.toggle('camera'); await f.client.toggle('microphone');
+  const f = fixture();
   await f.ready([{ participant_id: 20, generation: 'one' }]); assert.equal(f.captures[0].tracks.length, 0);
   await f.client.toggle('camera'); assert.equal(f.peers[0].senders[1].track.kind, 'video');
   await f.client.toggle('microphone'); assert.equal(f.peers[0].senders[0].track.kind, 'audio');
   await f.client.toggle('microphone'); assert.equal(f.peers[0].senders[0].track.enabled, false); await f.client.dispose();
 });
 test('screen sharing replaces and restores video while preserving audio', async () => {
-  const f = fixture(); await f.ready([{ participant_id: 20, generation: 'one' }]);
+  const f = fixture(); await f.client.toggle('camera'); await f.client.toggle('microphone'); await f.ready([{ participant_id: 20, generation: 'one' }]);
   const camera = f.peers[0].senders[1].track, microphone = f.peers[0].senders[0].track;
   await f.client.share(); const screen = f.peers[0].senders[1].track;
   assert.notEqual(screen, camera); assert.equal(f.client.state.sharing, true);
@@ -234,9 +242,29 @@ test('ICE transport policy reaches every classroom peer and defaults to all', as
   }
 });
 
+test('learning-room media defaults off and only selected devices are captured', async () => {
+  const f = fixture();
+  assert.equal(f.client.state.camera, false);
+  assert.equal(f.client.state.microphone, false);
+  await f.client.toggle('microphone');
+  await f.ready();
+  assert.deepEqual(f.captures[0].getTracks().map(track => track.kind), ['audio']);
+  await f.client.dispose();
+});
+
 test('invalid ICE policy stops joining before media capture', async () => {
   const f = fixture(); const api = f.client.api;
   f.client.api = async (...args) => args[0].includes('ice-servers') ? { ice_servers: [], ice_transport_policy: 'invalid' } : api(...args);
+  await f.client.join();
+  assert.equal(f.captures.length, 0);
+  assert.equal(f.sockets.length, 0);
+  await f.client.dispose();
+});
+
+test('relay-only classroom configuration without TURN fails before media capture', async () => {
+  const f = fixture();
+  const api = f.client.api;
+  f.client.api = async (...args) => args[0].includes('ice-servers') ? { ice_servers: [{ urls: 'stun:stun.test' }], ice_transport_policy: 'relay' } : api(...args);
   await f.client.join();
   assert.equal(f.captures.length, 0);
   assert.equal(f.sockets.length, 0);

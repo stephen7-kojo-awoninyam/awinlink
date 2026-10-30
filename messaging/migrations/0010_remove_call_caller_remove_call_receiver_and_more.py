@@ -9,36 +9,37 @@ def migrate_existing_calls(apps, schema_editor):
     Call = apps.get_model("messaging", "Call")
     CallParticipant = apps.get_model("messaging", "CallParticipant")
 
-    for call in Call.objects.all():
+    alias = schema_editor.connection.alias
+    for call in Call.objects.using(alias).all().iterator():
 
         # Preserve the original caller as the initiator
         if call.caller_id:
             call.initiated_by_id = call.caller_id
-            call.save(update_fields=["initiated_by"])
+            call.save(using=alias, update_fields=["initiated_by"])
 
-            CallParticipant.objects.get_or_create(
+            CallParticipant.objects.using(alias).get_or_create(
                 call_id=call.id,
                 user_id=call.caller_id,
                 defaults={
-                    "status": "JOINED",
+                    "status": "LEFT" if call.status in ["ENDED", "REJECTED", "MISSED"] else "JOINED",
                     "joined_at": call.answered_at or call.started_at,
+                    "left_at": call.ended_at,
                 }
             )
 
         # Preserve the original receiver
         if call.receiver_id:
             participant_status = (
-                "JOINED"
-                if call.status in ["ACCEPTED", "ENDED"]
-                else "RINGING"
+                {"ACCEPTED": "JOINED", "ENDED": "LEFT", "REJECTED": "REJECTED", "MISSED": "MISSED"}.get(call.status, "RINGING")
             )
 
-            CallParticipant.objects.get_or_create(
+            CallParticipant.objects.using(alias).get_or_create(
                 call_id=call.id,
                 user_id=call.receiver_id,
                 defaults={
                     "status": participant_status,
                     "joined_at": call.answered_at,
+                    "left_at": call.ended_at,
                 }
             )
 
@@ -151,7 +152,6 @@ class Migration(migrations.Migration):
 
         migrations.RunPython(
             migrate_existing_calls,
-            migrations.RunPython.noop,
         ),
 
         # ---------------------------------------------------------

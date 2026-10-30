@@ -1,3 +1,5 @@
+from talents.visibility import visible_talent_profiles_for
+from events.visibility import visible_events_for
 import re
 
 from talents.models import TalentProfile
@@ -151,7 +153,7 @@ class RecommendationEngine:
 
     @staticmethod
     def get_candidates(opportunity):
-        talents = TalentProfile.objects.select_related(
+        talents = visible_talent_profiles_for(opportunity.organization.user).select_related(
             "user"
         ).prefetch_related(
             "domains",
@@ -1325,7 +1327,7 @@ class RecommendationEngine:
         # --------------------------------------------------------
 
         candidates = (
-            TalentProfile.objects
+            visible_talent_profiles_for(talent.user)
             .select_related("user")
             .filter(profile_visibility="PUBLIC")
             .prefetch_related(
@@ -2136,7 +2138,7 @@ class RecommendationEngine:
         # FIND ELIGIBLE ROLE MODELS
         # ============================================
 
-        role_models = TalentProfile.objects.filter(
+        role_models = visible_talent_profiles_for(talent.user).filter(
             is_role_model=True,
             profile_visibility="PUBLIC",
         ).exclude(
@@ -3231,7 +3233,7 @@ class RecommendationEngine:
         from events.models import Event
 
         now = timezone.now()
-        events = Event.objects.filter(
+        events = visible_events_for(talent.user).filter(
             organizer__status="ACTIVE",
             status="PUBLISHED",
             registration_deadline__gt=now,

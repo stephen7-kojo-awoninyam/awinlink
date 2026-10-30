@@ -14,6 +14,7 @@ import { apiRequest, getAccessToken, getWebSocketUrl } from '@/src/api/client';
 import { socketAccessToken, maintainSocketAuthentication } from '@/src/api/socketAuthentication';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { validatedIceServers, type CallIceServer } from '@/src/calls/iceServers';
+import { safeCallDiagnostic } from '@/src/calls/callDiagnostics';
 import { colors } from '@/src/theme';
 import { bindNativeCall, nativeCallConnected, syncNativeMute, endNativeCall } from '@/src/calls/nativeCallUI';
 import { callHasEnded, finishCallRequest, onCallEnded } from '@/src/calls/callLifecycle';
@@ -68,13 +69,12 @@ export default function CallScreen() {
   const pendingCandidates = useRef(new Map<number, RTCIceCandidateInit[]>());
   const icePolicyRef = useRef<'all' | 'relay'>('all');
   const iceServersRef = useRef<CallIceServer[]>([]);
-  const diagnostics = useRef<Record<string, unknown>[]>([]);
   const diagnose = useCallback((event: string, detail: Record<string, unknown> = {}) => {
-    const entry = { at: Date.now(), callId, event, ...detail };
-    diagnostics.current.push(entry);
-    if (diagnostics.current.length > 100) diagnostics.current.shift();
-    console.info('[Awinlink call]', entry);
-  }, [callId]);
+    if (__DEV__) {
+      const entry = safeCallDiagnostic(event, detail);
+      if (entry) console.debug('[Awinlink call]', entry);
+    }
+  }, []);
   const leavingRef = useRef(false);
   const autoAcceptHandled = useRef(false);
   const acceptedRef = useRef(!incoming);
@@ -184,6 +184,7 @@ export default function CallScreen() {
     };
     const sampleStats = async () => {
       if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
+      if (!__DEV__) return;
       try {
         const report = await peer.getStats();
         report.forEach((row: { type: string; isRemote?: boolean; kind?: string; mediaType?: string; bytesReceived?: number; packetsLost?: number; framesDecoded?: number; selectedCandidatePairId?: string }) => {
@@ -202,13 +203,15 @@ export default function CallScreen() {
         });
       } catch { /* Older engines may not expose all stats. */ }
     };
-    const statsTimer = setInterval(() => {
-      if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) {
-        clearInterval(statsTimer); timers.current.delete(statsTimer); return;
-      }
-      void sampleStats();
-    }, 5000);
-    timers.current.add(statsTimer);
+    if (__DEV__) {
+      const statsTimer = setInterval(() => {
+        if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) {
+          clearInterval(statsTimer); timers.current.delete(statsTimer); return;
+        }
+        void sampleStats();
+      }, 5000);
+      timers.current.add(statsTimer);
+    }
     peer.oniceconnectionstatechange = () => {
       if (leavingRef.current || peersRef.current.get(remoteUserId) !== peer) return;
       diagnose('ice_state', { peerId: remoteUserId, state: peer.iceConnectionState });
@@ -359,9 +362,11 @@ export default function CallScreen() {
     try {
       setError('');
       const ice = await apiRequest<{ ice_servers?: unknown; ice_transport_policy?: string }>('messaging/calls/ice-servers/');
+      if (![undefined, 'all', 'relay'].includes(ice.ice_transport_policy)) throw new Error('Invalid ICE transport policy.');
       if (leavingRef.current || generation !== mediaGeneration.current) return;
       icePolicyRef.current = ice.ice_transport_policy === 'relay' ? 'relay' : 'all';
       iceServersRef.current = validatedIceServers(ice.ice_servers);
+      if (icePolicyRef.current === 'relay' && !iceServersRef.current.some(server => [server.urls].flat().some(url => /^turns?:/.test(url)))) throw new Error('Relay connectivity is unavailable.');
       diagnose('ice_configuration', { policy: icePolicyRef.current, relayConfigured: iceServersRef.current.some(server => [server.urls].flat().some(url => /^turns?:/.test(url))) });
       const stream = await mediaDevices.getUserMedia({ audio: true, video: video ? {
         facingMode: 'user', width: 1280, height: 720, frameRate: 24,

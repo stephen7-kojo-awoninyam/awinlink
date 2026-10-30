@@ -11,7 +11,7 @@ function screen({ following = false, state = 'none', own = false, fail = false }
   const profile = { id: 4, user: { id: own ? 1 : 2, username: 'target' } };
   const connection = { id: 7, sender_id: state === 'incoming' ? 2 : 1, receiver_id: state === 'incoming' ? 1 : 2, status: state === 'connected' ? 'ACCEPTED' : 'PENDING' };
   const react = {
-    useState: initial => { const slot = index++; if (!(slot in values)) values[slot] = initial; return [values[slot], value => { values[slot] = typeof value === 'function' ? value(values[slot]) : value; }]; },
+    useState: initial => { const slot = index++; if (!(slot in values)) values[slot] = typeof initial === 'function' ? initial() : initial; return [values[slot], value => { values[slot] = typeof value === 'function' ? value(values[slot]) : value; }]; },
     useRef: initial => refs[refIndex++] ||= { current: initial },
     useCallback: fn => fn, useEffect() {},
   };
@@ -30,11 +30,17 @@ function screen({ following = false, state = 'none', own = false, fail = false }
     return [];
   };
   const jsx = (type, props) => ({ type, props });
+  const privacy = {};
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../src/privacy-state.ts'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS },
+  }).outputText, { exports: privacy, require: name => name === 'react' ? react : require('./pagination-helpers.cjs').pagination });
   const exports = {};
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../app/talent/[id].tsx'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, { exports, require: name => ({
     react, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
+    '@/src/privacy-state': privacy,
+    '@/src/components/LoadMore': { LoadMore: 'LoadMore' },
     'react-native': { Pressable: 'Pressable', Text: 'Text', View: 'View', StyleSheet: { create: x => x } },
     'expo-router': { Stack: { Screen: 'Screen' }, useLocalSearchParams: () => ({ id: '4' }), useRouter: () => ({ push: url => routes.push(url) }), useFocusEffect: fn => focuses.push(fn) },
     '@/src/api/client': { apiRequest }, '@/src/auth/AuthProvider': { useAuth: () => ({ user: { id: 1 } }) },

@@ -12,7 +12,7 @@ function client(fetch) {
   }).outputText;
   vm.runInNewContext(source, {
     exports, URL, Headers, FormData, fetch, process: { env: { EXPO_PUBLIC_API_URL: 'https://api.example' } },
-    require: () => ({
+    require: name => name === '@/src/pagination' ? require('./pagination-helpers.cjs').pagination : ({
       getItemAsync: async key => tokens.get(key) || null,
       setItemAsync: async (key, value) => tokens.set(key, value),
       deleteItemAsync: async key => tokens.delete(key),
@@ -36,6 +36,17 @@ test('concurrent expired requests share refresh and preserve rotated refresh tok
   assert.equal(refreshes, 1);
   assert.ok(results.every(result => result.ok));
   assert.equal(api.tokens.get('awinlink.refresh-token'), 'rotated');
+});
+
+test('array responses expose an explicit next page without automatically requesting it', async () => {
+  let calls = 0;
+  const api = client(async () => { calls++; return Response.json([{ id: 1 }], {
+    headers: { Link: '<https://api.example/api/talents/?cursor=signed>; rel="next"' },
+  }); });
+  const page = await api.apiRequest('talents/');
+  assert.ok(Array.isArray(page)); assert.equal(JSON.stringify(page), '[{"id":1}]');
+  assert.equal(require('./pagination-helpers.cjs').pagination.nextPage(page), 'talents/?cursor=signed');
+  assert.equal(calls, 1);
 });
 
 test('logout during refresh cannot resurrect the old session', async () => {

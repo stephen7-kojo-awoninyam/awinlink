@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT))
 os.environ['DATABASE_URL'] = ''
 os.environ['REDIS_URL'] = ''
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
+os.environ.update(AWINLINK_ENV='development', DEBUG='true')
 from django.conf import settings
 
 settings.DATABASES = {'default': {
@@ -26,7 +27,7 @@ settings.DATABASES = {'default': {
 import django
 django.setup()
 from django.db import connection
-from django.db.migrations.executor import MigrationExecutor
+from config.migration_safety import SafeMigrationExecutor as MigrationExecutor
 from django.db.migrations.autodetector import MigrationAutodetector
 from django.db.migrations.state import ProjectState
 from django.utils import timezone

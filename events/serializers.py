@@ -183,10 +183,14 @@ class EventCertificateSerializer(
     serializers.ModelSerializer
 ):
 
-    event_title = serializers.CharField(
-        source="event.title",
-        read_only=True
-    )
+    event_title = serializers.SerializerMethodField()
+
+    def get_event_title(self, obj):
+        from django.contrib.auth.models import AnonymousUser
+        from .visibility import visible_events_for
+        request = self.context.get('request')
+        user = request.user if request is not None else AnonymousUser()
+        return obj.event.title if visible_events_for(user).filter(pk=obj.event_id).exists() else ''
 
     talent_name = serializers.SerializerMethodField()
 

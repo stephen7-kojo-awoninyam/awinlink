@@ -15,8 +15,9 @@
 <div>
 <span class="lc-eyebrow">{{ attempt.quiz.lesson.course.title }}</span>
 <h2 class="mt-2">{{ attempt.quiz.title }}</h2>
-<p class="lc-muted">{{ attempt.score }} / {{ attempt.total_questions }} correct &middot; {{ attempt.attempted_at|date:"M j, Y" }}</p>
+<p class="lc-muted">{{ attempt.score }} / {{ attempt.total_questions }} correct &middot; {{ attempt.percentage }}% · Pass mark {{ attempt.quiz.passing_score }}% &middot; {{ attempt.attempted_at|date:"M j, Y g:i a" }}</p>
 <a class="lc-text-link mt-2" href="{% learning_url 'lesson_detail' attempt.quiz.lesson.id %}">Revisit lesson</a>
+{% if not attempt.passed %}<a class="lc-text-link mt-2" href="{% url 'take_quiz' attempt.quiz.id %}">Try quiz again</a>{% endif %}
 </div>
 <div>
 <strong class="lc-score mt-0">{{ attempt.percentage }}%</strong>

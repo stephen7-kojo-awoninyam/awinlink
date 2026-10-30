@@ -380,6 +380,8 @@ class OrganizationTalent(models.Model):
     """A roster affiliation; unclaimed entries never create login accounts."""
     organization = models.ForeignKey(Organization, on_delete=models.PROTECT, related_name="talent_roster")
     talent = models.ForeignKey("talents.TalentProfile", null=True, blank=True, on_delete=models.PROTECT, related_name="organization_tags")
+    coach = models.ForeignKey("coaches.CoachProfile", null=True, blank=True, on_delete=models.PROTECT, related_name="organization_tags")
+    scout = models.ForeignKey("scouts.ScoutProfile", null=True, blank=True, on_delete=models.PROTECT, related_name="organization_tags")
     name = models.CharField(max_length=200)
     talent_details = models.CharField(max_length=300, blank=True)
     tag = models.CharField(max_length=80)
@@ -388,12 +390,38 @@ class OrganizationTalent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def linked_profile(self):
+        return self.talent or self.coach or self.scout
+
+    @property
+    def linked_user_id(self):
+        profile = self.linked_profile
+        return profile.user_id if profile else None
+
+    @property
+    def profile_type(self):
+        return "TALENT" if self.talent_id else "COACH" if self.coach_id else "SCOUT" if self.scout_id else None
+
     class Meta:
         ordering = ["name", "pk"]
         constraints = [
             models.CheckConstraint(condition=models.Q(status__in=["UNCLAIMED", "PENDING", "CONFIRMED", "DECLINED", "REMOVED"]), name="org_talent_status_valid"),
-            models.CheckConstraint(condition=models.Q(status="UNCLAIMED", talent__isnull=True) | models.Q(status__in=["PENDING", "CONFIRMED", "DECLINED"], talent__isnull=False) | models.Q(status="REMOVED"), name="org_talent_link_valid"),
+            models.CheckConstraint(condition=(
+                models.Q(talent__isnull=True, coach__isnull=True, scout__isnull=True)
+                | models.Q(talent__isnull=False, coach__isnull=True, scout__isnull=True)
+                | models.Q(talent__isnull=True, coach__isnull=False, scout__isnull=True)
+                | models.Q(talent__isnull=True, coach__isnull=True, scout__isnull=False)
+            ), name="org_roster_one_profile"),
+            models.CheckConstraint(condition=(
+                models.Q(status="UNCLAIMED", talent__isnull=True, coach__isnull=True, scout__isnull=True)
+                | (models.Q(status__in=["PENDING", "CONFIRMED", "DECLINED"]) & (
+                    models.Q(talent__isnull=False) | models.Q(coach__isnull=False) | models.Q(scout__isnull=False)))
+                | models.Q(status="REMOVED")
+            ), name="org_talent_link_valid"),
             models.UniqueConstraint(fields=["organization", "talent", "tag", "roster"], condition=models.Q(status__in=["PENDING", "CONFIRMED"]), name="org_talent_live_tag_unique"),
+            models.UniqueConstraint(fields=["organization", "coach", "tag", "roster"], condition=models.Q(status__in=["PENDING", "CONFIRMED"]), name="org_coach_live_tag_unique"),
+            models.UniqueConstraint(fields=["organization", "scout", "tag", "roster"], condition=models.Q(status__in=["PENDING", "CONFIRMED"]), name="org_scout_live_tag_unique"),
         ]
 
 

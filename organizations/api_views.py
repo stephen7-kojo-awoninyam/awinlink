@@ -5,6 +5,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from api.pagination import OrderedCursorPagination, PagedAPIView
 
 from . import services
 from .api_permissions import (
@@ -19,7 +20,7 @@ from .api_serializers import (
 from .models import Organization, OrganizationMembership, OrganizationTeamInvitation
 
 
-class TeamAPIView(APIView):
+class TeamAPIView(PagedAPIView):
     def handle_exception(self, exc):
         # Existing services expose Django exceptions; translate validation into
         # DRF's 400 responses without changing the services or other endpoints.
@@ -46,9 +47,11 @@ class OrganizationTeamAPIView(TeamAPIView):
 
 
 class TeamMemberListAPIView(OrganizationTeamAPIView):
+    pagination_class = OrderedCursorPagination
     def get(self, request, organization_id):
         organization = self.get_organization(request, organization_id)
-        members = services.list_team_members(organization=organization, actor=request.user)
+        members = services.list_team_members(organization=organization, actor=request.user,
+                                            paginate=lambda queryset: self.page(request, queryset))
         return Response(TeamMemberSerializer(members, many=True).data)
 
 
@@ -128,7 +131,8 @@ class TeamInvitationListCreateAPIView(OrganizationTeamAPIView):
     def get(self, request, organization_id):
         organization = self.get_organization(request, organization_id)
         invitations = organization.team_invitations.select_related("recipient").order_by("-created_at", "-pk")
-        data = [dict(TeamInvitationSerializer(invitation).data, recipient_username=invitation.recipient.username) for invitation in invitations]
+        data = [dict(TeamInvitationSerializer(invitation).data, recipient_username=invitation.recipient.username)
+                for invitation in self.page(request, invitations)]
         return Response(data, headers={"Cache-Control": "no-store"})
 
     def post(self, request, organization_id):

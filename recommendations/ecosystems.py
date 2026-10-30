@@ -47,12 +47,7 @@ def normalize_topic(value):
     normalized = normalized.replace("&", " and ")
     normalized = re.sub(r"[^\w]+", " ", normalized, flags=re.UNICODE)
     normalized = " ".join(normalized.split())
-    aliases = {
-        _normalize_variant(alias): canonical
-        for canonical, values in TOPIC_ALIASES.items()
-        for alias in values
-    }
-    return aliases.get(normalized, normalized)
+    return _NORMALIZED_TOPIC_ALIASES.get(normalized, normalized)
 
 
 def _normalize(value):
@@ -73,6 +68,16 @@ def _normalize_variant(value):
     normalized = unicodedata.normalize("NFKC", value or "").casefold()
     normalized = normalized.replace("&", " and ")
     return " ".join(re.sub(r"[^\w]+", " ", normalized).split())
+
+
+# Static catalog metadata only: never retain profile labels or activity in a
+# process-wide cache. Build this once instead of re-normalizing every alias for
+# every skill and achievement in a batch.
+_NORMALIZED_TOPIC_ALIASES = {
+    _normalize_variant(alias): canonical
+    for canonical, values in TOPIC_ALIASES.items()
+    for alias in values
+}
 
 
 def _split_interest(value):

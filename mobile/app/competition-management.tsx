@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text } from 'react-native';
 import { Redirect, useFocusEffect } from 'expo-router';
@@ -23,7 +25,7 @@ const NEXT_ACTION: Record<string, { action: string; label: string }> = {
 
 export default function CompetitionManagementScreen() {
   const { user } = useAuth();
-  const [items, setItems] = useState<Competition[]>([]);
+  const [items, setItems] = usePagedState<Competition>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [working, setWorking] = useState<number | null>(null);
@@ -58,7 +60,9 @@ export default function CompetitionManagementScreen() {
       </Pressable>;
     })}
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-  </Page>;
+
+      <LoadMore items={items} onChange={setItems} label="Load more items" />
+    </Page>;
 }
 
 const styles = StyleSheet.create({ card: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: 15, borderWidth: 1, gap: 9, padding: 15 }, title: { color: colors.ink, fontSize: 15, fontWeight: '800' }, status: { color: colors.muted, fontSize: 12 }, note: { color: colors.muted, fontSize: 12 }, button: { alignItems: 'center', backgroundColor: colors.primary, borderRadius: 11, padding: 12 }, buttonText: { color: '#fff', fontSize: 12, fontWeight: '800' }, error: { color: colors.danger, fontSize: 12 } });

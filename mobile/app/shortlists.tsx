@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect, useRouter } from 'expo-router';
@@ -13,7 +15,7 @@ type Shortlist = { id: number; talent_id: number; talent_name: string; talent_us
 export default function ShortlistsScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [items, setItems] = useState<Shortlist[]>([]);
+  const [items, setItems] = usePagedState<Shortlist>([]);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,6 +59,8 @@ export default function ShortlistsScreen() {
         </View>)}
         {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
       </>}
+
+      <LoadMore items={items} onChange={setItems} label="Load more items" />
     </Page>
   </>;
 }

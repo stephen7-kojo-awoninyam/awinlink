@@ -31,10 +31,14 @@ def publish_notification(notification_id):
         from marketplace.services import booking_notification_is_current
         if not booking_notification_is_current(notification):
             return
+        from recommendations.rising_talent import notification_is_current
+        if not notification_is_current(notification):
+            return
         from .push import (
             notification_payload,
             send_expo_call_push,
             send_expo_classroom_push,
+            send_expo_rising_talent_push,
             send_push_notification,
         )
 
@@ -42,6 +46,7 @@ def publish_notification(notification_id):
         send_push_notification(notification)
         send_expo_call_push(notification)
         send_expo_classroom_push(notification)
+        send_expo_rising_talent_push(notification)
 
         channel_layer = get_channel_layer()
         if channel_layer is not None:

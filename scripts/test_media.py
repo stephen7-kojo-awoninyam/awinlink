@@ -5,6 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
+os.environ.update(AWINLINK_ENV='development', DEBUG='true')
 from django.conf import settings
 
 settings.DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}

@@ -1,7 +1,9 @@
 
 from rest_framework import serializers
+from collections.abc import Mapping
 
 from .models import PortfolioItem
+from .permissions import OWNERSHIP_FIELDS
 
 
 # ============================================================
@@ -9,6 +11,11 @@ from .models import PortfolioItem
 # ============================================================
 
 class PortfolioItemSerializer(serializers.ModelSerializer):
+
+    def to_internal_value(self, data):
+        if isinstance(data, Mapping) and OWNERSHIP_FIELDS.intersection(data):
+            raise serializers.ValidationError({'non_field_errors': ['Portfolio ownership cannot be changed here.']})
+        return super().to_internal_value(data)
 
     talent_id = serializers.IntegerField(
         source="talent.id",

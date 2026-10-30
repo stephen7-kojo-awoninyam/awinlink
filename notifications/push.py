@@ -28,6 +28,8 @@ def notification_payload(notification):
     }
     if notification.notification_type in {"CLASSROOM_INVITATION", "CLASSROOM_SESSION"}:
         payload["data"] = classroom_push_data(notification)
+    if isinstance(notification.metadata, dict) and notification.metadata.get("feature") == "rising_talent":
+        payload["data"] = {"type": "rising_talent", "notification_id": notification.pk}
     return payload
 
 
@@ -184,9 +186,21 @@ def send_expo_classroom_push(notification):
     from learning.classroom_notifications import classroom_notification_is_current
     if not classroom_notification_is_current(notification):
         return
+    _send_expo_update(notification, classroom_push_data(notification))
+
+
+def send_expo_rising_talent_push(notification):
+    if not isinstance(notification.metadata, dict) or notification.metadata.get("feature") != "rising_talent":
+        return
+    from recommendations.rising_talent import notification_is_current
+    if notification_is_current(notification):
+        _send_expo_update(notification, {"type": "rising_talent", "notification_id": notification.pk})
+
+
+def _send_expo_update(notification, data):
     tokens = list(MobilePushToken.objects.filter(user_id=notification.user_id).values_list("token", flat=True))
     messages = [{"to": token, "title": notification.get_notification_type_display(),
-                 "body": notification.message[:180], "data": classroom_push_data(notification),
+                 "body": notification.message[:180], "data": data,
                  "sound": "default", "ttl": 3600, "collapseId": f"awinlink-notification-{notification.pk}"}
                 for token in tokens]
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -203,4 +217,4 @@ def send_expo_classroom_push(notification):
                 if ticket.get("status") == "error" and ticket.get("details", {}).get("error") == "DeviceNotRegistered":
                     MobilePushToken.objects.filter(token=batch[index]["to"]).delete()
         except (HTTPError, URLError, TimeoutError, ValueError, OSError, AttributeError):
-            logger.exception("Unable to send Expo classroom push for notification %s.", notification.pk)
+            logger.exception("Unable to send Expo update for notification %s.", notification.pk)

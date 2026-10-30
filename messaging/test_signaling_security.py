@@ -12,6 +12,12 @@ from rest_framework_simplejwt.tokens import AccessToken
 from .consumers import CallConsumer
 
 
+VALID_OFFER = {
+    "type": "offer",
+    "sdp": "v=0\r\no=- 1 1 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n",
+}
+
+
 class SignalingPayloadTests(SimpleTestCase):
     def setUp(self):
         # These tests isolate signal payload handling; credential integration is
@@ -19,6 +25,9 @@ class SignalingPayloadTests(SimpleTestCase):
         guard = patch('messaging.socket_security.SecureSocketMixin.ensure_credentials', new=AsyncMock(return_value=True))
         guard.start()
         self.addCleanup(guard.stop)
+        target = patch.object(CallConsumer, 'target_is_participant', new=AsyncMock(return_value=True))
+        target.start()
+        self.addCleanup(target.stop)
 
     def test_non_object_json_does_not_crash_or_relay(self):
         for payload in ('[]', 'null', '42', '"offer"'):
@@ -40,7 +49,7 @@ class SignalingPayloadTests(SimpleTestCase):
         consumer.channel_name = 'sender'
         consumer.channel_layer = SimpleNamespace(group_send=AsyncMock())
         consumer.check_participant = AsyncMock(return_value=True)
-        async_to_sync(consumer.receive)('{"type":"offer","sender_id":99}')
+        async_to_sync(consumer.receive)(json.dumps({"type": "offer", "sender_id": 99, "to_user_id": 2, "description": VALID_OFFER}))
         self.assertEqual(consumer.channel_layer.group_send.call_args.args[1]['data']['sender_id'], 7)
 
     def test_revoked_participant_cannot_keep_relaying_on_open_socket(self):
@@ -63,8 +72,8 @@ class SignalingPayloadTests(SimpleTestCase):
 
     def test_legacy_web_payloads_are_normalized_for_mobile(self):
         for payload in (
-            {"type": "offer", "target_id": 2, "offer": {"type": "offer", "sdp": "legacy"}},
-            {"type": "ice-candidate", "target_id": 2, "candidate": {"candidate": "ice"}},
+            {"type": "offer", "target_id": 2, "offer": VALID_OFFER},
+            {"type": "ice-candidate", "target_id": 2, "candidate": {"candidate": "candidate:legacy 1 udp 2130706431 192.0.2.1 9 typ host"}},
         ):
             consumer = CallConsumer()
             consumer.user = SimpleNamespace(id=1)
@@ -101,6 +110,50 @@ class SignalingPayloadTests(SimpleTestCase):
         async_to_sync(consumer.receive)(json.dumps({'type': 'ready', 'to_user_id': 'invalid'}))
         consumer.channel_layer.group_send.assert_not_awaited()
         self.assertEqual(json.loads(consumer.send.call_args.kwargs['text_data'])['type'], 'error')
+
+    def test_unknown_types_extra_fields_and_malformed_sdp_are_rejected(self):
+        invalid = [
+            {'type': 'call_ended', 'to_user_id': 2},
+            {'type': 'offer', 'to_user_id': 2, 'description': VALID_OFFER, 'candidate': {'candidate': 'candidate:x'}},
+            {'type': 'answer', 'to_user_id': 2, 'description': VALID_OFFER},
+            {'type': 'offer', 'to_user_id': 2, 'description': {'type': 'offer', 'sdp': 'not sdp'}},
+            {'type': 'offer', 'to_user_id': 2, 'description': {'type': 'offer', 'sdp': 'v=0\r\no=- 1 1 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n' + 'a' * 32768}},
+            {'type': 'ice_candidate', 'to_user_id': 2, 'candidate': {'candidate': 'candidate:x malformed'}},
+            {'type': 'ice_candidate', 'to_user_id': 2, 'candidate': {'candidate': 'candidate:x 1 udp 1 192.0.2.1 9 typ host', 'address': 'private'}},
+        ]
+        for payload in invalid:
+            with self.subTest(payload=payload):
+                consumer = CallConsumer()
+                consumer.user = SimpleNamespace(id=1)
+                consumer.room_group_name = 'call_1'
+                consumer.channel_layer = SimpleNamespace(group_send=AsyncMock())
+                consumer.send = AsyncMock()
+                consumer.check_participant = AsyncMock(return_value=True)
+                async_to_sync(consumer.receive)(json.dumps(payload))
+                consumer.channel_layer.group_send.assert_not_awaited()
+                self.assertEqual(json.loads(consumer.send.call_args.kwargs['text_data'])['type'], 'error')
+
+    def test_recipient_must_be_another_current_call_participant(self):
+        consumer = CallConsumer()
+        consumer.user = SimpleNamespace(id=1)
+        consumer.room_group_name = 'call_1'
+        consumer.channel_layer = SimpleNamespace(group_send=AsyncMock())
+        consumer.send = AsyncMock()
+        consumer.check_participant = AsyncMock(return_value=True)
+        consumer.target_is_participant = AsyncMock(return_value=False)
+        async_to_sync(consumer.receive)(json.dumps({'type': 'ready', 'to_user_id': 999}))
+        consumer.target_is_participant.assert_awaited_once_with(999)
+        consumer.channel_layer.group_send.assert_not_awaited()
+
+    def test_duplicate_json_keys_are_rejected(self):
+        consumer = CallConsumer()
+        consumer.user = SimpleNamespace(id=1)
+        consumer.room_group_name = 'call_1'
+        consumer.channel_layer = SimpleNamespace(group_send=AsyncMock())
+        consumer.send = AsyncMock()
+        consumer.check_participant = AsyncMock(return_value=True)
+        async_to_sync(consumer.receive)('{"type":"ready","type":"offer","to_user_id":2}')
+        consumer.channel_layer.group_send.assert_not_awaited()
 
 
 @override_settings(ALLOWED_HOSTS=['testserver'])
@@ -161,15 +214,20 @@ class NativeSignalingIntegrationTests(TransactionTestCase):
     def test_authenticated_native_peers_relay_offer_with_server_identity(self):
         async def run():
             first, second = self.socket(self.caller), self.socket(self.callee)
-            self.assertTrue((await first.connect())[0])
-            self.assertEqual((await first.receive_json_from())['type'], 'connection')
-            self.assertTrue((await second.connect())[0])
-            await second.receive_json_from()
-            self.assertEqual((await first.receive_json_from())['type'], 'participant_joined')
-            await first.send_json_to({'type': 'offer', 'description': {'type': 'offer', 'sdp': 'audit'}, 'sender_id': self.outsider.pk})
-            self.assertEqual((await second.receive_json_from())['sender_id'], self.caller.pk)
-            await first.disconnect()
-            await second.disconnect()
+            try:
+                # Integration startup includes credential and shared-budget IO;
+                # one second is too short under concurrent migration/test load.
+                self.assertTrue((await first.connect(timeout=5))[0])
+                self.assertEqual((await first.receive_json_from(timeout=5))['type'], 'connection')
+                self.assertTrue((await second.connect(timeout=5))[0])
+                await second.receive_json_from(timeout=5)
+                self.assertEqual((await first.receive_json_from(timeout=5))['type'], 'participant_joined')
+                await first.send_json_to({'type': 'offer', 'to_user_id': self.callee.pk,
+                    'description': VALID_OFFER, 'sender_id': self.outsider.pk})
+                self.assertEqual((await second.receive_json_from(timeout=5))['sender_id'], self.caller.pk)
+            finally:
+                await first.disconnect(timeout=5)
+                await second.disconnect(timeout=5)
         async_to_sync(run)()
 
     def test_outsider_and_foreign_browser_are_rejected(self):
@@ -198,4 +256,17 @@ class NativeSignalingIntegrationTests(TransactionTestCase):
             await socket.send_json_to({'type': 'offer'})
             self.assertEqual((await socket.receive_output())['code'], 4003)
             await socket.disconnect()
+        async_to_sync(run)()
+
+    def test_signal_recipient_must_be_in_the_same_call(self):
+        async def run():
+            socket = self.socket(self.caller)
+            try:
+                self.assertTrue((await socket.connect(timeout=5))[0])
+                await socket.receive_json_from(timeout=5)
+                await socket.send_json_to({'type': 'ready', 'to_user_id': self.outsider.pk})
+                response = await socket.receive_json_from(timeout=5)
+                self.assertEqual(response['type'], 'error')
+            finally:
+                await socket.disconnect(timeout=5)
         async_to_sync(run)()

@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Stack, useFocusEffect } from 'expo-router';
@@ -12,9 +14,9 @@ type ConnectionRequest = { id: number; sender_id: number; sender_username: strin
 
 export default function ConnectionsScreen() {
   const { user } = useAuth();
-  const [incoming, setIncoming] = useState<ConnectionRequest[]>([]);
-  const [outgoing, setOutgoing] = useState<ConnectionRequest[]>([]);
-  const [accepted, setAccepted] = useState<ConnectionRequest[]>([]);
+  const [incoming, setIncoming] = usePagedState<ConnectionRequest>([]);
+  const [outgoing, setOutgoing] = usePagedState<ConnectionRequest>([]);
+  const [accepted, setAccepted] = usePagedState<ConnectionRequest>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [workingId, setWorkingId] = useState<number | null>(null);
@@ -61,6 +63,10 @@ export default function ConnectionsScreen() {
         })}
         {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
       </>}
+
+      <LoadMore items={incoming} onChange={setIncoming} label="Load more incoming" />
+      <LoadMore items={outgoing} onChange={setOutgoing} label="Load more outgoing" />
+      <LoadMore items={accepted} onChange={setAccepted} label="Load more accepted" />
     </Page>
   </>;
 }

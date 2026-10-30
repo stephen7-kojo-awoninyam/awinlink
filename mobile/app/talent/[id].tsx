@@ -1,7 +1,7 @@
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -12,8 +12,10 @@ import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useRouter } from 'expo-router';
 
 import { apiRequest } from '@/src/api/client';
+import { useScopedState } from '@/src/privacy-state';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { EmptyState } from '@/src/components/EmptyState';
+import { AuthorizedImage } from '@/src/components/AuthorizedImage';
 import { Page, ui } from '@/src/components/Page';
 import { SafetyActions } from '@/src/components/SafetyActions';
 import { OrganizationBadges } from '@/src/organizations/Badges';
@@ -32,8 +34,14 @@ export default function TalentProfileScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const talentId = Number(routeId);
-  const [profile, setProfile] = useState<TalentProfile | null>(null);
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+  const scope = `${user?.id ?? ''}:${user?.role ?? ''}:${talentId}`;
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
+  const [loadedScope, setLoadedScope] = useState('');
+  const [storedProfile, setProfile] = useScopedState<TalentProfile | null>(scope, null);
+  const [storedPortfolio, setPortfolio] = useScopedState<PortfolioItem[]>(scope, []);
+  const profile = loadedScope === scope ? storedProfile : null;
+  const portfolio = loadedScope === scope ? storedPortfolio : [];
   const [relationship, setRelationship] = useState<RelationshipStatus>('none');
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -48,16 +56,18 @@ export default function TalentProfileScreen() {
   viewedTalentId.current = Number.isInteger(talentId) ? talentId : null;
 
   const loadProfile = useCallback(async () => {
-    if (!Number.isInteger(talentId) || talentId < 1) {
-      setError('This profile link is invalid.');
+    const generation = ++loadGeneration.current;
+    if (!user?.id || !Number.isInteger(talentId) || talentId < 1) {
+      setProfile(null); setPortfolio([]); setLoadedScope(scope);
+      setError(!user?.id ? 'Sign in to view this profile.' : 'This profile link is invalid.');
       setLoading(false);
       setRefreshing(false);
       return;
     }
 
     const revision = dataRevision.current;
-    const generation = ++loadGeneration.current;
     setError('');
+    setLoading(true);
     try {
       const [talent, following, connections, outgoing, incoming, portfolioItems] = await Promise.all([
         apiRequest<TalentProfile>(`talents/${talentId}/`),
@@ -67,9 +77,10 @@ export default function TalentProfileScreen() {
         apiRequest<Connection[]>('connections/incoming/'),
         apiRequest<PortfolioItem[]>(`portfolio/talent/${talentId}/`),
       ]);
-      if (revision !== dataRevision.current || generation !== loadGeneration.current) return;
+      if (currentScope.current !== scope || revision !== dataRevision.current || generation !== loadGeneration.current) return;
       setProfile(talent);
       setPortfolio(portfolioItems);
+      setLoadedScope(scope);
       const targetUserId = talent.user.id;
       setIsFollowing(following.some((item) => item.following_id === targetUserId));
       if (connections.some((item) => item.sender_id === targetUserId || item.receiver_id === targetUserId)) {
@@ -82,16 +93,17 @@ export default function TalentProfileScreen() {
         setRelationship('none');
       }
     } catch (loadError) {
-      if (revision === dataRevision.current && generation === loadGeneration.current) {
+      if (currentScope.current === scope && generation === loadGeneration.current) {
+        setProfile(null); setPortfolio([]); setLoadedScope(scope);
         setError(loadError instanceof Error ? loadError.message : 'Unable to load this profile.');
       }
     } finally {
-      if (generation === loadGeneration.current) {
+      if (currentScope.current === scope && generation === loadGeneration.current) {
         setLoading(false);
         setRefreshing(false);
       }
     }
-  }, [talentId]);
+  }, [talentId, user?.id, user?.role, scope]);
 
   useFocusEffect(useCallback(() => {
     void loadProfile();
@@ -222,7 +234,7 @@ export default function TalentProfileScreen() {
       />
       <Page
         eyebrow="AWINLINK TALENT"
-        title={loading ? 'Profile' : name || 'Profile'}
+            title={loading || loadedScope !== scope ? 'Profile' : name || 'Profile'}
         refreshControl={
           <RefreshControl
             onRefresh={() => {
@@ -234,7 +246,7 @@ export default function TalentProfileScreen() {
           />
         }
       >
-        {loading ? (
+        {loading || loadedScope !== scope ? (
           <ActivityIndicator color={colors.primary} style={styles.loader} />
         ) : error ? (
           <EmptyState
@@ -250,8 +262,8 @@ export default function TalentProfileScreen() {
           <>
             <View style={styles.profileCard}>
               {profile.profile_photo || profile.user.profile_picture ? (
-                <Image
-                  source={{ uri: profile.profile_photo || profile.user.profile_picture || '' }}
+                <AuthorizedImage
+                  uri={profile.profile_photo || profile.user.profile_picture || ''}
                   style={styles.avatar}
                 />
               ) : (
@@ -377,19 +389,21 @@ export default function TalentProfileScreen() {
             )}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Portfolio</Text>
-              {portfolio.length === 0 ? <Text style={styles.body}>No public portfolio items yet.</Text> : portfolio.map((item) => (
+              {portfolio.length === 0 ? <Text style={styles.body}>No portfolio items to display.</Text> : portfolio.map((item) => (
                 <View key={item.id} style={styles.portfolioItem}>
                   <Text style={styles.portfolioTitle}>{item.title}</Text>
                   <Text style={styles.body}>{item.description}</Text>
                   {!!item.link && <Text selectable style={styles.link}>{item.link}</Text>}
-                  {!!item.image && <Image source={{ uri: item.image }} style={styles.portfolioImage} />}
+                  {!!item.image && <AuthorizedImage uri={item.image} style={styles.portfolioImage} />}
                   {!!item.file && <Text selectable style={styles.link}>{item.file}</Text>}
                 </View>
               ))}
             </View>
           </>
         ) : null}
-      </Page>
+
+      <LoadMore items={storedPortfolio} onChange={setPortfolio} label="Load more stored portfolio" />
+    </Page>
     </>
   );
 }

@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
@@ -19,12 +21,12 @@ function displayName(user: MessagingUser) {
 export default function MessagesScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = usePagedState<Conversation>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [contacts, setContacts] = useState<Connection[]>([]);
-  const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
+  const [contacts, setContacts] = usePagedState<Connection>([]);
+  const [selectedContacts, setSelectedContacts] = usePagedState<number>([]);
   const [groupName, setGroupName] = useState('');
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -204,7 +206,11 @@ export default function MessagesScreen() {
             );
           })
         )}
-      </Page>
+
+      <LoadMore items={conversations} onChange={setConversations} label="Load more conversations" />
+      <LoadMore items={contacts} onChange={setContacts} label="Load more contacts" />
+      <LoadMore items={selectedContacts} onChange={setSelectedContacts} label="Load more selected contacts" />
+    </Page>
     </>
   );
 }

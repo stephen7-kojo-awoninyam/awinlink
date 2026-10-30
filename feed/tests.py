@@ -104,6 +104,7 @@ class FeedAjaxInteractionsTests(TestCase):
             organizer=organization,
             category=category,
             title="Community Cup",
+            status="PUBLISHED",
             slug="community-cup",
             description="Test event",
             event_type="WORKSHOP",

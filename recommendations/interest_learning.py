@@ -171,7 +171,8 @@ class InterestLearningService:
             return course
         if kind == "EVENT":
             now = timezone.now()
-            event = Event.objects.filter(
+            from events.visibility import visible_events_for
+            event = visible_events_for(user).filter(
                 pk=item_id,
                 status="PUBLISHED",
                 organizer__status="ACTIVE",

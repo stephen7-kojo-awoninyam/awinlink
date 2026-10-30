@@ -1,3 +1,6 @@
+from accounts.roles import active_user_has_role
+from talents.visibility import public_talent_profiles_for
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -41,13 +44,14 @@ from messaging.models import (
 # =========================================================
 
 @login_required
+@never_cache
 def coach_profile(request):
 
     # -----------------------------------------------------
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -78,13 +82,14 @@ def coach_profile(request):
 # =========================================================
 
 @login_required
+@never_cache
 def edit_coach_profile(request):
 
     # -----------------------------------------------------
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -262,6 +267,7 @@ def edit_coach_profile(request):
 # COACH TALENT DIRECTORY
 # =========================================================
 @login_required
+@never_cache
 def coach_talent_directory(request):
 
 
@@ -269,7 +275,7 @@ def coach_talent_directory(request):
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -291,7 +297,7 @@ def coach_talent_directory(request):
     # GET TALENTS
     # -----------------------------------------------------
 
-    talents = TalentProfile.objects.select_related(
+    talents = public_talent_profiles_for(request.user).select_related(
         "user"
     ).filter(
         profile_visibility="PUBLIC"
@@ -369,7 +375,7 @@ def coach_talent_directory(request):
     saved_talent_ids = set(
         CoachTalentBookmark.objects.filter(
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         ).values_list(
             "talent_id",
             flat=True
@@ -383,7 +389,7 @@ def coach_talent_directory(request):
     followed_talent_ids = set(
         CoachTalentFollow.objects.filter(
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         ).values_list(
             "talent_id",
             flat=True
@@ -428,9 +434,10 @@ def coach_talent_directory(request):
 # =========================================================
 
 @login_required
+@never_cache
 def coach_view_talent(request, talent_id):
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -445,7 +452,7 @@ def coach_view_talent(request, talent_id):
     )
 
     talent = get_object_or_404(
-        TalentProfile.objects.select_related(
+        public_talent_profiles_for(request.user).select_related(
             "user"
         ),
         id=talent_id,
@@ -498,13 +505,14 @@ def coach_view_talent(request, talent_id):
 
 
 @login_required
+@never_cache
 def saved_talents(request):
 
     # -----------------------------------------------------
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -530,7 +538,7 @@ def saved_talents(request):
         CoachTalentBookmark.objects
         .filter(
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         )
         .select_related(
             "talent",
@@ -555,7 +563,7 @@ def saved_talents(request):
         CoachTalentFollow.objects
         .filter(
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         )
         .values_list(
             "talent_id",
@@ -589,13 +597,14 @@ def saved_talents(request):
 # =========================================================
 
 @login_required
+@never_cache
 def unsave_talent(request, talent_id):
 
     # -----------------------------------------------------
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -658,13 +667,14 @@ def unsave_talent(request, talent_id):
 # =========================================================
 
 @login_required
+@never_cache
 def message_talent(request, talent_id):
 
     # -----------------------------------------------------
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -698,7 +708,7 @@ def message_talent(request, talent_id):
     # -----------------------------------------------------
 
     talent = get_object_or_404(
-        TalentProfile,
+        public_talent_profiles_for(request.user),
         id=talent_id,
         profile_visibility="PUBLIC",
     )
@@ -775,13 +785,14 @@ def message_talent(request, talent_id):
 # =========================================================
 
 @login_required
+@never_cache
 def coach_analytics(request):
 
     # -----------------------------------------------------
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -804,7 +815,8 @@ def coach_analytics(request):
     # -----------------------------------------------------
 
     talent_views = CoachTalentView.objects.filter(
-        coach=coach
+        coach=coach,
+        talent__in=public_talent_profiles_for(request.user)
     )
 
     total_talent_views = talent_views.count()
@@ -834,7 +846,8 @@ def coach_analytics(request):
     # -----------------------------------------------------
 
     followed_talents = CoachTalentFollow.objects.filter(
-        coach=coach
+        coach=coach,
+        talent__in=public_talent_profiles_for(request.user)
     )
 
     total_followed_talents = followed_talents.count()
@@ -844,7 +857,8 @@ def coach_analytics(request):
     # -----------------------------------------------------
 
     saved_talents = CoachTalentBookmark.objects.filter(
-        coach=coach
+        coach=coach,
+        talent__in=public_talent_profiles_for(request.user)
     )
 
     total_saved_talents = saved_talents.count()
@@ -939,7 +953,7 @@ def coach_analytics(request):
     recent_views = (
         talent_views
         .filter(
-            talent__profile_visibility="PUBLIC"
+            talent__in=public_talent_profiles_for(request.user)
         )
         .select_related(
             "talent",
@@ -957,7 +971,7 @@ def coach_analytics(request):
     recent_saved = (
         saved_talents
         .filter(
-            talent__profile_visibility="PUBLIC"
+            talent__in=public_talent_profiles_for(request.user)
         )
         .select_related(
             "talent",
@@ -990,13 +1004,14 @@ def coach_analytics(request):
 
 @login_required
 @require_POST
+@never_cache
 def save_talent(request, talent_id):
 
     # -----------------------------------------------------
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -1021,7 +1036,7 @@ def save_talent(request, talent_id):
     from talents.models import TalentProfile
 
     talent = get_object_or_404(
-        TalentProfile,
+        public_talent_profiles_for(request.user),
         id=talent_id,
         profile_visibility="PUBLIC",
     )
@@ -1066,6 +1081,7 @@ def save_talent(request, talent_id):
 # =========================================================
 
 @login_required
+@never_cache
 def update_saved_talent_notes(
     request,
     bookmark_id
@@ -1075,7 +1091,7 @@ def update_saved_talent_notes(
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -1098,7 +1114,7 @@ def update_saved_talent_notes(
     # -----------------------------------------------------
 
     bookmark = get_object_or_404(
-        CoachTalentBookmark,
+        CoachTalentBookmark.objects.filter(talent__in=public_talent_profiles_for(request.user)),
         id=bookmark_id,
         coach=coach
     )
@@ -1136,6 +1152,7 @@ def update_saved_talent_notes(
 # =========================================================
 
 @login_required
+@never_cache
 def remove_saved_talent(
     request,
     bookmark_id
@@ -1145,7 +1162,7 @@ def remove_saved_talent(
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -1194,6 +1211,7 @@ def remove_saved_talent(
 # =========================================================
 
 @login_required
+@never_cache
 def toggle_talent_follow(
     request,
     talent_id
@@ -1203,7 +1221,7 @@ def toggle_talent_follow(
     # ONLY COACHES
     # -----------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -1226,7 +1244,7 @@ def toggle_talent_follow(
     # -----------------------------------------------------
 
     talent = get_object_or_404(
-        TalentProfile,
+        public_talent_profiles_for(request.user),
         id=talent_id,
         profile_visibility="PUBLIC",
     )
@@ -1287,13 +1305,14 @@ def toggle_talent_follow(
 
 @login_required
 @require_POST
+@never_cache
 def follow_talent(request, talent_id):
 
     # -------------------------------------------------
     # ONLY COACHES
     # -------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -1316,7 +1335,7 @@ def follow_talent(request, talent_id):
     # -------------------------------------------------
 
     talent = get_object_or_404(
-        TalentProfile,
+        public_talent_profiles_for(request.user),
         id=talent_id,
         profile_visibility="PUBLIC",
     )
@@ -1344,55 +1363,13 @@ def follow_talent(request, talent_id):
 
 @login_required
 @require_POST
+@never_cache
 def unfollow_talent(request, talent_id):
-
-    # -------------------------------------------------
-    # ONLY COACHES
-    # -------------------------------------------------
-
-    if request.user.role != "COACH":
-
-        messages.error(
-            request,
-            "Only coaches can unfollow talents."
-        )
-
-        return redirect("home")
-
-    # -------------------------------------------------
-    # GET COACH
-    # -------------------------------------------------
-
-    coach = get_object_or_404(
-        CoachProfile,
-        user=request.user
-    )
-
-    # -------------------------------------------------
-    # GET TALENT
-    # -------------------------------------------------
-
-    talent = get_object_or_404(
-        TalentProfile,
-        id=talent_id,
-        profile_visibility="PUBLIC",
-    )
-
-    # -------------------------------------------------
-    # REMOVE FOLLOW
-    # -------------------------------------------------
-
-    CoachTalentFollow.objects.filter(
-        coach=coach,
-        talent=talent
-    ).delete()
-
-    messages.success(
-        request,
-        "Talent unfollowed."
-    )
-
-    return redirect("saved_talents")
+    if not active_user_has_role(request.user, 'COACH'):
+        return redirect('home')
+    coach = get_object_or_404(CoachProfile, user=request.user)
+    CoachTalentFollow.objects.filter(coach=coach, talent_id=talent_id).delete()
+    return redirect('coach_saved_talents')
 
 
 # =====================================================
@@ -1400,13 +1377,14 @@ def unfollow_talent(request, talent_id):
 # =====================================================
 
 @login_required
+@never_cache
 def update_talent_note(request, talent_id):
 
     # -------------------------------------------------
     # ONLY COACHES
     # -------------------------------------------------
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -1429,7 +1407,7 @@ def update_talent_note(request, talent_id):
     # -------------------------------------------------
 
     bookmark = get_object_or_404(
-        CoachTalentBookmark,
+        CoachTalentBookmark.objects.filter(talent__in=public_talent_profiles_for(request.user)),
         coach=coach,
         talent_id=talent_id
     )
@@ -1470,6 +1448,7 @@ def update_talent_note(request, talent_id):
 # =====================================================
 
 @login_required
+@never_cache
 def coach_talent_directory(request):
 
 
@@ -1477,7 +1456,7 @@ def coach_talent_directory(request):
     # ONLY COACHES
     # ==========================================
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
 
         messages.error(
             request,
@@ -1502,7 +1481,7 @@ def coach_talent_directory(request):
     # ==========================================
 
     talents = (
-        TalentProfile.objects
+        public_talent_profiles_for(request.user)
         .select_related("user")
         .prefetch_related(
             "skills",
@@ -1557,7 +1536,7 @@ def coach_talent_directory(request):
 
         CoachTalentBookmark.objects.filter(
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         ).values_list(
             "talent_id",
             flat=True
@@ -1574,7 +1553,7 @@ def coach_talent_directory(request):
 
         CoachTalentFollow.objects.filter(
             coach=coach,
-            talent__profile_visibility="PUBLIC",
+            talent__in=public_talent_profiles_for(request.user),
         ).values_list(
             "talent_id",
             flat=True
@@ -1621,9 +1600,10 @@ def coach_talent_directory(request):
     )
 
 @login_required
+@never_cache
 def select_coach_category(request):
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
         return render(
             request,
             "analytics/access_denied.html"
@@ -1665,9 +1645,10 @@ def select_coach_category(request):
 
 
 @login_required
+@never_cache
 def create_coach_profile(request):
 
-    if request.user.role != "COACH":
+    if not active_user_has_role(request.user, "COACH"):
         return render(
             request,
             "analytics/access_denied.html"

@@ -19,7 +19,10 @@
     return url.pathname.slice(5) + url.search;
   };
   if (byId('classroom-directory')) {
-    const directory = byId('classroom-directory'); let next = 'learning/classrooms/?page_size=20';
+    const directory = byId('classroom-directory');
+    const selectedCourse = new URLSearchParams(location.search).get('course');
+    const courseQuery = selectedCourse && /^[1-9]\d{0,14}$/.test(selectedCourse) ? `&course=${selectedCourse}` : '';
+    let next = `learning/classrooms/?page_size=20${courseQuery}`;
     const more = byId('vc-more');
     async function load() {
       more.disabled = true; byId('vc-error').textContent = '';

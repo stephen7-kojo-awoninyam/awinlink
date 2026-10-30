@@ -5,8 +5,10 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TransactionTestCase
 from django.utils import timezone
+from unittest import skipUnless
 
 
+@skipUnless(connection.vendor == "postgresql", "Historical classroom migrations require PostgreSQL.")
 class ClassroomConnectionMigrationTests(TransactionTestCase):
     def test_existing_intervals_receive_distinct_connection_ids(self):
         previous = [("learning", "0008_classroom_live_sessions")]
@@ -33,8 +35,7 @@ class ClassroomConnectionMigrationTests(TransactionTestCase):
             for minute in [0, 2]:
                 Interval.objects.create(participant=participant, joined_at=now + timedelta(minutes=minute),
                     left_at=now + timedelta(minutes=minute + 1))
-            executor = MigrationExecutor(connection)
-            executor.migrate(latest)
+            MigrationExecutor(connection).migrate(latest)
             new = executor.loader.project_state(latest).apps
             ids = list(new.get_model("learning", "AttendanceInterval").objects.values_list("connection_id", flat=True))
             self.assertEqual(len(ids), 2)

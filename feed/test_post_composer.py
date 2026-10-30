@@ -68,7 +68,7 @@ class PostComposerTests(TestCase):
         self.assertEqual(Post.objects.get().caption, "")
 
     def test_video_only_post_is_valid(self):
-        video = SimpleUploadedFile("practice.mp4", b"synthetic-upload-test", content_type="video/mp4")
+        video = SimpleUploadedFile("practice.mp4", b"\x00\x00\x00\x18ftypisom\x00\x00\x00\x00isommp42", content_type="video/mp4")
         response = self.ajax(self.data(video=video))
         self.assertEqual(response.status_code, 201)
         self.assertTrue(Post.objects.get().video)

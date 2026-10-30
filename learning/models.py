@@ -5,6 +5,8 @@ from django.db.models import F, Q
 from django.utils import timezone
 from django.db import transaction
 from django.core.validators import MinValueValidator
+from django.core.validators import RegexValidator
+from .validators import validate_webvtt, validate_transcript
 import uuid
 
 
@@ -249,6 +251,22 @@ class Certificate(models.Model):
 
     def __str__(self):
         return self.certificate_id
+
+
+class CourseModule(models.Model):
+    """Optional ordered curriculum section; lessons keep their legacy order."""
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='modules')
+    title = models.CharField(max_length=180)
+    description = models.TextField(blank=True)
+    order = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'pk']
+        indexes = [models.Index(fields=['course', 'order', 'id'], name='learning_module_page_idx')]
+
+    def __str__(self):
+        return f'{self.course.title}: {self.title}'
     
 class Lesson(models.Model):
 
@@ -257,6 +275,8 @@ class Lesson(models.Model):
         on_delete=models.CASCADE,
         related_name="lessons"
     )
+
+    module = models.ForeignKey(CourseModule, on_delete=models.SET_NULL, related_name='lessons', blank=True, null=True)
 
     title = models.CharField(
         max_length=250
@@ -278,6 +298,10 @@ class Lesson(models.Model):
         null=True
     )
 
+    captions = models.FileField(upload_to="learning/captions/", blank=True, null=True, validators=[validate_webvtt])
+    caption_language = models.CharField(max_length=35, blank=True, validators=[RegexValidator(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$', 'Enter a valid BCP 47 language tag.')])
+    transcript = models.TextField(blank=True, validators=[validate_transcript])
+
     order = models.PositiveIntegerField()
 
     duration = models.PositiveIntegerField(
@@ -290,6 +314,12 @@ class Lesson(models.Model):
 
     class Meta:
         ordering = ["order"]
+        indexes = [models.Index(fields=['course', 'order', 'id'], name='learning_lesson_page_idx')]
+
+    def clean(self):
+        super().clean()
+        if self.module_id and self.course_id and self.module.course_id != self.course_id:
+            raise ValidationError({'module': 'Choose a module from this lesson course.'})
 
     def __str__(self):
         return self.title
@@ -422,6 +452,9 @@ class Question(models.Model):
     correct_answer = models.CharField(
         max_length=1
     )
+
+    class Meta:
+        indexes = [models.Index(fields=['quiz', 'id'], name='learning_question_page_idx')]
 
     def __str__(self):
         return self.question[:50]

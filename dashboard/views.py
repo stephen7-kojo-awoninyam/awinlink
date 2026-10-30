@@ -23,6 +23,8 @@ from django.http import HttpResponseBadRequest
 from organizations.permissions import require_user_organization_active, require_request_organization, OrganizationCapability
 
 from skills.models import Skill
+from django.views.decorators.cache import never_cache
+from talents.verification_permissions import verification_reviewer
 # Create your views here.
 
 
@@ -138,10 +140,11 @@ def dashboard(request):
         
         
 @login_required
+@never_cache
 def verification_requests(request):
 
 
-    if not request.user.is_superuser and request.user.role != "ADMIN":
+    if not verification_reviewer(request.user):
 
         return redirect("home")
 
@@ -177,7 +180,7 @@ def verification_requests(request):
 def approve_verification(request, request_id):
 
 
-    if not request.user.is_superuser and request.user.role != "ADMIN":
+    if not verification_reviewer(request.user):
 
         return redirect("home")
 
@@ -219,7 +222,7 @@ def approve_verification(request, request_id):
 def reject_verification(request, request_id):
 
 
-    if not request.user.is_superuser and request.user.role != "ADMIN":
+    if not verification_reviewer(request.user):
 
         return redirect("home")
 

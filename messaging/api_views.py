@@ -1,4 +1,5 @@
 from accounts.models import User
+from api.pagination import BoundedCursorPagination, OrderedCursorPagination, PagedAPIView
 from accounts.safety import require_unblocked, blocked_user_ids
 import base64
 import hashlib
@@ -10,6 +11,7 @@ from datetime import timedelta
 import time
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,6 +21,7 @@ from channels.layers import get_channel_layer
 from .models import Conversation, ConversationParticipant, Message,Call, CallParticipant
 from .call_lifecycle import finish_call, publish_call_ended
 from .turn import turn_configuration
+from config.resource_limits import consume
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from opportunities.models import Opportunity
@@ -44,10 +47,15 @@ class CallIceServersAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        response['Cache-Control'] = 'no-store'
+        return response
+
     def get(self, request):
         ice_servers = [{"urls": "stun:stun.l.google.com:19302"}]
         config = turn_configuration()
-        if config['errors'] and (config['required'] or config['policy'] == 'relay'):
+        if config['errors'] and not config['optional_stun_only']:
             response = Response({"detail": "Call connectivity is temporarily unavailable. Please try again later.", "code": "turn_unavailable"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
             response["Cache-Control"] = "no-store"
             response["Retry-After"] = "60"
@@ -55,6 +63,10 @@ class CallIceServersAPIView(APIView):
         turn_urls = config['urls']
         shared_secret = config['secret']
         if turn_urls and shared_secret:
+            # Atomic shared budgets fail closed if Redis is unavailable in production.
+            # Do not tie issuance to call membership: clients fetch ICE before joining.
+            consume('turn_credentials_burst', request.user.pk)
+            consume('turn_credentials_hour', request.user.pk)
             expires_at = int(time.time()) + config['ttl']
             username = f"{expires_at}:{request.user.pk}"
             credential = base64.b64encode(
@@ -66,7 +78,7 @@ class CallIceServersAPIView(APIView):
                 {"urls": turn_urls, "username": username, "credential": credential}
             )
         response = Response({
-            "ice_servers": ice_servers, "relay_configured": bool(turn_urls and shared_secret),
+            "ice_servers": ice_servers, "relay_configured": config['relay_configured'],
             "ice_transport_policy": config['policy'] if config['policy'] in ('all', 'relay') else 'all',
             "credential_ttl_seconds": config['ttl'],
         }, status=status.HTTP_200_OK)
@@ -187,7 +199,12 @@ def expire_ringing_call(call):
 # MY CONVERSATIONS
 # ============================================================
 
-class MyConversationsAPIView(APIView):
+class RecentConversationPagination(OrderedCursorPagination):
+    ordering = ('-updated_at', '-pk')
+
+
+class MyConversationsAPIView(PagedAPIView):
+    pagination_class = RecentConversationPagination
 
     permission_classes = [IsAuthenticated]
 
@@ -200,7 +217,6 @@ class MyConversationsAPIView(APIView):
             )
             .prefetch_related(
                 "participants__user",
-                "messages__sender",
             )
             .select_related(
                 "opportunity",
@@ -211,8 +227,21 @@ class MyConversationsAPIView(APIView):
             )
         )
 
+        latest = Message.objects.filter(conversation_id=OuterRef('pk')).order_by('-pk').values('pk')[:1]
+        page = self.page(request, conversations.annotate(_latest_id=Subquery(latest)))
+        latest_messages = {message.pk: message for message in Message.objects.filter(
+            pk__in=[conversation._latest_id for conversation in page if conversation._latest_id]
+        ).select_related('sender', 'reply_to__sender')}
+        unread = dict(Message.objects.filter(
+            Q(conversation__participants__last_read_at__isnull=True) |
+            Q(created_at__gt=F('conversation__participants__last_read_at')),
+            conversation_id__in=[conversation.pk for conversation in page], conversation__participants__user=request.user,
+        ).exclude(sender=request.user).values('conversation_id').annotate(total=Count('pk')).values_list('conversation_id', 'total'))
+        for conversation in page:
+            conversation._page_last_message = latest_messages.get(conversation._latest_id)
+            conversation._page_unread_count = unread.get(conversation.pk, 0)
         serializer = ConversationSerializer(
-            conversations,
+            page,
             many=True, context={"request": request}
         )
 
@@ -220,6 +249,18 @@ class MyConversationsAPIView(APIView):
             serializer.data,
             status=status.HTTP_200_OK
         )
+
+
+class UnreadMessageCountAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        count = Message.objects.filter(
+            Q(conversation__participants__last_read_at__isnull=True) |
+            Q(created_at__gt=F('conversation__participants__last_read_at')),
+            conversation__participants__user=request.user,
+        ).exclude(sender=request.user).count()
+        return Response({'unread_count': count})
 
 
 
@@ -601,7 +642,13 @@ class ConversationDetailAPIView(APIView):
 # CONVERSATION MESSAGES
 # ============================================================
 
-class ConversationMessagesAPIView(APIView):
+class ChronologicalMessagePagination(BoundedCursorPagination):
+    def get_paginated_response(self, data):
+        return super().get_paginated_response(sorted(data, key=lambda item: item['id']))
+
+
+class ConversationMessagesAPIView(PagedAPIView):
+    pagination_class = ChronologicalMessagePagination
 
     permission_classes = [IsAuthenticated]
 
@@ -665,7 +712,7 @@ class ConversationMessagesAPIView(APIView):
         )
 
         serializer = MessageSerializer(
-            messages,
+            self.page(request, messages),
             many=True,
             context={"request": request},
         )
@@ -1529,7 +1576,7 @@ class EndCallAPIView(APIView):
         return Response(CallSerializer(call).data)
 
 
-class IncomingCallsAPIView(APIView):
+class IncomingCallsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -1542,7 +1589,8 @@ class IncomingCallsAPIView(APIView):
         ringing_calls = Call.objects.filter(
             status="RINGING",
             started_at__lt=timezone.now() - CALL_RING_TIMEOUT,
-        )
+            participants__user=request.user,
+        ).order_by('pk')[:100]
 
         for call in ringing_calls:
             expire_ringing_call(call)
@@ -1557,7 +1605,7 @@ class IncomingCallsAPIView(APIView):
                 participants__user=request.user,
                 participants__status="RINGING",
                 status__in=["RINGING", "ACTIVE"],
-            )
+            ).filter(Q(status='ACTIVE') | Q(started_at__gte=timezone.now() - CALL_RING_TIMEOUT))
             .select_related(
                 "conversation",
                 "initiated_by",
@@ -1570,7 +1618,7 @@ class IncomingCallsAPIView(APIView):
         )
 
         serializer = CallSerializer(
-            calls,
+            self.page(request, calls),
             many=True
         )
 

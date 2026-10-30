@@ -107,7 +107,8 @@ class GoogleFlowTests(TestCase):
             self.assertEqual(response.status_code, 200)
         response = client.post("/api/auth/google/start/", {}, format="json")
         self.assertEqual(response.status_code, 429)
-        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertIn('no-store', response['Cache-Control'])
+        self.assertIn('private', response['Cache-Control'])
         self.assertEqual(response["Referrer-Policy"], "no-referrer")
 
     def test_expired_attempt_cleanup_keeps_live_identity(self):

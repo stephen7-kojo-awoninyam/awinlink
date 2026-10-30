@@ -11,9 +11,11 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-for name in ('RAILWAY_ENVIRONMENT_NAME', 'RAILWAY_ENVIRONMENT', 'RENDER'):
+for name in tuple(os.environ):
+    if not name.startswith(('RAILWAY_', 'RENDER')):
+        continue
     os.environ.pop(name, None)
-os.environ.update(DJANGO_SETTINGS_MODULE='config.settings', DATABASE_URL='', DEBUG='true',
+os.environ.update(DJANGO_SETTINGS_MODULE='config.settings', DATABASE_URL='', DEBUG='true', AWINLINK_ENV='development',
                   SECRET_KEY='test-fixture-only-0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ-abcdefgh')
 
 from django.conf import settings
@@ -22,6 +24,7 @@ settings.CHANNEL_LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChann
 settings.CACHES = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 settings.AUTH_RATE_LIMIT_CACHE_ALIAS = settings.PASSWORD_RESET_CACHE_ALIAS = 'default'
 settings.AUTH_RATE_LIMIT_REQUIRE_SHARED_CACHE = False
+settings.AWINLINK_RESOURCE_CACHE_ALIAS = 'default'
 settings.EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 settings.WEB_PUSH_PUBLIC_KEY = settings.WEB_PUSH_PRIVATE_KEY = settings.MOBILE_APNS_PRIVATE_KEY = ''
 settings.STORAGES = {'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},

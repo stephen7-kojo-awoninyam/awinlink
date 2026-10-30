@@ -1,3 +1,4 @@
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 from talents.visibility import visible_talent_profiles_for
 from django.db import models
@@ -284,6 +285,7 @@ def talent_dashboard(request):
     )
     
 @login_required
+@never_cache
 def request_verification(request):
 
     # Only talent/athlete accounts can request verification
@@ -330,6 +332,7 @@ def request_verification(request):
 
 
 @login_required
+@never_cache
 def talent_profile(request, talent_id):
 
     talent = get_object_or_404(
@@ -341,7 +344,8 @@ def talent_profile(request, talent_id):
     # PORTFOLIO
     # =====================================================
 
-    portfolio_items = talent.portfolio_items.all()
+    from portfolio.permissions import visible_portfolio_items_for
+    portfolio_items = visible_portfolio_items_for(request.user).filter(talent=talent)
 
     # =====================================================
     # FOLLOWERS

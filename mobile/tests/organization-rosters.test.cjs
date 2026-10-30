@@ -152,3 +152,66 @@ test('mobile profile badges discard late responses after switching profiles', as
   const text = JSON.stringify(h.nodes());
   assert.ok(text.includes('Current Academy')); assert.ok(!text.includes('Previous Academy'));
 });
+
+for (const role of ['COACH', 'SCOUT']) {
+  for (const category of ['SPORTS', 'SCIENCE_TECHNOLOGY', 'ARTS', 'OTHERS']) {
+    test(`mobile ${role} ${category} uses the shared consent, removal and history controls`, async () => {
+      const h = hookHarness(), calls = [];
+      const Card = load('../app/organization-rosters.tsx', name => h.common(name) || (name.endsWith('/organizations/rosters') ? {
+        rosterPages: async () => [{ id: 1, action: 'CONFIRM', reason: 'Profile owner consent', created_at: '2026-10-22T12:00:00Z' }],
+      } : name.endsWith('/api/client') ? {} : (() => { throw Error(name); })())).TagCard;
+      const entry = { id: 4, name: 'Member', organization_name: 'Academy', tag: role, category,
+        category_name: { SPORTS: 'Sports', SCIENCE_TECHNOLOGY: 'Science and technology', ARTS: 'Arts', OTHERS: 'Others' }[category],
+        profile_type: role, talent_id: null, status: 'PENDING', actions: ['CONFIRM', 'DECLINE', 'REMOVE'] };
+      const props = { entry, working: false, act: async (...args) => calls.push(args) };
+      const render = () => h.render(Card, props);
+      render();
+      assert.ok(JSON.stringify(h.nodes()).includes(entry.category_name));
+      assert.ok(!h.nodes().some(n => n.type === 'Link')); // No talent-only agreement or profile link.
+      h.nodes().find(n => n.props.title === 'Confirm affiliation').props.onPress(); await flush();
+      assert.equal(calls[0][1], 'CONFIRM');
+      h.nodes().find(n => n.props.title === 'Remove tag').props.onPress(); render();
+      assert.equal(calls.length, 1);
+      h.nodes().find(n => n.props.title === 'Confirm removal').props.onPress(); await flush(); render();
+      assert.equal(calls[1][1], 'REMOVE');
+      h.nodes().find(n => n.props.title === 'View history').props.onPress(); await flush(); render();
+      assert.ok(JSON.stringify(h.nodes()).includes('Profile owner consent'));
+    });
+  }
+}
+
+test('mobile coach and scout badges use account IDs and render organization roster identities', async () => {
+  for (const role of ['COACH', 'SCOUT']) {
+    const h = hookHarness(), paths = [];
+    const row = { id: 9, name: 'Roster alias', profile_name: `${role} person`, profile_type: role, tag: 'Mentor', organization_name: 'Academy', talent_id: null };
+    const Badges = load('../src/organizations/Badges.tsx', name => h.common(name) || (name === './rosters' ? {
+      rosterPages: async url => { paths.push(url); return [row]; },
+    } : (() => { throw Error(name); })())).OrganizationBadges;
+    h.render(Badges, { userId: 42 }); await flush(); h.render(Badges, { userId: 42 });
+    assert.equal(paths[0], 'organizations/profile-badges/42/');
+    assert.ok(JSON.stringify(h.nodes()).includes('Academy'));
+    assert.ok(JSON.stringify(h.nodes()).includes(role === 'COACH' ? 'Coach' : 'Scout'));
+    h.render(Badges, { organizationId: 7 }); await flush(); h.render(Badges, { organizationId: 7 });
+    assert.ok(JSON.stringify(h.nodes()).includes(`${role} person`));
+    assert.ok(!h.nodes().some(n => n.type === 'Link'));
+  }
+});
+
+test('mobile account profiles mount badges for talents, coaches and scouts using the account ID', () => {
+  for (const role of ['ATHLETE', 'COACH', 'SCOUT', 'ORGANIZATION', 'ADMIN']) {
+    const h = hookHarness();
+    const Profile = load('../app/(tabs)/profile.tsx', name => {
+      if (name === 'react-native') return { Image: 'Image', Pressable: 'Pressable', Text: 'Text', View: 'View', StyleSheet: { create: value => value } };
+      if (name === 'expo-router') return { ...h.common(name), useRouter: () => ({ push() {} }) };
+      if (name.endsWith('/auth/AuthProvider')) return { useAuth: () => ({ user: { id: 42, username: 'profile', role }, signOut: async () => {} }) };
+      if (name.endsWith('/api/client')) return { apiRequest: async () => ({}) };
+      if (name.endsWith('/organizations/Badges')) return { OrganizationBadges: 'OrganizationBadges' };
+      if (name.endsWith('/theme')) return { colors: {} };
+      return h.common(name) || (() => { throw Error(name); })();
+    }).default;
+    h.render(Profile);
+    const badges = h.nodes().filter(node => node.type === 'OrganizationBadges');
+    assert.equal(badges.length, ['ATHLETE', 'COACH', 'SCOUT'].includes(role) ? 1 : 0);
+    if (badges.length) assert.equal(badges[0].props.userId, 42);
+  }
+});

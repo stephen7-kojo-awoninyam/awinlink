@@ -1,4 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useScopedState } from '@/src/privacy-state';
+import { useSearchPath } from '@/src/search-query';
+import { LoadMore } from '@/src/components/LoadMore';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -21,27 +24,31 @@ import type { TalentProfile } from '@/src/types';
 export default function DiscoverScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [profiles, setProfiles] = useState<TalentProfile[]>([]);
+  const [profiles, setProfiles] = useScopedState<TalentProfile[]>(`${user?.id}:${user?.role}`, []);
   const [query, setQuery] = useState('');
+  const endpoint = useSearchPath('talents/', query);
+  const revision = useRef(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   const loadProfiles = useCallback(async () => {
+    const generation = ++revision.current;
     setError('');
     try {
-      setProfiles(await apiRequest<TalentProfile[]>('talents/'));
+      const result = await apiRequest<TalentProfile[]>(endpoint);
+      if (generation === revision.current) setProfiles(result);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load talent profiles.');
+      if (generation === revision.current) setError(loadError instanceof Error ? loadError.message : 'Unable to load talent profiles.');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (generation === revision.current) { setLoading(false); setRefreshing(false); }
     }
-  }, []);
+  }, [endpoint, user?.id, user?.role]);
 
   useFocusEffect(
     useCallback(() => {
       void loadProfiles();
+      return () => { ++revision.current; };
     }, [loadProfiles]),
   );
 
@@ -193,6 +200,8 @@ export default function DiscoverScreen() {
           );
         })
       )}
+
+      <LoadMore items={profiles} onChange={setProfiles} label="Load more profiles" />
     </Page>
   );
 }

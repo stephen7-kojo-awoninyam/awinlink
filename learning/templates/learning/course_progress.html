@@ -32,6 +32,7 @@
 </i>{% else %}{{ lesson.order }}{% endif %}</span>
 <span>
 <strong>{{ lesson.title }}</strong>
+{% if lesson.module %}<small>{{ lesson.module.title }}</small>{% endif %}
 <small>{{ lesson.duration }} min{% if lesson.progress.completed %} &middot; Completed{% else %} &middot; Ready to learn{% endif %}</small>
 </span>
 <i class="bi bi-play-circle" aria-hidden="true">

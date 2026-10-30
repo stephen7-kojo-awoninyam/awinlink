@@ -63,7 +63,7 @@ export default function ClassroomScreen() {
         {supportedSharing && joined && button(state?.sharing ? 'Stop sharing' : 'Share screen', () => run(() => clientRef.current!.share()))}
         {caps.end && button('End for everyone', () => confirmAction('end', 'End for everyone'), !!state?.busy, true)}
       </View>
-      <Text style={styles.hint}>Camera and microphone are optional. Media closes in the background unless you explicitly share your screen.</Text>
+      <Text style={styles.hint}>Camera and microphone start off. Choose which devices to share before joining. Media closes in the background unless you explicitly share your screen.</Text>
       <Text style={styles.heading}>Participants</Text>
       <View style={styles.grid}>
         <View style={styles.tile}>{state?.localStream ? <RTCView streamURL={state.localStream.toURL()} objectFit="contain" mirror={!state.sharing} style={styles.video} /> : <Text style={styles.placeholder}>Camera off</Text>}<Text style={styles.label}>{state?.sharing ? 'Your screen' : 'You'}</Text></View>

@@ -499,7 +499,7 @@ export default function CreateScreen() {
           </Pressable>
         </View>
       )}
-    </Page>
+  </Page>
   );
 }
 

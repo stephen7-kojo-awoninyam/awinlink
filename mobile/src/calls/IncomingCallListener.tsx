@@ -157,6 +157,7 @@ export function IncomingCallListener() {
 
     const handlePushResponse = (response: Notifications.NotificationResponse) => {
       const data = response.notification.request.content.data as Record<string, unknown>;
+      if (data.type === 'rising_talent') { router.push('/rising-talent'); return; }
       const call = callFromData(data);
       if (!call) return;
       if (response.actionIdentifier === 'DECLINE') {

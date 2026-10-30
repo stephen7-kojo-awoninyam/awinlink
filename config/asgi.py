@@ -31,6 +31,8 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 from messaging.routing import websocket_urlpatterns
 from learning.routing import websocket_urlpatterns as classroom_websocket_urlpatterns
+from config.socket_limits import SharedSocketLimits, SocketHandshakeLimits
+from config.http_limits import HTTPBodyLimits
 
 
 @database_sync_to_async
@@ -55,7 +57,7 @@ class JWTWebSocketMiddleware:
         authorization = headers.get(b"authorization", b"").decode("latin1")
         scheme, _, token = authorization.partition(" ")
         if authorization:
-            identity = await _jwt_socket_identity(token) if scheme.lower() == "bearer" and token else None
+            identity = await _jwt_socket_identity(token) if scheme.lower() == "bearer" and 0 < len(token) <= 16384 else None
             if identity is not None:
                 user, claims = identity
                 scope = {**scope, "user": user, "jwt_authenticated": True,
@@ -98,12 +100,12 @@ class WebSocketOriginMiddleware:
 
 application = ProtocolTypeRouter(
     {
-        "http": django_asgi_application,
+        "http": HTTPBodyLimits(django_asgi_application),
 
-        "websocket": JWTAuthMiddlewareStack(
-            WebSocketOriginMiddleware(URLRouter(
+        "websocket": SocketHandshakeLimits(JWTAuthMiddlewareStack(
+            WebSocketOriginMiddleware(SharedSocketLimits(URLRouter(
                 websocket_urlpatterns + classroom_websocket_urlpatterns
-            ))
-        ),
+            )))
+        )),
     }
 )

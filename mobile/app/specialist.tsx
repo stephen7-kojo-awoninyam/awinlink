@@ -1,3 +1,6 @@
+import { useScopedState } from '@/src/privacy-state';
+import { LoadMore } from '@/src/components/LoadMore';
+import { useSearchPath } from '@/src/search-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect, useRouter } from 'expo-router';
@@ -18,10 +21,12 @@ export default function SpecialistScreen() {
   const role = user?.role;
   const base = role === 'SCOUT' ? 'scouts' : 'coaches';
   const title = role === 'SCOUT' ? 'Scout tools' : 'Coach tools';
-  const [profiles, setProfiles] = useState<TalentProfile[]>([]);
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [following, setFollowing] = useState<Follow[]>([]);
+  const scope = `${user?.id}:${role}`;
+  const [profiles, setProfiles] = useScopedState<TalentProfile[]>(scope, []);
+  const [bookmarks, setBookmarks] = useScopedState<Bookmark[]>(scope, []);
+  const [following, setFollowing] = useScopedState<Follow[]>(scope, []);
   const [query, setQuery] = useState('');
+  const endpoint = useSearchPath(`${base}/talents/`, query);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [workingId, setWorkingId] = useState<number | null>(null);
@@ -35,7 +40,7 @@ export default function SpecialistScreen() {
     setError('');
     try {
       const [talents, saved, followed] = await Promise.all([
-        apiRequest<TalentProfile[]>(`${base}/talents/`),
+        apiRequest<TalentProfile[]>(endpoint),
         apiRequest<Bookmark[]>(`${base}/talents/bookmarks/`),
         apiRequest<Follow[]>(`${base}/talents/following/`),
       ]);
@@ -50,8 +55,8 @@ export default function SpecialistScreen() {
     finally {
       if (generation === loadGeneration.current) { setLoading(false); setRefreshing(false); }
     }
-  }, [base, role]);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  }, [base, role, endpoint, scope]);
+  useFocusEffect(useCallback(() => { void load(); return () => { ++loadGeneration.current; }; }, [load]));
   const filtered = useMemo(() => {
     const needle = query.trim().replace(/^@/, '').toLowerCase();
     return profiles.filter((p) => !needle || [p.user.username, p.user.first_name, p.user.last_name, p.headline, p.talent_area, p.talent_category, p.country].filter(Boolean).join(' ').toLowerCase().includes(needle));
@@ -59,33 +64,38 @@ export default function SpecialistScreen() {
   if (!user) return <Redirect href="/login" />;
   if (role !== 'SCOUT' && role !== 'COACH') return <Redirect href="/(tabs)" />;
 
-  async function toggleBookmark(profile: TalentProfile) {
-    const existing = bookmarks.find((item) => item.talent === profile.id);
+  async function toggleBookmark(profile: Pick<TalentProfile, 'id' | 'specialist_bookmark_id'>) {
+    const existing = bookmarks.find((item) => item.talent === profile.id)
+      || (profile.specialist_bookmark_id ? { id: profile.specialist_bookmark_id } : null);
     setWorkingId(profile.id); setError('');
     try {
       if (existing) {
         await apiRequest(`${base}/bookmarks/${existing.id}/delete/`, { method: 'DELETE' });
         setBookmarks((current) => current.filter((item) => item.id !== existing.id));
+        setProfiles(current => current.map(item => item.id === profile.id ? { ...item, specialist_bookmark_id: null } : item));
       } else {
         const saved = await apiRequest<Bookmark>(`${base}/talents/${profile.id}/bookmark/`, { method: 'POST', body: { notes: '' } });
         setBookmarks((current) => [saved, ...current]);
+        setProfiles(current => current.map(item => item.id === profile.id ? { ...item, specialist_bookmark_id: saved.id } : item));
       }
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to update saved talents.'); }
     finally { setWorkingId(null); }
   }
 
-  async function toggleFollow(profile: TalentProfile) {
-    const existing = following.find((item) => item.talent === profile.id);
+  async function toggleFollow(profile: Pick<TalentProfile, 'id' | 'specialist_follow_id'>) {
+    const existing = following.find((item) => item.talent === profile.id) || profile.specialist_follow_id;
     setWorkingId(profile.id); setError('');
     try {
       if (existing) {
         await apiRequest(`${base}/talents/${profile.id}/unfollow/`, { method: 'DELETE' });
         dataRevision.current += 1;
         setFollowing((current) => current.filter((item) => item.talent !== profile.id));
+        setProfiles(current => current.map(item => item.id === profile.id ? { ...item, specialist_follow_id: null } : item));
       } else {
         const result = await apiRequest<Follow>(`${base}/talents/${profile.id}/follow/`, { method: 'POST' });
         dataRevision.current += 1;
         setFollowing((current) => [result, ...current.filter((item) => item.talent !== profile.id)]);
+        setProfiles(current => current.map(item => item.id === profile.id ? { ...item, specialist_follow_id: result.id } : item));
       }
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to update followed talents.'); }
     finally { setWorkingId(null); }
@@ -93,8 +103,8 @@ export default function SpecialistScreen() {
 
   const cards = (items: TalentProfile[]) => items.map((profile) => {
     const name = [profile.user.first_name, profile.user.last_name].filter(Boolean).join(' ') || profile.user.username;
-    const saved = bookmarks.some((item) => item.talent === profile.id);
-    const followed = following.some((item) => item.talent === profile.id);
+    const saved = bookmarks.some((item) => item.talent === profile.id) || !!profile.specialist_bookmark_id;
+    const followed = following.some((item) => item.talent === profile.id) || !!profile.specialist_follow_id;
     return <View key={profile.id} style={styles.card}>
       <Pressable style={styles.personRow} onPress={() => router.push({ pathname: '/talent/[id]', params: { id: String(profile.id) } })}>
         {profile.profile_photo || profile.user.profile_picture ? <Image source={{ uri: profile.profile_photo || profile.user.profile_picture || '' }} style={styles.avatar} /> : <View style={[styles.avatar, styles.avatarFallback]}><Text style={styles.initial}>{name.charAt(0).toUpperCase()}</Text></View>}
@@ -115,12 +125,18 @@ export default function SpecialistScreen() {
       {loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : error && profiles.length === 0 ? <EmptyState title="Specialist tools unavailable" message={error} actionLabel="Try again" onAction={() => { setLoading(true); void load(); }} /> : <>
         <Text style={styles.section}>Talent directory</Text>
         {filtered.length ? cards(filtered) : <Text style={styles.meta}>No matching public talents found.</Text>}
-        <Text style={styles.section}>Saved talents ({bookmarks.length})</Text>
-        {bookmarks.length ? cards(profiles.filter((profile) => bookmarks.some((item) => item.talent === profile.id))) : <Text style={styles.meta}>Your saved talents will appear here.</Text>}
-        <Text style={styles.section}>Following ({following.length})</Text>
-        {following.length ? cards(profiles.filter((profile) => following.some((item) => item.talent === profile.id))) : <Text style={styles.meta}>Talents you follow will appear here.</Text>}
+        <Text style={styles.section}>Saved talents ({bookmarks.length} loaded)</Text>
+        {bookmarks.map(item => <View key={item.id} style={styles.card}><Pressable onPress={() => router.push({ pathname: '/talent/[id]', params: { id: String(item.talent) } })}><Text style={styles.person}>{item.talent_name}</Text><Text style={styles.meta}>{item.notes}</Text></Pressable><Pressable disabled={workingId !== null} onPress={() => void toggleBookmark({ id: item.talent, specialist_bookmark_id: item.id })}><Text style={styles.actionText}>Remove saved</Text></Pressable></View>)}
+        {!bookmarks.length && <Text style={styles.meta}>Your saved talents will appear here.</Text>}
+        <Text style={styles.section}>Following ({following.length} loaded)</Text>
+        {following.map(item => <View key={item.id} style={styles.card}><Pressable onPress={() => router.push({ pathname: '/talent/[id]', params: { id: String(item.talent) } })}><Text style={styles.person}>{item.talent_name}</Text></Pressable><Pressable disabled={workingId !== null} onPress={() => void toggleFollow({ id: item.talent, specialist_follow_id: item.id })}><Text style={styles.actionText}>Unfollow</Text></Pressable></View>)}
+        {!following.length && <Text style={styles.meta}>Talents you follow will appear here.</Text>}
         {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
       </>}
+
+      <LoadMore items={profiles} onChange={setProfiles} label="Load more profiles" />
+      <LoadMore items={bookmarks} onChange={setBookmarks} label="Load more bookmarks" />
+      <LoadMore items={following} onChange={setFollowing} label="Load more following" />
     </Page>
   </>;
 }

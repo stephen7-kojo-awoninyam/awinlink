@@ -8,8 +8,10 @@ from django.db.migrations.executor import MigrationExecutor
 from django.db.migrations.recorder import MigrationRecorder
 from django.test import TransactionTestCase
 from django.utils import timezone
+from unittest import skipUnless
 
 
+@skipUnless(connection.vendor == "postgresql", "Historical classroom migrations require PostgreSQL.")
 class VCMigrationChainTests(TransactionTestCase):
     def migrate(self, name):
         executor = MigrationExecutor(connection)

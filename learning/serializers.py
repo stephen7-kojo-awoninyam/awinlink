@@ -3,6 +3,7 @@ from rest_framework import serializers
 from .models import (
     LearningCategory,
     Course,
+    CourseModule,
     CourseReview,
     Certificate,
     Lesson,
@@ -18,9 +19,30 @@ from .models import (
 # LEARNING CATEGORY
 # ============================================================
 
+class LessonCompletionInput(serializers.Serializer):
+    completed = serializers.BooleanField(default=True)
+
+
+class QuizAttemptInput(serializers.Serializer):
+    answers = serializers.DictField(child=serializers.ChoiceField(choices=['A', 'B', 'C', 'D']), default=dict)
+
+
+class CourseRejectionInput(serializers.Serializer):
+    rejection_reason = serializers.CharField(allow_blank=False, trim_whitespace=True)
+
+    def validate_rejection_reason(self, value):
+        if not isinstance(self.initial_data.get('rejection_reason'), str):
+            raise serializers.ValidationError('A rejection reason must be text.')
+        return value
+
+
 class LearningCategorySerializer(serializers.ModelSerializer):
 
     course_count = serializers.SerializerMethodField()
+    is_default = serializers.SerializerMethodField()
+
+    def get_is_default(self, obj):
+        return obj.pk == self.context.get("default_category_id")
 
     class Meta:
         model = LearningCategory
@@ -31,6 +53,7 @@ class LearningCategorySerializer(serializers.ModelSerializer):
             "description",
             "icon",
             "course_count",
+            "is_default",
             "created_at",
         ]
 
@@ -137,6 +160,7 @@ class LessonSerializer(serializers.ModelSerializer):
         source="course.title",
         read_only=True
     )
+    module_title = serializers.CharField(source="module.title", read_only=True, allow_null=True)
 
     class Meta:
         model = Lesson
@@ -145,10 +169,15 @@ class LessonSerializer(serializers.ModelSerializer):
             "id",
             "course",
             "course_title",
+            "module",
+            "module_title",
             "title",
             "description",
             "video",
             "notes",
+            "captions",
+            "caption_language",
+            "transcript",
             "order",
             "duration",
             "created_at",
@@ -157,6 +186,47 @@ class LessonSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "created_at",
         ]
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        course = attrs.get('course') or getattr(self.instance, 'course', None)
+        module = attrs.get('module', getattr(self.instance, 'module', None))
+        if module and course and module.course_id != course.pk:
+            raise serializers.ValidationError({'module': 'Choose a module from this lesson course.'})
+        return attrs
+
+
+class CourseModuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseModule
+        fields = ['id', 'course', 'title', 'description', 'order', 'created_at']
+        read_only_fields = ['id', 'course', 'created_at']
+
+    def validate_order(self, value):
+        if value < 1:
+            raise serializers.ValidationError('Module order must be at least 1.')
+        return value
+
+
+class StudioQuizInput(serializers.Serializer):
+    title = serializers.CharField(max_length=200, trim_whitespace=True)
+    passing_score = serializers.IntegerField(min_value=1, max_value=100, default=70)
+
+
+class StudioQuestionInput(serializers.Serializer):
+    question = serializers.CharField(trim_whitespace=True)
+    option_a = serializers.CharField(max_length=250, trim_whitespace=True)
+    option_b = serializers.CharField(max_length=250, trim_whitespace=True)
+    option_c = serializers.CharField(max_length=250, trim_whitespace=True)
+    option_d = serializers.CharField(max_length=250, trim_whitespace=True)
+    correct_answer = serializers.ChoiceField(choices=('A', 'B', 'C', 'D'))
+
+
+class StudioQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = ['id', 'quiz', 'question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_answer']
+        read_only_fields = ['id', 'quiz']
 
 
 # ============================================================
@@ -320,6 +390,18 @@ class CourseCreateSerializer(serializers.ModelSerializer):
             "is_free",
         ]
 
+    def validate(self, attrs):
+        requested_free = attrs.get("is_free", self.instance.is_free if self.instance else True)
+        if self.instance is None and not requested_free:
+            raise serializers.ValidationError({
+                "is_free": "Paid courses cannot be created until Learning billing is available."
+            })
+        if self.instance is not None and "is_free" in attrs and requested_free != self.instance.is_free:
+            raise serializers.ValidationError({
+                "is_free": "A course's free or paid status cannot be changed after creation."
+            })
+        return attrs
+
     def create(self, validated_data):
 
         request = self.context.get("request")
@@ -336,6 +418,8 @@ class CourseCreateSerializer(serializers.ModelSerializer):
 
 class CertificateSerializer(serializers.ModelSerializer):
 
+    course_id = serializers.IntegerField(source='enrollment.course_id', read_only=True)
+
     course_title = serializers.CharField(
         source="enrollment.course.title",
         read_only=True
@@ -351,6 +435,7 @@ class CertificateSerializer(serializers.ModelSerializer):
             "enrollment",
             "certificate_id",
             "course_title",
+            "course_id",
             "user_name",
             "issued_at",
             "pdf",
@@ -428,6 +513,8 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
         source="quiz.title",
         read_only=True
     )
+    lesson_id = serializers.IntegerField(source="quiz.lesson_id", read_only=True)
+    passing_score = serializers.IntegerField(source="quiz.passing_score", read_only=True)
 
     class Meta:
         model = QuizAttempt
@@ -437,6 +524,8 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             "enrollment",
             "quiz",
             "quiz_title",
+            "lesson_id",
+            "passing_score",
             "score",
             "total_questions",
             "percentage",

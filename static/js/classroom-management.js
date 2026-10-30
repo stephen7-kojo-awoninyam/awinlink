@@ -51,7 +51,7 @@
   }
   function select(parent, label, items) {
     const wrapper = node('label', label + ' '), input = node('select'); input.required = true;
-    for (const item of items) { const option = node('option', item.title); option.value = item.id; input.append(option); }
+    for (const item of items) { const option = node('option', `${item.module_title ? item.module_title + ' · ' : ''}${item.title}`); option.value = item.id; input.append(option); }
     wrapper.append(input); parent.append(wrapper); return input;
   }
   function form(parent, title, submit, build) {
@@ -78,7 +78,9 @@
   }).click();
   api('courses/me/').then(courses => { if (!courses.length) return;
     form(root, 'Create classroom', 'Create classroom', f => {
-      const course = select(f, 'Course', courses), title = field(f, 'Classroom title'), capacity = field(f, 'Seats', 'number'); capacity.value = '50'; capacity.max = '2147483647';
+      const course = select(f, 'Course', courses), requestedCourse = new URLSearchParams(location.search).get('course');
+      if (requestedCourse && /^[1-9]\d{0,14}$/.test(requestedCourse) && courses.some(item => String(item.id) === requestedCourse)) course.value = requestedCourse;
+      const title = field(f, 'Classroom title'), capacity = field(f, 'Seats', 'number'); capacity.value = '50'; capacity.max = '2147483647';
       return async () => { await api('classrooms/', 'POST', { course: Number(course.value), title: title.value, capacity: Number(capacity.value) }); location.reload(); };
     });
   }).catch(report);

@@ -36,7 +36,7 @@
       this.cancel = options.cancel || (timer => clearTimeout(timer));
       this.state = { status: 'Not joined', error: '', session: null, participants: [], peers: [],
         localStream: null, remoteStreams: {}, board: null, chat: [], connected: false,
-        activityConnected: false, camera: true, microphone: true, sharing: false, busy: false,
+        activityConnected: false, camera: false, microphone: false, sharing: false, busy: false,
         rosterPage: 1, rosterHasNext: false, rosterHasPrevious: false };
       this.rosterPage = 1;
       this.peers = new Map(); this.earlySignals = []; this.epoch = 0; this.wanted = false; this.retryCount = 0;
@@ -101,6 +101,7 @@
         this.iceServers = this.options.validateIce(ice.ice_servers);
         if (![undefined, "all", "relay"].includes(ice.ice_transport_policy)) throw new Error("Invalid ICE transport policy.");
         this.icePolicy = ice.ice_transport_policy || "all";
+        if (this.icePolicy === "relay" && !this.iceServers.some(server => [server.urls].flat().some(url => /^turns?:/.test(url)))) throw new Error("Relay connectivity is unavailable.");
         if (this.options.canCapture && !this.options.canCapture()) {
           const error = new Error('Return to Awinlink and join the classroom again.'); error.name = 'SecurityError'; throw error;
         }

@@ -10,9 +10,17 @@
 </span>
 <span class="lc-eyebrow">{{ quiz.title }}</span>
 <h1>{% if passed %}Quiz passed!{% else %}You can try again{% endif %}</h1>
-<p class="lc-muted">{% if passed %}You’ve put your knowledge into practice. Keep the momentum going.{% else %}Review the lesson material and give it another go.{% endif %}</p>
+<p class="lc-muted">{% if passed %}You passed the {{ quiz.passing_score }}% threshold. Continue to the lesson to update progress; certificates follow the course completion rules.{% else %}You need {{ quiz.passing_score }}% to pass. Review the feedback and lesson material, then retry when you’re ready.{% endif %}</p>
 <div class="lc-score">{{ percentage }}%</div>
 <p class="lc-muted">{{ score }} / {{ total_questions }} correct answers &middot; Passing score: {{ quiz.passing_score }}%</p>
+<section class="lc-quiz-feedback" aria-labelledby="quiz-feedback-title">
+<h2 id="quiz-feedback-title">Question feedback</h2>
+<ol>{% for item in question_feedback %}<li class="lc-quiz-feedback-item {% if item.is_correct %}is-correct{% else %}is-incorrect{% endif %}">
+<h3>{{ forloop.counter }}. {{ item.question }}</h3>
+<p>{% if item.is_correct %}Correct.{% else %}Not quite.{% endif %} Your answer: {% if item.selected_answer %}{{ item.selected_answer }}. {{ item.selected_text }}{% else %}No answer selected{% endif %}</p>
+{% if not item.is_correct %}<p>Correct answer: {{ item.correct_answer }}. {{ item.correct_text }}</p>{% endif %}
+</li>{% endfor %}</ol>
+</section>
 <div class="lc-actions">{% if passed %}<a class="lc-button" href="{% learning_url 'lesson_detail' lesson.id %}">Continue learning</a>{% else %}<a class="lc-button" href="{% url 'take_quiz' quiz.id %}">Try again</a>{% endif %}<a class="lc-button lc-button-secondary" href="{% learning_url 'course_progress' course.id %}">Course progress</a>
 </div>
 </section>

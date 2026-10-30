@@ -54,7 +54,7 @@ module.exports = config => {
     return mod;
   }]);
   return withAppBuildGradle(config, mod => {
-    if (!mod.modResults.contents.includes('// Awinlink native call push')) mod.modResults.contents += '\n// Awinlink native call push\ndependencies {\n  implementation project(":expo-notifications")\n  implementation "com.google.firebase:firebase-messaging:25.0.1"\n}\n';
+    if (!mod.modResults.contents.includes('// Awinlink native call push')) mod.modResults.contents += '\n// Awinlink native call push\ndependencies {\n  implementation "com.google.firebase:firebase-messaging:25.0.1"\n}\n';
     return mod;
   });
 };

@@ -1,5 +1,8 @@
+from api.pagination import OrderedCursorPagination, PagedAPIView
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db import transaction
+from django.db.models import Max
 
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -9,6 +12,7 @@ from .services import LearningService
 from .models import (
     LearningCategory,
     Course,
+    CourseModule,
     CourseReview,
     Certificate,
     Lesson,
@@ -31,6 +35,13 @@ from .serializers import (
     QuizSerializer,
     QuestionSerializer,
     QuizAttemptSerializer,
+    LessonCompletionInput,
+    QuizAttemptInput,
+    CourseRejectionInput,
+    StudioQuizInput,
+    StudioQuestionInput,
+    StudioQuestionSerializer,
+    CourseModuleSerializer,
 )
 
 
@@ -48,17 +59,24 @@ class LearningCategoryListAPIView(APIView):
 
         serializer = LearningCategorySerializer(
             categories,
-            many=True
+            many=True,
+            context={"default_category_id": self.default_category_id(request.user)},
         )
 
         return Response(serializer.data)
+
+    @staticmethod
+    def default_category_id(user):
+        from .category_defaults import creator_course_category
+        category = creator_course_category(user)
+        return category.pk if category else None
 
 
 # ============================================================
 # COURSES
 # ============================================================
 
-class CourseListAPIView(APIView):
+class CourseListAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -72,7 +90,7 @@ class CourseListAPIView(APIView):
         )
 
         serializer = CourseSerializer(
-            courses,
+            self.page(request, courses),
             many=True
         )
 
@@ -115,7 +133,7 @@ class CourseDetailAPIView(APIView):
 
     def patch(self, request, course_id):
         course = get_object_or_404(Course, id=course_id)
-        if course.creator_id != request.user.id:
+        if course.creator_id != request.user.id or not LearningService.can_create_course(request.user):
             return Response({"detail": "Only the course creator can edit this course."}, status=status.HTTP_403_FORBIDDEN)
         if course.status not in {"DRAFT", "REJECTED"}:
             return Response({"detail": "Only draft or rejected courses can be edited."}, status=status.HTTP_400_BAD_REQUEST)
@@ -127,6 +145,19 @@ class CourseDetailAPIView(APIView):
         return Response(CourseSerializer(course).data, status=status.HTTP_200_OK)
 
 
+class CourseSubmissionReadinessAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        if course.creator_id != request.user.pk or not LearningService.can_create_course(request.user):
+            return Response({'detail': 'Only the course creator can view submission readiness.'}, status=403)
+        if course.status not in {'DRAFT', 'REJECTED'}:
+            return Response({'detail': 'Readiness is available while a course is editable.'}, status=400)
+        checklist = LearningService.submission_checklist(course)
+        return Response({'ready': all(item['ready'] for item in checklist), 'checks': checklist})
+
+
 # ============================================================
 # CREATE COURSE
 # ============================================================
@@ -136,56 +167,19 @@ class CourseCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-
-        allowed_roles = [
-             "ATHLETE",
-            "ORGANIZATION",
-            "COACH",
-            "ADMIN",
-        ]
-
-        if request.user.role not in allowed_roles:
-
-            return Response(
-                {
-                    "detail": (
-                        "You do not have permission "
-                        "to create courses."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        serializer = CourseCreateSerializer(
-            data=request.data
-        )
-
-        if serializer.is_valid():
-
-            course = serializer.save(
-                creator=request.user
-            )
-
-            response_serializer = CourseSerializer(
-                course
-            )
-
-            return Response(
-                response_serializer.data,
-                status=status.HTTP_201_CREATED
-            )
-
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        if not LearningService.can_create_course(request.user):
+            return Response({'detail': 'You do not have permission to create courses.'}, status=403)
+        serializer = CourseCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        course = serializer.save(creator=request.user)
+        return Response(CourseSerializer(course).data, status=201)
 
 
 # ============================================================
 # MY COURSES
 # ============================================================
 
-class MyCoursesAPIView(APIView):
+class MyCoursesAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -198,7 +192,7 @@ class MyCoursesAPIView(APIView):
         )
 
         serializer = CourseSerializer(
-            courses,
+            self.page(request, courses),
             many=True
         )
 
@@ -298,50 +292,26 @@ class CourseRejectAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, course_id):
-
-        if request.user.role != "ADMIN":
-            return Response(
-                {
-                    "detail": (
-                        "Only ADMIN users can reject courses."
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        course = get_object_or_404(
-            Course,
-            id=course_id
-        )
-
-        reason = request.data.get(
-            "rejection_reason",
-            ""
-        )
-
+        if request.user.role != 'ADMIN':
+            return Response({'detail': 'Only ADMIN users can reject courses.'}, status=403)
+        course = get_object_or_404(Course, id=course_id)
+        data = CourseRejectionInput(data=request.data)
+        data.is_valid(raise_exception=True)
         try:
-            course = LearningService.reject_course(
-                course=course,
-                reason=reason
-            )
-
+            course = LearningService.reject_course(course, data.validated_data['rejection_reason'])
         except ValueError as error:
-            return Response(
-                {
-                    "detail": str(error)
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        return Response(
-            CourseSerializer(course).data,
-            status=status.HTTP_200_OK
-        )                
+            return Response({'detail': str(error)}, status=400)
+        return Response(CourseSerializer(course).data)
 # ============================================================
 # LESSONS FOR COURSE
 # ============================================================
 
-class CourseLessonsAPIView(APIView):
+class LessonPagination(OrderedCursorPagination):
+    ordering = ('order', 'pk')
+
+
+class CourseLessonsAPIView(PagedAPIView):
+    pagination_class = LessonPagination
 
     permission_classes = [IsAuthenticated]
 
@@ -367,14 +337,73 @@ class CourseLessonsAPIView(APIView):
         lessons = course.lessons.all()
 
         serializer = LessonSerializer(
-            lessons,
+            self.page(request, lessons),
             many=True
         )
 
         data = serializer.data
-        if not course.is_free and course.creator_id != request.user.pk and request.user.role != 'ADMIN' and not Enrollment.objects.filter(course=course, user=request.user).exists():
-            data = [{**lesson, 'video': None, 'notes': None} for lesson in data]
+        locked = not course.is_free and course.creator_id != request.user.pk and request.user.role != 'ADMIN' and not Enrollment.objects.filter(course=course, user=request.user).exists()
+        data = [{**lesson, 'is_locked': bool(locked), **({'video': None, 'notes': None, 'captions': None, 'transcript': '', 'caption_language': ''} if locked else {})} for lesson in data]
         return Response(data)
+
+
+class CourseModulesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @staticmethod
+    def _available(course, user):
+        return course.status == 'APPROVED' or course.creator_id == user.pk or user.role == 'ADMIN'
+
+    def get(self, request, course_id):
+        course = get_object_or_404(Course, pk=course_id)
+        if not self._available(course, request.user):
+            return Response({'detail': 'This course is not available.'}, status=404)
+        return Response(CourseModuleSerializer(course.modules.all(), many=True).data)
+
+    @transaction.atomic
+    def post(self, request, course_id):
+        course = get_object_or_404(Course.objects.select_for_update(), pk=course_id)
+        if course.creator_id != request.user.pk or not LearningService.can_create_course(request.user):
+            return Response({'detail': 'Only the course creator can manage course modules.'}, status=403)
+        if course.status not in {'DRAFT', 'REJECTED'}:
+            return Response({'detail': 'Modules cannot be changed while the course is pending or published.'}, status=400)
+        data = {key: request.data.get(key) for key in request.data}
+        if 'order' not in data:
+            data['order'] = (course.modules.aggregate(last=Max('order'))['last'] or 0) + 1
+        serializer = CourseModuleSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        module = CourseModule.objects.create(course=course, **serializer.validated_data)
+        return Response(CourseModuleSerializer(module).data, status=201)
+
+
+class CourseModuleDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def patch(self, request, module_id):
+        module = get_object_or_404(CourseModule.objects.select_related('course').select_for_update(), pk=module_id)
+        course = Course.objects.select_for_update().get(pk=module.course_id)
+        if course.creator_id != request.user.pk or not LearningService.can_create_course(request.user):
+            return Response({'detail': 'Only the course creator can manage course modules.'}, status=403)
+        if course.status not in {'DRAFT', 'REJECTED'}:
+            return Response({'detail': 'Modules cannot be changed while the course is pending or published.'}, status=400)
+        data = {key: request.data.get(key) for key in request.data if key in {'title', 'description', 'order'}}
+        serializer = CourseModuleSerializer(module, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @transaction.atomic
+    def delete(self, request, module_id):
+        module = get_object_or_404(CourseModule.objects.select_related('course').select_for_update(), pk=module_id)
+        course = Course.objects.select_for_update().get(pk=module.course_id)
+        if course.creator_id != request.user.pk or not LearningService.can_create_course(request.user):
+            return Response({'detail': 'Only the course creator can manage course modules.'}, status=403)
+        if course.status not in {'DRAFT', 'REJECTED'}:
+            return Response({'detail': 'Modules cannot be changed while the course is pending or published.'}, status=400)
+        # SET_NULL keeps every lesson, quiz, progress row, attempt and certificate intact.
+        module.delete()
+        return Response(status=204)
 
 
 # ============================================================
@@ -385,14 +414,15 @@ class LessonCreateAPIView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, course_id):
 
         course = get_object_or_404(
-            Course,
+            Course.objects.select_for_update(),
             id=course_id
         )
 
-        if course.creator != request.user:
+        if course.creator_id != request.user.pk or not LearningService.can_create_course(request.user):
 
             return Response(
                 {
@@ -422,7 +452,12 @@ class LessonCreateAPIView(APIView):
 
         # Flatten multipart values without deep-copying temporary upload streams.
         data = {key: request.data.get(key) for key in request.data}
+        if data.get('module') in {'', 'none', 'null'}:
+            data['module'] = None
         data['course'] = course.id
+        # The client may have only a cursor page. Serialize appends on the
+        # course row and use the complete persisted lesson collection.
+        data['order'] = (course.lessons.aggregate(last=Max('order'))['last'] or 0) + 1
         serializer = LessonSerializer(data=data)
 
         if serializer.is_valid():
@@ -478,6 +513,130 @@ class LessonDetailAPIView(APIView):
 
         return Response(serializer.data)
 
+    @transaction.atomic
+    def patch(self, request, lesson_id):
+        lesson = get_object_or_404(Lesson.objects.select_related('course').select_for_update(), id=lesson_id)
+        course = Course.objects.select_for_update().get(pk=lesson.course_id)
+        if course.creator_id != request.user.pk or not LearningService.can_create_course(request.user):
+            return Response({'detail': 'Only the course creator can edit this lesson.'}, status=403)
+        if course.status not in {'DRAFT', 'REJECTED'}:
+            return Response({'detail': 'Lessons cannot be edited while pending or published.'}, status=400)
+        data = {key: request.data.get(key) for key in request.data if key in {'title', 'description', 'video', 'notes', 'captions', 'caption_language', 'transcript', 'module', 'order', 'duration'}}
+        if data.get('module') in {'', 'none', 'null'}:
+            data['module'] = None
+        serializer = LessonSerializer(lesson, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        if 'order' in serializer.validated_data and serializer.validated_data['order'] < 1:
+            return Response({'order': ['Order must be at least 1.']}, status=400)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class StudioLessonQuizAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _lesson(self, request, lesson_id, *, lock=False):
+        query = Lesson.objects.select_related('course')
+        if lock:
+            query = query.select_for_update()
+        lesson = get_object_or_404(query, id=lesson_id)
+        if lesson.course.creator_id != request.user.pk or not LearningService.can_create_course(request.user):
+            return None, Response({'detail': 'Only the course creator can manage this lesson quiz.'}, status=403)
+        return lesson, None
+
+    def get(self, request, lesson_id):
+        lesson, denied = self._lesson(request, lesson_id)
+        if denied:
+            return denied
+        quiz = Quiz.objects.filter(lesson=lesson).first()
+        if not quiz:
+            return Response({'quiz': None, 'question_count': 0})
+        return Response({'quiz': QuizSerializer(quiz).data, 'question_count': quiz.questions.count()})
+
+    @transaction.atomic
+    def post(self, request, lesson_id):
+        lesson, denied = self._lesson(request, lesson_id, lock=True)
+        if denied:
+            return denied
+        course = Course.objects.select_for_update().get(pk=lesson.course_id)
+        if course.status not in {'DRAFT', 'REJECTED'}:
+            return Response({'detail': 'Quiz content cannot be changed while pending or published.'}, status=400)
+        if Quiz.objects.filter(lesson=lesson).exists():
+            return Response({'detail': 'This lesson already has a quiz.'}, status=409)
+        data = StudioQuizInput(data=request.data)
+        data.is_valid(raise_exception=True)
+        quiz = Quiz.objects.create(lesson=lesson, **data.validated_data)
+        return Response(QuizSerializer(quiz).data, status=201)
+
+    @transaction.atomic
+    def patch(self, request, lesson_id):
+        lesson, denied = self._lesson(request, lesson_id, lock=True)
+        if denied:
+            return denied
+        course = Course.objects.select_for_update().get(pk=lesson.course_id)
+        if course.status not in {'DRAFT', 'REJECTED'}:
+            return Response({'detail': 'Quiz content cannot be changed while pending or published.'}, status=400)
+        quiz = get_object_or_404(Quiz.objects.select_for_update(), lesson=lesson)
+        data = StudioQuizInput(data=request.data, partial=True)
+        data.is_valid(raise_exception=True)
+        for key, value in data.validated_data.items():
+            setattr(quiz, key, value)
+        quiz.save(update_fields=list(data.validated_data))
+        return Response(QuizSerializer(quiz).data)
+
+
+class StudioQuizQuestionsAPIView(PagedAPIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = OrderedCursorPagination
+
+    def _quiz(self, request, quiz_id, *, lock=False):
+        query = Quiz.objects.select_related('lesson__course')
+        if lock:
+            query = query.select_for_update()
+        quiz = get_object_or_404(query, id=quiz_id)
+        course = quiz.lesson.course
+        if course.creator_id != request.user.pk or not LearningService.can_create_course(request.user):
+            return None, Response({'detail': 'Only the course creator can manage quiz questions.'}, status=403)
+        return quiz, None
+
+    def get(self, request, quiz_id):
+        quiz, denied = self._quiz(request, quiz_id)
+        if denied:
+            return denied
+        return Response(StudioQuestionSerializer(self.page(request, quiz.questions.all().order_by('id')), many=True).data)
+
+    @transaction.atomic
+    def post(self, request, quiz_id):
+        quiz, denied = self._quiz(request, quiz_id, lock=True)
+        if denied:
+            return denied
+        course = Course.objects.select_for_update().get(pk=quiz.lesson.course_id)
+        if course.status not in {'DRAFT', 'REJECTED'}:
+            return Response({'detail': 'Quiz content cannot be changed while pending or published.'}, status=400)
+        data = StudioQuestionInput(data=request.data)
+        data.is_valid(raise_exception=True)
+        question = Question.objects.create(quiz=quiz, **data.validated_data)
+        return Response(StudioQuestionSerializer(question).data, status=201)
+
+
+class StudioQuestionDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def patch(self, request, question_id):
+        question = get_object_or_404(Question.objects.select_related('quiz__lesson__course').select_for_update(), id=question_id)
+        course = Course.objects.select_for_update().get(pk=question.quiz.lesson.course_id)
+        if course.creator_id != request.user.pk or not LearningService.can_create_course(request.user):
+            return Response({'detail': 'Only the course creator can edit this question.'}, status=403)
+        if course.status not in {'DRAFT', 'REJECTED'}:
+            return Response({'detail': 'Quiz content cannot be changed while pending or published.'}, status=400)
+        data = StudioQuestionInput(data=request.data, partial=True)
+        data.is_valid(raise_exception=True)
+        for key, value in data.validated_data.items():
+            setattr(question, key, value)
+        question.save(update_fields=list(data.validated_data))
+        return Response(StudioQuestionSerializer(question).data)
+
 
 # ============================================================
 # ENROLL IN COURSE
@@ -488,48 +647,21 @@ class CourseEnrollmentAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, course_id):
-
-        course = get_object_or_404(
-            Course,
-            id=course_id,
-            status="APPROVED"
-        )
-
-        if not course.is_free:
-            return Response({"detail": "Paid enrollment is unavailable until store billing is configured."}, status=402)
-
-        if Enrollment.objects.filter(
-            user=request.user,
-            course=course
-        ).exists():
-
-            return Response(
-                {
-                    "detail": "You are already enrolled."
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        enrollment = Enrollment.objects.create(
-            user=request.user,
-            course=course
-        )
-
-        serializer = EnrollmentSerializer(
-            enrollment
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED
-        )
+        course = get_object_or_404(Course, id=course_id, status='APPROVED')
+        try:
+            enrollment, created = LearningService.enroll(course, request.user)
+        except ValueError as error:
+            return Response({'detail': str(error)}, status=402)
+        if not created:
+            return Response({'detail': 'You are already enrolled.'}, status=400)
+        return Response(EnrollmentSerializer(enrollment).data, status=201)
 
 
 # ============================================================
 # MY ENROLLMENTS
 # ============================================================
 
-class MyEnrollmentsAPIView(APIView):
+class MyEnrollmentsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -542,7 +674,7 @@ class MyEnrollmentsAPIView(APIView):
         )
 
         serializer = EnrollmentSerializer(
-            enrollments,
+            self.page(request, enrollments),
             many=True
         )
 
@@ -558,63 +690,20 @@ class LessonProgressAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, lesson_id):
-
-        lesson = get_object_or_404(
-            Lesson,
-            id=lesson_id
-        )
-
-        enrollment = get_object_or_404(
-            Enrollment,
-            user=request.user,
-            course=lesson.course
-        )
-
-        progress, created = LessonProgress.objects.get_or_create(
-            enrollment=enrollment,
-            lesson=lesson
-        )
-
-        completed = request.data.get(
-            "completed",
-            True
-        )
-
-        progress.completed = completed
-
-        if completed:
-            progress.completed_at = timezone.now()
-        else:
-            progress.completed_at = None
-
-        progress.save()
-
-        # Check whether all lessons are completed.
-        total_lessons = lesson.course.lessons.count()
-
-        completed_lessons = LessonProgress.objects.filter(
-            enrollment=enrollment,
-            completed=True
-        ).count()
-
-        if (
-            total_lessons > 0
-            and completed_lessons >= total_lessons
-        ):
-            enrollment.completed = True
-            enrollment.completed_at = timezone.now()
-            enrollment.save(
-                update_fields=[
-                    "completed",
-                    "completed_at"
-                ]
-            )
-
-        serializer = LessonProgressSerializer(
-            progress
-        )
-
-        return Response(serializer.data)
+        lesson = get_object_or_404(Lesson.objects.select_related('course'), id=lesson_id)
+        LearningService.require_quiz_access(request.user, lesson.course)
+        data = LessonCompletionInput(data=request.data)
+        data.is_valid(raise_exception=True)
+        try:
+            progress, certificate = LearningService.set_lesson_completion(lesson, request.user, data.validated_data['completed'])
+        except ValueError as error:
+            return Response({'detail': str(error)}, status=400)
+        try:
+            LearningService.ensure_certificate_pdf(certificate)
+        except Exception:
+            # The durable progress and certificate identity remain retryable.
+            return Response({'detail': 'Progress saved; certificate PDF is temporarily unavailable. Retry completion to generate it.'}, status=503)
+        return Response(LessonProgressSerializer(progress).data)
 
 
 # ============================================================
@@ -678,7 +767,7 @@ class CourseProgressAPIView(APIView):
 # COURSE REVIEWS
 # ============================================================
 
-class CourseReviewListCreateAPIView(APIView):
+class CourseReviewListCreateAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -694,7 +783,7 @@ class CourseReviewListCreateAPIView(APIView):
         )
 
         serializer = CourseReviewSerializer(
-            reviews,
+            self.page(request, reviews),
             many=True
         )
 
@@ -768,7 +857,7 @@ class CourseReviewListCreateAPIView(APIView):
 # MY CERTIFICATES
 # ============================================================
 
-class MyCertificatesAPIView(APIView):
+class MyCertificatesAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -781,7 +870,7 @@ class MyCertificatesAPIView(APIView):
         )
 
         serializer = CertificateSerializer(
-            certificates,
+            self.page(request, certificates),
             many=True
         )
 
@@ -797,47 +886,25 @@ class LessonQuizAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, lesson_id):
-
-        lesson = get_object_or_404(
-            Lesson,
-            id=lesson_id
-        )
-
-        quiz = get_object_or_404(
-            Quiz,
-            lesson=lesson
-        )
-
-        serializer = QuizSerializer(
-            quiz
-        )
-
-        return Response(serializer.data)
+        lesson = get_object_or_404(Lesson.objects.select_related('course'), id=lesson_id)
+        LearningService.require_quiz_access(request.user, lesson.course)
+        quiz = get_object_or_404(Quiz, lesson=lesson)
+        return Response(QuizSerializer(quiz).data)
 
 
 # ============================================================
 # QUIZ QUESTIONS
 # ============================================================
 
-class QuizQuestionsAPIView(APIView):
+class QuizQuestionsAPIView(PagedAPIView):
+    pagination_class = OrderedCursorPagination
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request, quiz_id):
-
-        quiz = get_object_or_404(
-            Quiz,
-            id=quiz_id
-        )
-
-        questions = quiz.questions.all()
-
-        serializer = QuestionSerializer(
-            questions,
-            many=True
-        )
-
-        return Response(serializer.data)
+        quiz = get_object_or_404(Quiz.objects.select_related('lesson__course'), id=quiz_id)
+        LearningService.require_quiz_access(request.user, quiz.lesson.course)
+        return Response(QuestionSerializer(self.page(request, quiz.questions.all()), many=True).data)
 
 
 # ============================================================
@@ -849,76 +916,24 @@ class QuizAttemptAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, quiz_id):
-
-        quiz = get_object_or_404(
-            Quiz,
-            id=quiz_id
-        )
-
-        enrollment = get_object_or_404(
-            Enrollment,
-            user=request.user,
-            course=quiz.lesson.course
-        )
-
-        answers = request.data.get(
-            "answers",
-            {}
-        )
-
-        questions = quiz.questions.all()
-
-        total_questions = questions.count()
-        score = 0
-
-        for question in questions:
-
-            answer = answers.get(
-                str(question.id)
-            )
-
-            if answer == question.correct_answer:
-
-                score += 1
-
-        if total_questions > 0:
-
-            percentage = round(
-                (score / total_questions) * 100
-            )
-
-        else:
-
-            percentage = 0
-
-        passed = (
-            percentage >= quiz.passing_score
-        )
-
-        attempt = QuizAttempt.objects.create(
-            enrollment=enrollment,
-            quiz=quiz,
-            score=score,
-            total_questions=total_questions,
-            percentage=percentage,
-            passed=passed
-        )
-
-        serializer = QuizAttemptSerializer(
-            attempt
-        )
-
-        return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED
-        )
+        quiz = get_object_or_404(Quiz.objects.select_related('lesson__course'), id=quiz_id)
+        LearningService.require_quiz_access(request.user, quiz.lesson.course)
+        data = QuizAttemptInput(data=request.data)
+        data.is_valid(raise_exception=True)
+        try:
+            attempt = LearningService.record_quiz_attempt(quiz, request.user, data.validated_data['answers'])
+        except ValueError as error:
+            return Response({'detail': str(error)}, status=400)
+        result = dict(QuizAttemptSerializer(attempt).data)
+        result['question_feedback'] = attempt.question_feedback
+        return Response(result, status=201)
 
 
 # ============================================================
 # MY QUIZ ATTEMPTS
 # ============================================================
 
-class MyQuizAttemptsAPIView(APIView):
+class MyQuizAttemptsAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -929,17 +944,17 @@ class MyQuizAttemptsAPIView(APIView):
         ).select_related(
             "quiz",
             "enrollment"
-        )
+        ).order_by('-attempted_at', '-pk')
 
         serializer = QuizAttemptSerializer(
-            attempts,
+            self.page(request, attempts),
             many=True
         )
 
         return Response(serializer.data)
 
 
-class PendingCoursesAPIView(APIView):
+class PendingCoursesAPIView(PagedAPIView):
 
     permission_classes = [IsAuthenticated]
 
@@ -947,4 +962,4 @@ class PendingCoursesAPIView(APIView):
         if request.user.role != "ADMIN":
             return Response({"detail": "Only administrators can review courses."}, status=status.HTTP_403_FORBIDDEN)
         courses = Course.objects.filter(status="PENDING").select_related("category", "creator")
-        return Response(CourseSerializer(courses, many=True).data)
+        return Response(CourseSerializer(self.page(request, courses), many=True).data)

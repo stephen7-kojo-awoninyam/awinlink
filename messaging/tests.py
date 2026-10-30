@@ -535,7 +535,7 @@ class MobileCallApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual([item["id"] for item in response.data], [call.id])
 
-    @override_settings(TURN_SERVER_URLS="turn:turn.example.test:3478,turns:turn.example.test:5349", TURN_SHARED_SECRET="unit-test-secret")
+    @override_settings(TURN_SERVER_URLS="turn:turn.example.test:3478,turns:turn.example.test:5349", TURN_SHARED_SECRET="unit-test-secret" * 4)
     def test_ice_endpoint_returns_short_lived_coturn_credentials(self):
         self.client.force_authenticate(self.caller)
         response = self.client.get("/api/messaging/calls/ice-servers/")
@@ -545,7 +545,7 @@ class MobileCallApiTests(TestCase):
         self.assertEqual(user_id, str(self.caller.id))
         self.assertGreaterEqual(int(expires), int(time.time()) + 3590)
         expected = base64.b64encode(
-            hmac.new(b"unit-test-secret", turn["username"].encode(), hashlib.sha1).digest()
+            hmac.new(b"unit-test-secret" * 4, turn["username"].encode(), hashlib.sha1).digest()
         ).decode("ascii")
         self.assertEqual(turn["credential"], expected)
         self.assertEqual(turn["urls"], ["turn:turn.example.test:3478", "turns:turn.example.test:5349"])

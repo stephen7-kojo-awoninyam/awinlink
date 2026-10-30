@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect } from 'expo-router';
@@ -12,7 +14,7 @@ type Certificate = { id: number; event_title: string; certificate_title: string;
 
 export default function EventCertificatesScreen() {
   const { user } = useAuth();
-  const [items, setItems] = useState<Certificate[]>([]);
+  const [items, setItems] = usePagedState<Certificate>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [verified, setVerified] = useState<Record<string, boolean>>({});
@@ -45,6 +47,8 @@ export default function EventCertificatesScreen() {
         <Pressable accessibilityRole="button" onPress={() => void verify(item.certificate_code)} style={styles.button}><Text style={styles.buttonText}>{verified[item.certificate_code] === undefined ? 'Verify certificate' : verified[item.certificate_code] ? 'Verified' : 'Not verified'}</Text></Pressable>
       </View>)}
       {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+
+      <LoadMore items={items} onChange={setItems} label="Load more items" />
     </Page>
   </>;
 }

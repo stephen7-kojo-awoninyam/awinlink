@@ -74,6 +74,13 @@ class UserSerializer(serializers.ModelSerializer):
 # ACHIEVEMENT SERIALIZER
 # =====================================================
 
+class PublicUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'role', 'profile_picture', 'country']
+        read_only_fields = fields
+
+
 class AchievementSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -199,7 +206,7 @@ class TalentProfileSerializer(serializers.ModelSerializer):
             attrs["talent_area"] = candidate.talent_area
         return attrs
 
-    user = UserSerializer(
+    user = PublicUserSerializer(
         read_only=True
     )
 
@@ -317,6 +324,14 @@ class TalentProfileSerializer(serializers.ModelSerializer):
 # =====================================================
 # ORGANIZATION CATEGORY SERIALIZER
 # =====================================================
+
+class SpecialistTalentProfileSerializer(TalentProfileSerializer):
+    specialist_bookmark_id = serializers.IntegerField(source='_viewer_bookmark_id', read_only=True, default=None)
+    specialist_follow_id = serializers.IntegerField(source='_viewer_follow_id', read_only=True, default=None)
+
+    class Meta(TalentProfileSerializer.Meta):
+        fields = [*TalentProfileSerializer.Meta.fields, 'specialist_bookmark_id', 'specialist_follow_id']
+
 
 class OrganizationCategorySerializer(serializers.ModelSerializer):
 

@@ -1,3 +1,5 @@
+import { usePagedState } from '@/src/paged-state';
+import { LoadMore } from '@/src/components/LoadMore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Redirect, Stack, useFocusEffect, useRouter } from 'expo-router';
@@ -13,7 +15,7 @@ type Application = { id: number; talent: number; talent_name: string; opportunit
 export default function ApplicationsScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [items, setItems] = useState<Application[]>([]);
+  const [items, setItems] = usePagedState<Application>([]);
   const [selected, setSelected] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,7 +78,9 @@ export default function ApplicationsScreen() {
             </Pressable>
           ))
         }
-      </Page>
+
+      <LoadMore items={items} onChange={setItems} label="Load more items" />
+    </Page>
     </>
   );
 }

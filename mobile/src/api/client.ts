@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
 import type { AuthResponse, RegistrationData } from '@/src/types';
+import { continuationPath, withNextPage } from '@/src/pagination';
 
 const ACCESS_TOKEN_KEY = 'awinlink.access-token';
 const REFRESH_TOKEN_KEY = 'awinlink.refresh-token';
@@ -18,8 +19,43 @@ export function onSessionCleared(listener: () => void) {
 }
 const API_ORIGIN = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
 
-export async function mediaSource(uri: string) {
+export function resolveMediaUrl(uri: string) {
   const resolved = API_ORIGIN ? new URL(uri, `${API_ORIGIN}/`) : new URL(uri);
+  if (!['https:', 'http:'].includes(resolved.protocol) || resolved.username || resolved.password) {
+    throw new Error('Unsupported file URL.');
+  }
+  return resolved;
+}
+
+const MEDIA_FIELDS = new Set(['image', 'video', 'audio', 'file', 'pdf', 'notes', 'captions', 'thumbnail',
+  'logo', 'cover_photo', 'profile_photo', 'profile_picture', 'image_url', 'video_url', 'audio_url', 'file_url']);
+export function resolveMediaFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(resolveMediaFields);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) =>
+    [key, MEDIA_FIELDS.has(key) && typeof item === 'string' && item.startsWith('/media/')
+      ? resolveMediaUrl(item).href : resolveMediaFields(item)]));
+  return value;
+}
+
+export function validateMultipartUploads(body: FormData) {
+  const native = body as FormData & { getParts?: () => { name?: string }[] };
+  const names = typeof native.getParts === 'function' ? native.getParts().map(part => part.name).filter(Boolean)
+    : typeof body.entries === 'function' ? Array.from(body.entries()).map(([, value]) =>
+      typeof value === 'object' && 'name' in value ? String(value.name) : '') : [];
+  for (const name of names) {
+    if (/\.(html?|xhtml|svgz?|xml|js|mjs|exe|bat|cmd|com|ps1|sh)\s*$/i.test(name || '')) {
+      throw new Error('This file type is not supported. Choose an image, recording, video or document.');
+    }
+  }
+}
+
+export async function mediaSource(uri: string, options: { localPreview?: boolean; original?: boolean } = {}) {
+  // Recording previews are created by this device, never read from API data.
+  if (options.localPreview && /^(file:|blob:)/i.test(uri)) return { uri };
+  const resolved = resolveMediaUrl(uri);
+  if (options.original && API_ORIGIN && resolved.origin === new URL(API_ORIGIN).origin && resolved.pathname.startsWith('/media/')) {
+    resolved.searchParams.delete('playback');
+  }
   // Never send account credentials to Cloudinary or another external host.
   if (API_ORIGIN && resolved.origin === new URL(API_ORIGIN).origin && resolved.pathname.startsWith('/media/')) {
     const token = await getAccessToken();
@@ -180,6 +216,7 @@ export async function apiRequest<T>(
   } = options;
 
   const headers = new Headers(inputHeaders);
+  if (body instanceof FormData) validateMultipartUploads(body);
   if (body !== undefined && !(body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
@@ -226,7 +263,11 @@ export async function apiRequest<T>(
     throw new ApiError(await readError(response), response.status);
   }
   if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  const result = resolveMediaFields(await response.json());
+  if (Array.isArray(result)) {
+    withNextPage(result, continuationPath(response.headers?.get('Link') ?? null, apiUrl('')));
+  }
+  return result as T;
 }
 
 export async function signInRequest(username: string, password: string) {
