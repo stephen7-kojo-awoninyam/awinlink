@@ -1,0 +1,32 @@
+name: Awinlink encrypted PostgreSQL backup
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 2 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: awinlink-daily-backup
+  cancel-in-progress: false
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL 18 client and Python dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq curl ca-certificates postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18
+          python -m pip install --disable-pip-version-check 'cryptography>=45,<47' 'google-api-python-client>=2,<3' 'google-auth>=2,<3'
+          pg_dump --version
+      - name: Backup, encrypt, upload and verify
+        env:
+          DATABASE_URL: ${{ secrets.AWINLINK_BACKUP_DATABASE_URL }}
+          BACKUP_ENCRYPTION_PASSWORD: ${{ secrets.AWINLINK_BACKUP_ENCRYPTION_PASSWORD }}
+          GOOGLE_DRIVE_TOKEN_JSON: ${{ secrets.AWINLINK_GOOGLE_DRIVE_TOKEN_JSON }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ vars.AWINLINK_GOOGLE_DRIVE_FOLDER_ID }}
+        run: python scripts/backup.py
