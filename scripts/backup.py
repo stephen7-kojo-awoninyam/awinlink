@@ -86,7 +86,7 @@ def main():
         while True:
             page = drive.files().list(
                 q=f"'{folder_id}' in parents and trashed = false",
-                fields="nextPageToken,files(id,name,createdTime)", page_size=1000,
+                fields="nextPageToken,files(id,name,createdTime)", pageSize=1000,
                 page_token=page_token).execute()
             for item in page.get("files", []):
                 name = item["name"]
