@@ -11,5 +11,8 @@ def blocked_user_ids(user):
 
 
 def require_unblocked(user, other_ids):
+    other_ids = list(other_ids)
     if blocked_user_ids(user).intersection(other_ids):
         raise PermissionDenied('This interaction is unavailable because an account is blocked.')
+    from .age_safety import require_contact
+    require_contact(user, other_ids)

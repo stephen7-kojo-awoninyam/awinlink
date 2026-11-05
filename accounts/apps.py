@@ -6,3 +6,4 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         from . import safety_signals  # noqa: F401
+        from . import age_signals  # noqa: F401

@@ -13,6 +13,8 @@ def notifications(request):
         )
 
 
+        from .age_safety import visible_notifications
+        notifications = visible_notifications(notifications)
         unread_count = notifications.filter(
             is_read=False
         ).count()

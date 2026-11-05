@@ -404,7 +404,7 @@ class ClassroomSocketSecurityTests(SocketFixture, TransactionTestCase):
             with patch.object(layer, "group_add", AsyncMock(side_effect=RedisError("test unavailable"))):
                 with self.assertLogs("learning.consumers", level="ERROR"):
                     socket = self.socket(self.learner)
-                    connected, code = await socket.connect()
+                    connected, code = await socket.connect(timeout=5)
                 self.assertFalse(connected)
                 self.assertEqual(code, 4503)
                 await socket.disconnect()

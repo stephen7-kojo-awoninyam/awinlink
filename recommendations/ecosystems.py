@@ -333,7 +333,8 @@ def _profile_topics(profile, member_type):
 
 def _public_related_profile_filter(viewer_id):
     """Honor talent visibility when a user has more than one profile type."""
-    return (
+    from accounts.age_safety import public_discovery_q
+    return (Q(user_id=viewer_id) | public_discovery_q()) & (
         Q(user_id=viewer_id)
         | Q(user__talent_profile__isnull=True)
         | Q(user__talent_profile__profile_visibility="PUBLIC")
@@ -433,9 +434,7 @@ def _ecosystem_profiles(user_ids, viewer_id):
     talents = TalentProfile.objects.filter(
         user_id__in=user_ids,
         user__is_active=True,
-    ).filter(
-        Q(user_id=viewer_id) | Q(profile_visibility="PUBLIC")
-    ).select_related(
+    ).filter(public_user).select_related(
         "user", "sports_profile__sport", "sports_profile__sport_category",
         "science_technology_profile", "arts_profile", "other_profile",
     ).prefetch_related("domains", "skills")

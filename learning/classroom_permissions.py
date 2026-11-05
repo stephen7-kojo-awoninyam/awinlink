@@ -12,6 +12,9 @@ def require_active_user(user):
     current = get_user_model().objects.filter(pk=user.pk, is_active=True).first()
     if current is None:
         raise PermissionDenied("An authenticated active account is required.")
+    from accounts.age_policy import age_access_allowed
+    if not age_access_allowed(current):
+        raise PermissionDenied("Verified guardian approval is required.")
     return current
 
 
@@ -52,6 +55,8 @@ def require_session_staff(user, session, *, allow_cohost=False):
 def require_enrollment(user, classroom):
     user = require_active_user(user)
     classroom = Classroom.objects.get(pk=classroom.pk)
+    from .age_permissions import require_course_access
+    require_course_access(user, classroom.course, live=True)
     if not Enrollment.objects.filter(user=user, course_id=classroom.course_id).exists():
         raise PermissionDenied("Current course enrollment is required.")
     return user

@@ -2150,3 +2150,29 @@ button.feed-text-link {
     cursor: pointer;
 }
 .d-grid > form.d-inline > button.btn { width: 100%; }
+
+/* Keep controls reachable in narrow portrait and short landscape viewports. */
+.awinlink-call-footer { flex-wrap: wrap; gap: 12px; flex-shrink: 0; }
+.call-controls { flex-wrap: wrap; }
+.call-invite-form { width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.call-invite-form[hidden] { display: none; }
+.call-invite-form input { min-width: 0; max-width: 100%; }
+.call-invite-form input, .call-invite-form button { min-height: 44px; padding: 8px 12px; }
+.call-invite-form p { width: 100%; text-align: center; margin: 0; }
+.awinlink-call-header { flex-shrink: 0; gap: 8px; padding-top: max(12px, env(safe-area-inset-top)); }
+.awinlink-call-heading { min-width: 0; }
+#callRemoteName { overflow-wrap: anywhere; }
+.call-video-grid { align-content: start; grid-auto-rows: minmax(140px, auto); }
+.call-video-tile video { object-fit: contain; }
+.call-video-tile:only-child { height: 100%; max-height: 100%; }
+@media (max-height: 500px) {
+    .awinlink-call-panel { height: 100dvh; min-height: 0; }
+    .awinlink-call-header { min-height: 48px; padding: 6px 12px; }
+    .awinlink-call-footer { padding: 6px 12px max(6px, env(safe-area-inset-bottom)); }
+    .call-control-button { min-height: 44px; }
+    .call-local-tile { width: 80px; top: 8px; right: 8px; }
+    .call-video-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); padding: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .call-avatar, .call-video-tile { animation: none; }
+}

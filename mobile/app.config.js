@@ -15,6 +15,12 @@ module.exports = () => {
   const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
   const androidPackage = process.env.AWINLINK_ANDROID_PACKAGE || expo.android.package;
   const iosBundle = process.env.AWINLINK_IOS_BUNDLE_IDENTIFIER || expo.ios.bundleIdentifier;
+  if (!/^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+$/.test(iosBundle || '')) throw new Error('Set a valid explicit AWINLINK_IOS_BUNDLE_IDENTIFIER (letters, digits, hyphens, and dots; no underscores or wildcard).');
+  // APNs routing follows signing, not whether the JavaScript bundle is a debug build.
+  // EAS internal distribution and store builds use distribution provisioning.
+  const apnsEnvironment = process.env.AWINLINK_APNS_ENVIRONMENT ||
+    (process.env.EAS_BUILD_PROFILE ? 'production' : 'development');
+  if (!['development', 'production'].includes(apnsEnvironment)) throw new Error('AWINLINK_APNS_ENVIRONMENT must be development or production.');
   const googleServicesFile = process.env.AWINLINK_GOOGLE_SERVICES_FILE;
   const androidApk = process.env.EAS_BUILD_PROFILE === 'android-apk';
   // Test APKs must exercise the deployed API and native push, not a dev-only setup.
@@ -36,7 +42,7 @@ module.exports = () => {
     httpsUrl(process.env.EXPO_PUBLIC_WEB_URL, 'EXPO_PUBLIC_WEB_URL', true);
     for (const key of ['EXPO_PUBLIC_PRIVACY_URL', 'EXPO_PUBLIC_TERMS_URL', 'EXPO_PUBLIC_SUPPORT_URL', 'EXPO_PUBLIC_DELETE_ACCOUNT_URL']) httpsUrl(process.env[key], key);
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId || '')) throw new Error('Set EXPO_PUBLIC_EAS_PROJECT_ID to your EAS project UUID.');
-    if (![androidPackage, iosBundle].every(value => /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(value || ''))) throw new Error('Set valid owned AWINLINK_ANDROID_PACKAGE and AWINLINK_IOS_BUNDLE_IDENTIFIER values.');
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(androidPackage || '')) throw new Error('Set a valid owned AWINLINK_ANDROID_PACKAGE.');
     if (process.env.EAS_BUILD_PLATFORM !== 'ios' && !googleServicesFile) throw new Error('Set AWINLINK_GOOGLE_SERVICES_FILE for Android FCM configuration.');
   }
   if (googleServicesFile) {
@@ -45,7 +51,7 @@ module.exports = () => {
   }
   return {
     ...expo,
-    extra: { ...expo.extra, launch: { free: true, purchasesEnabled: false }, ...(projectId ? { eas: { projectId } } : {}) },
+    extra: { ...expo.extra, apnsEnvironment, launch: { free: true, purchasesEnabled: false }, ...(projectId ? { eas: { projectId } } : {}) },
     android: {
       ...expo.android,
       blockedPermissions: ['android.permission.READ_EXTERNAL_STORAGE', 'android.permission.WRITE_EXTERNAL_STORAGE', ...(production || androidApk ? ['android.permission.SYSTEM_ALERT_WINDOW'] : [])],
@@ -54,7 +60,11 @@ module.exports = () => {
     },
     ios: {
       ...expo.ios,
-      entitlements: { 'aps-environment': ['production', 'preview', 'preview-device'].includes(process.env.EAS_BUILD_PROFILE) ? 'production' : 'development' },
+      infoPlist: {
+        ...expo.ios.infoPlist,
+        ...(production ? { NSAppTransportSecurity: { NSAllowsArbitraryLoads: false, NSAllowsLocalNetworking: false } } : {}),
+      },
+      entitlements: { ...expo.ios.entitlements, 'aps-environment': apnsEnvironment },
       ...(process.env.AWINLINK_APPLE_TEAM_ID ? { appleTeamId: process.env.AWINLINK_APPLE_TEAM_ID } : {}),
       ...(iosBundle ? { bundleIdentifier: iosBundle } : {}),
     },

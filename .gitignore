@@ -19,6 +19,11 @@ db.sqlite3
 .env.*
 !.env.example
 
+# Local Cloud Dashboard credentials and generated backup metadata
+deploy/vps/dashboard.password
+deploy/vps/backup.status.json
+deploy/vps/.backup-status-*
+
 # User uploaded files
 media/
 

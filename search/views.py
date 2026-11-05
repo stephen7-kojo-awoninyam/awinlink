@@ -1,3 +1,4 @@
+from accounts.profile_privacy import render as age_safe_render
 from talents.visibility import visible_talent_profiles_for
 from django.shortcuts import render
 from twisted import python
@@ -34,7 +35,8 @@ def username_suggestions(request):
     )
 
     user_model = get_user_model()
-    users = user_model.objects.filter(
+    from accounts.age_safety import visible_users_for
+    users = visible_users_for(request.user).filter(
         username__istartswith=query,
         is_active=True,
     ).exclude(
@@ -75,6 +77,9 @@ def talent_search(request):
     skill = request.GET.get("skill")
     domain = request.GET.get("domain")
     country = request.GET.get("country")
+    if country:
+        from accounts.age_safety import searchable_profiles
+        talents = searchable_profiles(request.user, talents)
     experience = request.GET.get("experience")
     availability = request.GET.get("availability")
     work_type = request.GET.get("work_type")
@@ -89,7 +94,8 @@ def talent_search(request):
     user_results = []
 
     if username_search:
-        users = user_model.objects.filter(
+        from accounts.age_safety import visible_users_for
+        users = visible_users_for(request.user).filter(
             username__iexact=username_query,
             is_active=True,
         ).exclude(
@@ -180,6 +186,9 @@ def talent_search(request):
                         args=[profile.pk],
                     )
 
+            from accounts.age_safety import minor, can_view_private_data
+            if minor(user) and not can_view_private_data(request.user, user):
+                location = ""
             user_results.append(
                 {
                     "user": user,
@@ -193,6 +202,8 @@ def talent_search(request):
             )
 
     elif search:
+        from accounts.age_safety import searchable_profiles
+        talents = searchable_profiles(request.user, talents)
         talents = talents.filter(
             Q(user__first_name__icontains=search)
             | Q(user__last_name__icontains=search)
@@ -318,7 +329,7 @@ def talent_search(request):
             TalentProfile.WORK_TYPES,
     }
 
-    return render(
+    return age_safe_render(
         request,
         "search/search.html",
         context
@@ -439,8 +450,8 @@ def opportunity_search(request):
 
     }
 
-    return render(
+    return age_safe_render(
         request,
         "search/opportunity_search.html",
         context
-    )    
+    )

@@ -32,6 +32,16 @@ def _media_is_allowed(user, path):
         part in {'', '.', '..', '.playback-cache'} for part in path.split('/'))):
         return False
     names = _stored_names(path)
+    if path.startswith("profiles/"):
+        from accounts.models import User
+        from accounts.age_safety import visible_users_for
+        owners = User.objects.filter(profile_picture__in=names)
+        return owners.filter(pk__in=visible_users_for(user)).exists()
+    if path.startswith(("coaches/profiles/", "coaches/covers/")):
+        from coaches.models import CoachProfile
+        from accounts.age_safety import visible_users_for
+        owners = CoachProfile.objects.filter(Q(profile_photo__in=names) | Q(cover_photo__in=names))
+        return owners.filter(user__in=visible_users_for(user)).exists()
     if path.startswith(('talents/profile/', 'talents/cover/', 'achievements/', 'certifications/')):
         from talents.visibility import visible_talent_profiles_for
         return visible_talent_profiles_for(user).filter(
@@ -55,21 +65,24 @@ def _media_is_allowed(user, path):
 
     if path.startswith("messages/"):
         from messaging.models import Conversation, Message
+        from messaging.age_permissions import visible_conversations
         if not user.is_authenticated:
             return False
         if path.startswith("messages/groups/"):
-            return Conversation.objects.filter(
+            return visible_conversations(Conversation.objects.filter(
                 image__in=names, participants__user=user,
-            ).exists()
+            )).exists()
         return Message.objects.filter(
             Q(image__in=names) | Q(video__in=names) | Q(audio__in=names) | Q(file__in=names),
             conversation__participants__user=user,
+            conversation__in=visible_conversations(Conversation.objects.filter(participants__user=user).distinct()),
         ).exists()
 
     if path.startswith(("learning/videos/", "learning/notes/", "learning/captions/")):
         from learning.models import Enrollment, Lesson
         lesson = Lesson.objects.filter(Q(video__in=names) | Q(notes__in=names) | Q(captions__in=names)).select_related('course').first()
-        return bool(lesson and user.is_authenticated and (
+        from learning.age_permissions import course_allowed
+        return bool(lesson and user.is_authenticated and course_allowed(user, lesson.course) and (
             lesson.course.creator_id == user.pk or user.role == 'ADMIN' or
             Enrollment.objects.filter(user=user, course_id=lesson.course_id).exists()))
     if path.startswith('verification_documents/'):
@@ -77,7 +90,10 @@ def _media_is_allowed(user, path):
         return can_read_verification_document(user, names)
     if path.startswith('certificates/'):
         from learning.models import Certificate
-        return user.is_authenticated and Certificate.objects.filter(pdf__in=names, enrollment__user=user).exists()
+        from learning.age_permissions import courses_for
+        from learning.models import Course
+        return user.is_authenticated and Certificate.objects.filter(pdf__in=names, enrollment__user=user,
+            enrollment__course__in=courses_for(user, Course.objects.all())).exists()
     # Existing public media namespaces retain their public behavior, but never
     # bypass MIME/disposition/CSP protection through Django's raw static view.
     return path.startswith(('profiles/',

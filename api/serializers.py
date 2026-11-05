@@ -75,9 +75,27 @@ class UserSerializer(serializers.ModelSerializer):
 # =====================================================
 
 class PublicUserSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        from accounts.age_safety import public_user_data
+        return public_user_data(super().to_representation(instance), instance,
+                                getattr(self.context.get("request"), "user", None))
+
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'role', 'profile_picture', 'country']
+        read_only_fields = fields
+
+
+class AccountUserSerializer(UserSerializer):
+    """Private age capabilities belong only in the signed-in account response."""
+    account_capabilities = serializers.SerializerMethodField()
+
+    def get_account_capabilities(self, obj):
+        from accounts.age_policy import account_capabilities
+        return account_capabilities(obj)
+
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ["account_capabilities"]
         read_only_fields = fields
 
 
@@ -158,7 +176,10 @@ class ExperienceSerializer(serializers.ModelSerializer):
 # OTHER TALENT PROFILE SERIALIZER
 # =====================================================
 
-class OtherTalentProfileSerializer(serializers.ModelSerializer):
+from accounts.profile_privacy import MinorProfileSerializerMixin
+
+
+class OtherTalentProfileSerializer(MinorProfileSerializerMixin, serializers.ModelSerializer):
 
     class Meta:
 
@@ -192,6 +213,26 @@ class OtherTalentProfileSerializer(serializers.ModelSerializer):
 # =====================================================
 
 class TalentProfileSerializer(serializers.ModelSerializer):
+    interaction_capabilities = serializers.SerializerMethodField()
+
+    def get_interaction_capabilities(self, instance):
+        from accounts.age_safety import contact_allowed, can_view_private_data
+        from accounts.models import User
+        viewer = getattr(self.context.get("request"), "user", None)
+        current = User.objects.filter(pk=getattr(viewer, "pk", None), is_active=True).first()
+        return {"can_message": bool(current and contact_allowed(current, instance.user)),
+                "can_call": bool(current and contact_allowed(current, instance.user, calls=True)),
+                "location_visible": instance.user.age_group not in {"CHILD", "TEEN"} or can_view_private_data(viewer, instance.user)}
+
+    def to_representation(self, instance):
+        from accounts.age_safety import minor, can_view_private_data
+        data = super().to_representation(instance)
+        viewer = getattr(self.context.get("request"), "user", None)
+        if minor(instance.user) and not can_view_private_data(viewer, instance.user):
+            for key in ("country", "city", "biography"):
+                if key in data:
+                    data[key] = ""
+        return data
 
     def validate(self, attrs):
         from django.core.exceptions import ValidationError
@@ -272,6 +313,7 @@ class TalentProfileSerializer(serializers.ModelSerializer):
             "city",
             
             # Classification
+            "interaction_capabilities",
             "talent_category",
             "talent_area",
             "profile_visibility",
@@ -419,7 +461,7 @@ class SportsOrganizationProfileSerializer(
 # ORGANIZATION SERIALIZER
 # =====================================================
 
-class OrganizationSerializer(serializers.ModelSerializer):
+class OrganizationSerializer(MinorProfileSerializerMixin, serializers.ModelSerializer):
 
     category_name = serializers.CharField(
         source="category.name",

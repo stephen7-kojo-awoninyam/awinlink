@@ -3,6 +3,7 @@ import logging
 
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import Q
 from redis.exceptions import RedisError
 
 from channels.db import database_sync_to_async
@@ -277,6 +278,9 @@ class CallConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
     @database_sync_to_async
     def check_participant(self):
 
+        from .age_permissions import call_allowed
+        if not call_allowed(self.call_id):
+            return False
         from accounts.safety import blocked_user_ids
         if CallParticipant.objects.filter(call_id=self.call_id, user_id__in=blocked_user_ids(self.user)).exists():
             return False
@@ -286,16 +290,18 @@ class CallConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
             user=self.user,
             user__is_active=True,
             call__status__in=["RINGING", "ACTIVE"],
-            call__conversation__participants__user=self.user,
             status__in=[
                 "INVITED",
                 "RINGING",
                 "JOINED",
             ],
-        ).exists()
+        ).filter(Q(status='JOINED') | Q(invitation_expires_at__isnull=True) | Q(invitation_expires_at__gt=timezone.now())).filter(Q(is_guest=True, status='JOINED') | Q(is_guest=False, call__conversation__participants__user=self.user)).exists()
 
     @database_sync_to_async
     def target_is_participant(self, user_id):
+        from .age_permissions import call_allowed
+        if not call_allowed(self.call_id):
+            return False
         from accounts.safety import blocked_user_ids
         if user_id in blocked_user_ids(self.user):
             return False
@@ -304,9 +310,8 @@ class CallConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
             call__status__in=["RINGING", "ACTIVE"],
             user_id=user_id,
             user__is_active=True,
-            call__conversation__participants__user_id=user_id,
             status__in=["INVITED", "RINGING", "JOINED"],
-        ).exists()
+        ).filter(Q(status='JOINED') | Q(invitation_expires_at__isnull=True) | Q(invitation_expires_at__gt=timezone.now())).filter(Q(is_guest=True, status='JOINED') | Q(is_guest=False, call__conversation__participants__user_id=user_id)).exists()
 
     @database_sync_to_async
     def mark_participant_left(self):
@@ -325,6 +330,37 @@ class CallConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
 
 
 class UserConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
+    async def delivery_allowed(self):
+        context = getattr(self, "_age_delivery", None)
+        if context is None:
+            return True
+        kind, identifier = context
+        if kind == "conversation":
+            return await self.messaging_access(identifier)
+        if kind == "call":
+            from .age_permissions import call_allowed
+            def allowed():
+                return call_allowed(identifier) and CallParticipant.objects.filter(call_id=identifier,
+                    user=self.user, status__in=["RINGING", "INVITED", "JOINED"]).filter(
+                        Q(status="JOINED") | Q(invitation_expires_at__isnull=True) |
+                        Q(invitation_expires_at__gt=timezone.now())).exists()
+            return await database_sync_to_async(allowed)()
+        if kind == "notification":
+            from notifications.models import Notification
+            from notifications.age_safety import notification_allowed
+            def allowed():
+                item = Notification.objects.filter(pk=identifier, user=self.user).first()
+                return bool(item and notification_allowed(item))
+            return await database_sync_to_async(allowed)()
+        return False
+
+    async def send_checked(self, kind, identifier, text_data):
+        self._age_delivery = (kind, identifier) if identifier else None
+        try:
+            await self.send(text_data=text_data)
+        finally:
+            self._age_delivery = None
+
     @database_sync_to_async
     def messaging_access(self, conversation_id):
         from .realtime import can_access
@@ -336,7 +372,7 @@ class UserConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
             await self.close(code=4001)
             return
         if await self.messaging_access(event['data']['conversation_id']):
-            await self.send(text_data=json.dumps(event['data']))
+            await self.send_checked("conversation", event['data']['conversation_id'], text_data=json.dumps(event['data']))
 
     async def call_ended(self, event):
         await self.send(text_data=json.dumps({
@@ -448,22 +484,39 @@ class UserConsumer(SecureSocketMixin, AsyncWebsocketConsumer):
     
     async def incoming_call(self, event):
 
-        await self.send(
+        from .age_permissions import call_allowed
+        if not await database_sync_to_async(call_allowed)(event["call_id"]):
+            return
+        from accounts.models import User
+        from accounts.age_safety import public_user_data
+        def caller_data():
+            caller = User.objects.get(pk=event["caller_id"])
+            return public_user_data({"id": caller.pk, "username": caller.username,
+                                     "first_name": caller.first_name, "last_name": caller.last_name}, caller, self.user)
+        caller = await database_sync_to_async(caller_data)()
+        await self.send_checked("call", event["call_id"],
             text_data=json.dumps({
                 "type": "incoming_call",
                 "call_id": event["call_id"],
                 "call_type": event["call_type"],
-                "caller": {
-                    "id": event["caller_id"],
-                    "username": event["caller_username"],
-                    "first_name": event["caller_first_name"],
-                    "last_name": event["caller_last_name"],
-                },
+                "caller": caller,
             })
         )
 
     async def notification_created(self, event):
-        await self.send(
+        if not await self.ensure_credentials():
+            return
+        from accounts.age_safety import visible_users_for
+        from notifications.models import Notification
+        def allowed():
+            if not event.get("notification", {}).get("id"):
+                return self.user.age_group not in {"CHILD", "TEEN"}
+            notification = Notification.objects.filter(pk=event.get("notification", {}).get("id"), user=self.user).first()
+            from notifications.age_safety import notification_allowed
+            return bool(notification and notification_allowed(notification))
+        if not await database_sync_to_async(allowed)():
+            return
+        await self.send_checked("notification", event.get("notification", {}).get("id"),
             text_data=json.dumps({
                 "type": "notification_created",
                 "notification": event["notification"],

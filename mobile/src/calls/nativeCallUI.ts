@@ -1,7 +1,8 @@
-import { AppRegistry, Linking, Platform } from 'react-native';
+import { AppRegistry, Linking, NativeModules, Platform } from 'react-native';
 import CallKeep, { CONSTANTS, type InitialEvents } from 'react-native-callkeep';
 import VoipPush from 'react-native-voip-push-notification';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 import { apiRequest } from '@/src/api/client';
 import { callID, callUUID } from './callIdentity';
 import { callHasEnded, finishCallRequest } from './callLifecycle';
@@ -53,6 +54,11 @@ async function end(uuid: string) {
 export function initializeNativeCallEvents() {
   if (initialized || Platform.OS === 'web') return;
   initialized = true;
+  if (Platform.OS === 'ios') {
+    // CallKit owns the audio session; notify WebRTC when the system activates it.
+    CallKeep.addEventListener('didActivateAudioSession', () => NativeModules.WebRTCModule.audioSessionDidActivate());
+    CallKeep.addEventListener('didDeactivateAudioSession', () => NativeModules.WebRTCModule.audioSessionDidDeactivate());
+  }
   CallKeep.addEventListener('answerCall', ({ callUUID }) => { void answer(callUUID).catch(() => {}); });
   CallKeep.addEventListener('endCall', ({ callUUID }) => { void end(callUUID).catch(() => {}); });
   CallKeep.addEventListener('didPerformSetMutedCallAction', ({ callUUID, muted }) => {
@@ -87,7 +93,9 @@ export function initializeNativeCallEvents() {
 export async function registerVoipToken() {
   if (!voipToken) return;
   const expo_token = await SecureStore.getItemAsync('awinlink.push-token');
-  await apiRequest('notifications/voip-push/', { method: 'POST', body: { token: voipToken, environment: __DEV__ ? 'development' : 'production', expo_token } });
+  const environment = Constants.expoConfig?.extra?.apnsEnvironment;
+  if (environment !== 'development' && environment !== 'production') throw new Error('Missing APNs signing environment. Rebuild the native app.');
+  await apiRequest('notifications/voip-push/', { method: 'POST', body: { token: voipToken, environment, expo_token } });
   await SecureStore.setItemAsync('awinlink.voip-token', voipToken);
 }
 

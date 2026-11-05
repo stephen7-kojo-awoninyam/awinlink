@@ -10,6 +10,21 @@ from django.db.models.functions import Lower
 
 class User(AbstractUser):
 
+    # Private, canonical account age. Existing accounts remain explicitly unknown.
+    date_of_birth = models.DateField(null=True, blank=True, editable=False)
+    birth_date_source = models.CharField(max_length=24, blank=True, default="", editable=False)
+
+    @property
+    def age_group(self):
+        from .age_policy import age_group
+        return age_group(self.date_of_birth)
+
+    def get_full_name(self):
+        # Shared notifications, classroom presence and call events use a minor's public handle.
+        if self.age_group in {"CHILD", "TEEN"}:
+            return self.username
+        return super().get_full_name()
+
     terms_accepted_version = models.CharField(max_length=64, blank=True, default="", editable=False)
     terms_accepted_at = models.DateTimeField(null=True, blank=True, editable=False)
 
@@ -74,7 +89,69 @@ class GoogleIdentity(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class GuardianAuthorization(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending guardian approval"
+        APPROVED = "APPROVED", "Approved"
+        REVOKED = "REVOKED", "Revoked"
+
+    child = models.OneToOneField(User, on_delete=models.CASCADE, related_name="guardian_authorization")
+    nominated_email = models.EmailField(editable=False)
+    guardian = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL,
+                                 related_name="managed_children", editable=False)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, editable=False)
+    verified_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL,
+                                    related_name="guardian_verifications", editable=False)
+    verified_at = models.DateTimeField(null=True, blank=True, editable=False)
+    verification_reference = models.CharField(max_length=200, blank=True, editable=False)
+    consent_version = models.CharField(max_length=64, blank=True, editable=False)
+    consented_at = models.DateTimeField(null=True, blank=True, editable=False)
+    revoked_at = models.DateTimeField(null=True, blank=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        permissions = [("verify_guardianauthorization", "Can verify adult guardian identity and relationship")]
+        constraints = [
+            models.CheckConstraint(condition=~models.Q(child=models.F("guardian")), name="guardian_not_child"),
+            models.CheckConstraint(
+                condition=~models.Q(status="APPROVED") | (
+                    models.Q(guardian__isnull=False, verified_by__isnull=False, verified_at__isnull=False,
+                             consented_at__isnull=False, revoked_at__isnull=True) & ~models.Q(consent_version="")),
+                name="guardian_approval_requires_verification"),
+        ]
+
+
+class GuardianAuditEvent(models.Model):
+    authorization = models.ForeignKey(GuardianAuthorization, on_delete=models.CASCADE, related_name="audit_events")
+    actor = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    action = models.CharField(max_length=24)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class GuardianContactPermission(models.Model):
+    authorization = models.ForeignKey(GuardianAuthorization, on_delete=models.CASCADE, related_name="contact_permissions")
+    contact = models.ForeignKey(User, on_delete=models.CASCADE, related_name="minor_contact_permissions")
+    allow_calls = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["authorization", "contact"], name="unique_guardian_contact")]
+
+
+class GuardianCoursePermission(models.Model):
+    authorization = models.ForeignKey(GuardianAuthorization, on_delete=models.CASCADE, related_name="course_permissions")
+    course = models.ForeignKey("learning.Course", on_delete=models.CASCADE, related_name="guardian_permissions")
+    allow_live = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["authorization", "course"], name="unique_guardian_course")]
+
+
 class GoogleAuthAttempt(models.Model):
+    purpose = models.CharField(max_length=16, default="LOGIN", choices=[("LOGIN", "Sign in or link"), ("DELETE", "Account deletion")])
+    reauth_user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name="+")
+    reauth_auth_hash = models.CharField(max_length=64, blank=True)
     state = models.CharField(max_length=64, unique=True)
     nonce = models.CharField(max_length=64)
     verifier = models.CharField(max_length=128)

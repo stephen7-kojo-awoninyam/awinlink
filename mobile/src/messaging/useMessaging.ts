@@ -41,6 +41,7 @@ export function useMessaging(onUpdate: () => void | Promise<void>, conversationI
           if (disposed || socketRef.current !== socket) return;
           try {
             const data = JSON.parse(String(event.data));
+            if (data.type === 'age_safety_changed') { setTyping(''); void update.current(); return; }
             if (data.type === 'typing' && data.conversation_id === conversationId && data.user_id !== user?.id) {
               if (expiry) clearTimeout(expiry);
               setTyping(data.is_typing ? `${data.username} is typing...` : '');
@@ -50,7 +51,7 @@ export function useMessaging(onUpdate: () => void | Promise<void>, conversationI
           } catch { /* Ignore unknown events. */ }
         };
         socket.onerror = () => socket.close();
-        socket.onclose = () => { if (socketRef.current === socket) socketRef.current = null; setTyping(''); retryLater(); };
+        socket.onclose = () => { if (socketRef.current === socket) socketRef.current = null; setTyping(''); void update.current(); retryLater(); };
       } catch { retryLater(); }
       finally { connecting = false; }
     }

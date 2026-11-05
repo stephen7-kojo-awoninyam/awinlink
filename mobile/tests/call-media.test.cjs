@@ -154,3 +154,18 @@ test('web diagnostics stay disabled by default and never retain call or peer IDs
   assert.equal(rows.includes('callId'), false);
   assert.equal(rows.includes('peerId'), false);
 });
+
+
+test('web late join negotiates a distinct peer for every participant and departure preserves others', async () => {
+  const call = browser(1);
+  for (const id of [2, 3, 4, 5, 6]) {
+    await call.signal({ type: 'participant_joined', user_id: id });
+    await call.signal({ type: 'ready', sender_id: id, to_user_id: 1 });
+  }
+  assert.equal(call.peers.length, 5);
+  const offers = call.sent.filter(row => row.type === 'offer');
+  assert.deepEqual(offers.map(row => row.to_user_id).sort(), [2, 3, 4, 5, 6]);
+  await call.signal({ type: 'participant_left', user_id: 4 });
+  assert.equal(call.run('Object.keys(peerConnections).length'), 4);
+  assert.equal(call.run('!!peerConnections[3] && !!peerConnections[5]'), true);
+});

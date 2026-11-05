@@ -12,7 +12,10 @@ from .models import (
 # SCOUT PROFILE
 # ============================================================
 
-class ScoutProfileSerializer(serializers.ModelSerializer):
+from accounts.profile_privacy import MinorProfileSerializerMixin
+
+
+class ScoutProfileSerializer(MinorProfileSerializerMixin, serializers.ModelSerializer):
 
     username = serializers.CharField(
         source="user.username",

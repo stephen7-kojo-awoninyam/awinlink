@@ -4,9 +4,13 @@ from django.contrib.auth import views as auth_views
 from . import views
 from . import recovery_views
 from . import google_views
+from . import guardian_views
 
 
 urlpatterns = [
+path("guardians/<int:authorization_id>/learning/", guardian_views.guardian_learning, name="guardian_learning"),
+path("guardians/", guardian_views.guardian_authorizations, name="guardian_authorizations"),
+path("age-details/", guardian_views.age_details, name="age_details"),
 path("google/start/", google_views.google_start, name="google_start"),
 path("google/callback/", google_views.google_callback, name="google_callback"),
 path("google/complete/", google_views.google_complete, name="google_complete"),

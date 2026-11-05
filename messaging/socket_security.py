@@ -9,6 +9,13 @@ from redis.exceptions import RedisError
 
 
 class SecureSocketMixin:
+    async def age_safety_changed(self, event):
+        # Control events contain no private payload and force current authorization checks.
+        await self.security_tick(event)
+        if await self.credentials_valid():
+            import json
+            await self.send(text_data=json.dumps({"type": "age_safety_changed"}))
+
     async def close(self, *args, **kwargs):
         self.stop_security_watchdog()
         return await super().close(*args, **kwargs)

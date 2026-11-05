@@ -2,6 +2,8 @@
 import base64
 import hashlib
 import secrets
+import json
+import time
 from datetime import timedelta
 from functools import wraps
 from urllib.parse import urlencode, urlsplit
@@ -16,6 +18,7 @@ from django.utils import timezone
 
 from .forms import UserRegistrationForm
 from .models import GoogleAuthAttempt, GoogleIdentity, User
+from .age_policy import prepare_registration, create_guardian_request, age_access_allowed
 
 AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -51,22 +54,30 @@ def digest(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
 
-def begin(*, mobile=False, link_user=None):
+def begin(*, mobile=False, link_user=None, reauth_user=None):
     client, _, callback = configuration()
+    if reauth_user is not None:
+        if link_user or not reauth_user.is_active or not age_access_allowed(reauth_user) or not GoogleIdentity.objects.filter(user=reauth_user).exists():
+            raise GoogleAuthError("Sign in to an available account with Google already linked before confirming deletion.")
     mobile_secret = secrets.token_urlsafe(32) if mobile else ""
     attempt = GoogleAuthAttempt.objects.create(
         state=secrets.token_urlsafe(32), nonce=secrets.token_urlsafe(32), verifier=secrets.token_urlsafe(64),
         mobile_secret_hash=digest(mobile_secret) if mobile else "", link_user=link_user,
-        expires_at=timezone.now() + timedelta(minutes=10),
+        purpose="DELETE" if reauth_user is not None else "LOGIN", reauth_user=reauth_user,
+        reauth_auth_hash=reauth_user.get_session_auth_hash() if reauth_user is not None else "",
+        expires_at=timezone.now() + timedelta(minutes=5 if reauth_user is not None else 10),
     )
     challenge = base64.urlsafe_b64encode(hashlib.sha256(attempt.verifier.encode()).digest()).rstrip(b"=").decode()
-    url = AUTHORIZE_URL + "?" + urlencode(dict(client_id=client, redirect_uri=callback,
+    parameters = dict(client_id=client, redirect_uri=callback,
         response_type="code", scope="openid email profile", state=attempt.state, nonce=attempt.nonce,
-        code_challenge=challenge, code_challenge_method="S256", prompt="select_account"))
+        code_challenge=challenge, code_challenge_method="S256", prompt="select_account")
+    if reauth_user is not None:
+        parameters.update(max_age=300, claims=json.dumps({"id_token": {"auth_time": {"essential": True}}}))
+    url = AUTHORIZE_URL + "?" + urlencode(parameters)
     return attempt, url, mobile_secret
 
 
-def validate_id_token(token, nonce):
+def validate_id_token(token, nonce, *, recent=False):
     client, _, _ = configuration()
     try:
         key = JWKS.get_signing_key_from_jwt(token).key
@@ -80,10 +91,19 @@ def validate_id_token(token, nonce):
             or not claims["sub"] or len(claims["sub"]) > 255):
             raise ValueError("Invalid identity claims")
         forms.EmailField().clean(claims["email"])
+        if recent:
+            require_recent_authentication(claims)
         return {"sub": claims["sub"], "email": claims["email"],
+            **({"auth_time": claims["auth_time"]} if recent else {}),
             "given_name": str(claims.get("given_name", ""))[:150], "family_name": str(claims.get("family_name", ""))[:150]}
     except (jwt.PyJWTError, ValueError, TypeError, KeyError, ValidationError) as exc:
         raise GoogleAuthError("Google identity could not be verified. Start sign-in again.") from exc
+
+
+def require_recent_authentication(claims):
+    value = claims.get("auth_time")
+    if type(value) is not int or not time.time() - 300 <= value <= time.time() + 30:
+        raise GoogleAuthError("A recent Google sign-in is required. Sign in again to Google, then retry deletion.")
 
 
 def exchange(state, code):
@@ -99,10 +119,13 @@ def exchange(state, code):
         response = httpx.post(TOKEN_URL, data=dict(code=code, client_id=client, client_secret=secret,
             redirect_uri=callback, grant_type="authorization_code", code_verifier=attempt.verifier), timeout=10)
         response.raise_for_status()
-        claims = validate_id_token(response.json()["id_token"], attempt.nonce)
+        token = response.json()["id_token"]
+        claims = validate_id_token(token, attempt.nonce, recent=True) if attempt.purpose == "DELETE" else validate_id_token(token, attempt.nonce)
     except (GoogleAuthError, httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
         GoogleAuthAttempt.objects.filter(pk=attempt.pk).update(status="FAILED", verifier="", nonce="")
-        raise GoogleAuthError("Google sign-in failed. Start again or use your existing sign-in method.") from exc
+        message = ("Google confirmation failed. Sign in again to Google, then retry account deletion."
+                   if attempt.purpose == "DELETE" else "Google sign-in failed. Start again or use your existing sign-in method.")
+        raise GoogleAuthError(message) from exc
     GoogleAuthAttempt.objects.filter(pk=attempt.pk).update(status="VERIFIED", claims=claims, verifier="", nonce="")
     attempt.refresh_from_db()
     return attempt
@@ -121,20 +144,23 @@ class GoogleSignupForm(UserRegistrationForm):
     def clean_email(self):
         return self.claims["email"].strip().lower()
 
+    @transaction.atomic
     def save(self, commit=True):
         user = forms.ModelForm.save(self, commit=False)
         user.set_unusable_password()
         user.terms_accepted_version = self.cleaned_data["terms_version"]
         user.terms_accepted_at = timezone.now()
+        prepare_registration(user, self.cleaned_data)
         if commit:
             user.save()
             self.save_m2m()
+            create_guardian_request(user, self.cleaned_data)
         return user
 
 
 def complete(attempt, signup=None):
     """Caller must hold the attempt row lock and transaction until consumption/token issuance."""
-    if attempt.status != "VERIFIED" or attempt.expires_at <= timezone.now():
+    if attempt.purpose != "LOGIN" or attempt.reauth_user_id or attempt.status != "VERIFIED" or attempt.expires_at <= timezone.now():
         raise GoogleAuthError("This Google sign-in has expired or was already used.")
     subject = attempt.claims["sub"]
     identity = GoogleIdentity.objects.select_related("user").filter(subject=subject).first()
@@ -146,7 +172,7 @@ def complete(attempt, signup=None):
             GoogleIdentity.objects.create(user=user, subject=subject)
     elif identity:
         user = identity.user
-        if not user.is_active:
+        if not user.is_active and age_access_allowed(user):
             raise GoogleAuthError("This account is unavailable. Contact support.")
     else:
         if User.objects.filter(email__iexact=attempt.claims["email"]).exists():

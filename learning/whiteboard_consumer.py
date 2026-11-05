@@ -68,6 +68,14 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
     async def send_json(self, value):
         if self.closing:
             return
+        from .age_permissions import course_allowed
+        from .models import LiveSession
+        def allowed():
+            session = LiveSession.objects.select_related("classroom__course").get(pk=self.session_id)
+            return course_allowed(self.user, session.classroom.course, live=True)
+        if not await self.authenticated() or not await database_sync_to_async(allowed)():
+            await self.finish(4403)
+            return
         if self.claims and float(self.claims["exp"]) <= time.time():
             await self.finish(4401)
             return

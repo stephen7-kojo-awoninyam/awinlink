@@ -12,6 +12,8 @@ from .models import User
 from .roles import PUBLIC_ROLE_CHOICES as PUBLIC_ACCOUNT_ROLE_CHOICES, validate_public_authority_input
 from .legal import TERMS_VERSION
 from django.utils import timezone
+from django.db import transaction
+from .age_policy import age_group, validate_birth_date, prepare_registration, create_guardian_request
 
 
 # ---------------------------------------------------------
@@ -219,6 +221,18 @@ COUNTRIES = [
 
 
 class UserRegistrationForm(UserCreationForm):
+    date_of_birth = forms.DateField(
+        required=True, widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+        help_text="Your date of birth is private and determines account protections.",
+    )
+    guardian_email = forms.EmailField(
+        required=False, help_text="Required for children under 13. A verified adult guardian must approve before sign-in.",
+        widget=forms.EmailInput(attrs={"class": "form-control"}),
+    )
+
+    def clean_date_of_birth(self):
+        return validate_birth_date(self.cleaned_data["date_of_birth"])
+
     terms_accepted = forms.BooleanField(
         required=True, label="I accept the Terms of Use",
         error_messages={"required": "You must explicitly accept the Terms of Use to register."},
@@ -236,13 +250,16 @@ class UserRegistrationForm(UserCreationForm):
             raise ValidationError("The Terms have changed. Reload registration and review the current Terms.")
         return TERMS_VERSION
 
+    @transaction.atomic
     def save(self, commit=True):
         user = super().save(commit=False)
         user.terms_accepted_version = self.cleaned_data["terms_version"]
         user.terms_accepted_at = timezone.now()
+        prepare_registration(user, self.cleaned_data)
         if commit:
             user.save()
             self.save_m2m()
+            create_guardian_request(user, self.cleaned_data)
         return user
 
     # Platform administrators are provisioned outside public registration.
@@ -469,6 +486,17 @@ class UserRegistrationForm(UserCreationForm):
     def clean(self):
         cleaned_data = super().clean()
         validate_public_authority_input(self.data)
+        forbidden = {"age_group", "birth_date_source", "guardian", "guardian_id", "guardian_approved",
+                     "guardian_approval_required", "verified_at", "verified_by", "consented_at", "consent_version"}
+        if forbidden.intersection(self.data):
+            raise ValidationError("Age and guardian authorization cannot be set through registration.")
+        birth_date = cleaned_data.get("date_of_birth")
+        if birth_date and age_group(birth_date) == "CHILD":
+            guardian_email = cleaned_data.get("guardian_email", "").strip().lower()
+            if not guardian_email:
+                self.add_error("guardian_email", "An adult guardian email address is required for children under 13.")
+            elif guardian_email == cleaned_data.get("email", "").strip().lower():
+                self.add_error("guardian_email", "Use a separate adult guardian email address.")
 
         role = cleaned_data.get("role")
 

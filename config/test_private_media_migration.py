@@ -51,13 +51,13 @@ class PrivateMediaMigrationTests(SimpleTestCase):
                     with self.assertRaises(NotFound):
                         provider.resource(row['public_id'], resource, source_type)
 
-    def test_all_private_namespaces_are_eligible_and_public_profiles_are_never_moved(self):
+    def test_private_namespaces_are_eligible_and_public_brand_assets_are_never_moved(self):
         from config.media_storage import PlaybackMediaStorage
         for namespace in PlaybackMediaStorage.PRIVATE_PREFIXES:
             row = record(namespace=namespace); provider = Provider(row)
             migrate_record(provider, provider, row, 'media', lambda: None)
             self.assertEqual(row['state'], 'origin_private_cdn_pending')
-        for namespace in ('organizations/logos/', 'profiles/', 'verification_documents/../profiles/'):
+        for namespace in ('organizations/logos/', 'sports/icons/', 'verification_documents/../profiles/'):
             row = record(namespace=namespace); provider = Provider(row)
             with self.assertRaises(MigrationConflict):
                 migrate_record(provider, provider, row, 'media', lambda: None)

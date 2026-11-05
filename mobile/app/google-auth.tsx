@@ -9,6 +9,7 @@ import { ui } from '@/src/components/Page';
 const FIELDS = [
   ['first_name', 'First name'], ['last_name', 'Last name'], ['username', 'Username'],
   ['country', 'Country code (GH, US, GB...)'], ['phone_number', 'Phone number'],
+  ['date_of_birth', 'Date of birth (private, YYYY-MM-DD)'], ['guardian_email', 'Guardian email (required under 13)'],
 ] as const;
 const ORG_FIELDS = [['organization_name', 'Organization name'], ['organization_username', 'Organization username'],
   ['organization_email', 'Organization email'], ['website', 'Website (optional)']] as const;
@@ -27,6 +28,7 @@ export default function GoogleAuthScreen() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [guardianPending, setGuardianPending] = useState(false);
   if (isLoading) return null;
   if (linking && !user) return <Redirect href="/login" />;
 
@@ -53,6 +55,8 @@ export default function GoogleAuthScreen() {
       if ('access' in result) {
         setSecret(null);
         router.replace(signup && ['ATHLETE', 'ORGANIZATION'].includes(result.user.role) ? '/onboarding' : '/(tabs)');
+      } else if (result.guardian_approval_required) {
+        setSecret(null); setNeedsSignup(false); setGuardianPending(true);
       } else if (result.signup_required) {
         setEmail(result.email || ''); setNeedsSignup(true);
       } else {
@@ -71,7 +75,10 @@ export default function GoogleAuthScreen() {
     <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }} keyboardShouldPersistTaps="handled">
       {linking && !needsSignup && <><Text>Confirm your current Awinlink password, then choose Google. This links to your signed-in account.</Text>
         <TextInput accessibilityLabel="Current Awinlink password" secureTextEntry value={password} onChangeText={setPassword} style={{ borderWidth: 1, borderColor: '#ccd3df', borderRadius: 8, padding: 12 }} /></>}
-      {!needsSignup && <Pressable accessibilityRole="button" disabled={busy} onPress={() => void handleGoogle()} style={ui.primaryButton}>
+      {guardianPending && <View><Text accessibilityRole="alert">This child account is restricted until a verified adult guardian approves. The guardian needs their own adult account, support verification, then approval in Guardian authorizations under Account and safety.</Text>
+        <Pressable onPress={() => void Linking.openURL(new URL('/support/', policyUrl('terms')).toString()).catch(() => setError('Unable to open support.'))}><Text>Contact support</Text></Pressable>
+        <Pressable onPress={() => router.replace('/login')}><Text>Return to sign in</Text></Pressable></View>}
+      {!needsSignup && !guardianPending && <Pressable accessibilityRole="button" disabled={busy} onPress={() => void handleGoogle()} style={ui.primaryButton}>
         <Text style={ui.primaryButtonText}>{busy ? 'Connecting...' : linking ? 'Link Google' : 'Continue with Google'}</Text></Pressable>}
       {needsSignup && <>
         <Text>Google verified: {email}. Choose your Awinlink account type.</Text>

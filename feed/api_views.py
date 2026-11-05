@@ -637,8 +637,10 @@ class PostCommentsAPIView(PagedAPIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        from accounts.age_safety import visible_users_for
         comments = (
             Comment.objects
+            .filter(user__in=visible_users_for(request.user))
             .exclude(user_id__in=blocked_user_ids(request.user))
             .filter(
                 post=post

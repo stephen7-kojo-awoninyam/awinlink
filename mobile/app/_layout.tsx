@@ -25,7 +25,7 @@ function Navigation() {
           'event-certificates', 'event-management', 'events', 'learning', 'learning/[id]',
           'learning/quiz/[id]', 'learning/results', 'learning/studio', 'messages', 'onboarding',
           'organizations', 'organization-team', 'organization-rosters', 'organization-agreements', 'account-settings', 'report', 'portfolio', 'profile-edit', 'recruitment', 'shortlists', 'specialist',
-          'rising-talent', 'talent/[id]'].map(name => <Stack.Screen key={name} name={name} />)}
+          'rising-talent', 'talent/[id]', 'guardians'].map(name => <Stack.Screen key={name} name={name} />)}
       </Stack.Protected>
     </Stack>
   </>;

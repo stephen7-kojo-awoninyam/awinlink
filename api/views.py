@@ -60,7 +60,7 @@ from rest_framework.views import APIView
 
 
 from .serializers import (
-    UserSerializer,
+    AccountUserSerializer as UserSerializer,
     TalentProfileSerializer,
     OtherTalentProfileSerializer,
     OrganizationSerializer,
@@ -141,6 +141,9 @@ class LoginAPIView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        from accounts.age_policy import age_access_allowed, PENDING_MESSAGE
+        if not age_access_allowed(user):
+            return Response({"guardian_approval_required": True, "detail": PENDING_MESSAGE}, status=403)
         refresh = RefreshToken.for_user(user)
 
         return Response(
@@ -198,6 +201,9 @@ class RegisterAPIView(APIView):
                     country=user.country,
                 )
 
+        from accounts.age_policy import age_access_allowed, PENDING_MESSAGE
+        if not age_access_allowed(user):
+            return Response({"guardian_approval_required": True, "detail": PENDING_MESSAGE}, status=202)
         refresh = RefreshToken.for_user(user)
         return Response(
             {
@@ -249,6 +255,9 @@ class TalentListAPIView(PagedAPIView):
             )
         )
 
+        if any(request.query_params.get(key) for key in ("q", "search", "country", "city")):
+            from accounts.age_safety import searchable_profiles
+            talents = searchable_profiles(request.user, talents)
         page = self.page(request, search_queryset(request, talents, TALENT_SEARCH_FIELDS))
         user_ids = [talent.user_id for talent in page]
         followers = dict(Follow.objects.filter(following_id__in=user_ids).order_by().values('following_id')
@@ -310,7 +319,7 @@ class TalentDetailAPIView(APIView):
             )
 
         serializer = TalentProfileSerializer(
-            talent
+            talent, context={"request": request}
         )
 
         return Response(
@@ -359,7 +368,7 @@ class MyTalentProfileAPIView(APIView):
             )
 
         serializer = TalentProfileSerializer(
-            talent
+            talent, context={"request": request}
         )
 
         return Response(
@@ -406,6 +415,7 @@ class MyTalentProfileAPIView(APIView):
             talent,
             data=request.data,
             partial=True,
+            context={"request": request},
         )
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -3575,6 +3585,8 @@ class NotificationListAPIView(PagedAPIView):
             )
         )
 
+        from notifications.age_safety import visible_notifications
+        notifications = visible_notifications(notifications)
         serializer = NotificationSerializer(
             self.page(request, notifications),
             many=True
@@ -3614,6 +3626,8 @@ class UnreadNotificationsAPIView(PagedAPIView):
             )
         )
 
+        from notifications.age_safety import visible_notifications
+        notifications = visible_notifications(notifications)
         serializer = NotificationSerializer(
             self.page(request, notifications),
             many=True
@@ -3660,6 +3674,9 @@ class NotificationDetailAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        from notifications.age_safety import notification_allowed
+        if not notification_allowed(notification):
+            return Response({"detail": "Notification not found."}, status=404)
         serializer = NotificationSerializer(
             notification
         )
@@ -3701,6 +3718,9 @@ class NotificationReadAPIView(APIView):
             update_fields=["is_read"]
         )
 
+        from notifications.age_safety import notification_allowed
+        if not notification_allowed(notification):
+            return Response({"detail": "Notification not found."}, status=404)
         serializer = NotificationSerializer(
             notification
         )
@@ -3753,10 +3773,8 @@ class NotificationCountAPIView(APIView):
 
     def get(self, request):
 
-        unread_count = Notification.objects.filter(
-            user=request.user,
-            is_read=False
-        ).count()
+        from notifications.age_safety import visible_notifications
+        unread_count = visible_notifications(Notification.objects.filter(user=request.user, is_read=False)).count()
 
         return Response(
             {

@@ -93,13 +93,15 @@ class CloudMediaTests(SimpleTestCase):
             with local.open(name) as original:
                 self.assertEqual(original.read(), b'unchanged')
 
-    def test_private_cloud_urls_are_application_routes_and_public_profile_media_stays_public(self):
+    def test_cloud_profile_urls_use_permission_checked_application_routes(self):
         import cloudinary
         with tempfile.TemporaryDirectory() as directory, override_settings(MEDIA_ROOT=directory), patch.dict(cloudinary.config().__dict__, {'cloud_name': 'media-tests', 'secure': True}):
             storage = PlaybackMediaStorage()
             self.assertEqual(storage.url('feed/images/private'), '/media/feed/images/private')
             self.assertEqual(storage.url('messages/files/private.pdf'), '/media/messages/files/private.pdf')
             self.assertEqual(storage.url('talents/profile/public.jpg'), '/media/talents/profile/public.jpg')
+            self.assertEqual(storage.url('profiles/child.jpg'), '/media/profiles/child.jpg')
+            self.assertEqual(storage.url('coaches/profiles/child.jpg'), '/media/coaches/profiles/child.jpg')
 
     def test_railway_and_local_storage_selection(self):
         for cloud in (False, True):

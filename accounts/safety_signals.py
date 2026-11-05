@@ -14,11 +14,15 @@ def check_conversation_interaction(sender, instance, **kwargs):
         return
     actor = instance.sender if sender is Message else instance.initiated_by
     require_unblocked(actor, instance.conversation.participants.values_list('user_id', flat=True))
+    if sender is Call:
+        from .age_safety import require_contact
+        require_contact(actor, instance.conversation.participants.values_list('user_id', flat=True), calls=True)
 
 
 @receiver(pre_save, sender=Connection)
 def check_connection(sender, instance, **kwargs):
-    require_unblocked(instance.sender, [instance.receiver_id])
+    from .age_safety import require_connection_request
+    require_connection_request(instance.sender, instance.receiver)
 
 
 @receiver(pre_save, sender=Follow)

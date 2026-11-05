@@ -27,6 +27,9 @@ class LearningService:
 
     @staticmethod
     def can_read_quiz(user, course):
+        from .age_permissions import course_allowed
+        if not course_allowed(user, course):
+            return False
         if not user.is_authenticated or not user.is_active:
             return False
         from django.contrib.auth import get_user_model
@@ -84,6 +87,8 @@ class LearningService:
     @staticmethod
     @transaction.atomic
     def enroll(course, user):
+        from .age_permissions import require_course_access
+        require_course_access(user, course)
         course = Course.objects.select_for_update().get(pk=course.pk)
         if not user.is_authenticated or not user.is_active or course.status != 'APPROVED':
             raise Http404('Course is not available.')

@@ -1,0 +1,6 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>Verify guardian for {{ authorization.child.username }}</h1>
+<p>Nominated email: {{ authorization.nominated_email }}. Complete independent review before submitting. Email and Google login alone are insufficient. This step does not activate the child.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<input type="submit" value="Record verification"></form>
+{% endblock %}

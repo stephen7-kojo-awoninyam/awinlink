@@ -60,7 +60,29 @@ test('explicit linking authenticates start and completion and requires password 
   assert.equal('password' in view.requests[1].options.body, false);
 });
 
-function screen({ needsSignup = true } = {}) {
+test('Google deletion starts an authenticated purpose-bound challenge without a password or login exchange', async () => {
+  const view = googleClient();
+  const proof = await view.api.beginGoogleDeletion();
+  assert.equal(proof.exchange_secret, 'private-exchange');
+  assert.equal(proof.handoff, 'browser-proof');
+  assert.equal(view.requests.length, 1);
+  assert.equal(view.requests[0].path, 'auth/google/start/');
+  assert.equal(view.requests[0].options.authenticated, true);
+  assert.equal(view.requests[0].options.body.purpose, 'DELETE');
+  assert.equal('password' in view.requests[0].options.body, false);
+  assert.equal('link' in view.requests[0].options.body, false);
+});
+
+test('cancelled or substituted Google deletion redirects never produce deletion proof', async () => {
+  for (const result of [{ type: 'cancel' }, { type: 'dismiss' }, { type: 'success', url: 'awinlink://attacker?handoff=bad' },
+    { type: 'success', url: 'awinlink://google-complete?error=cancelled' }]) {
+    const view = googleClient(result);
+    await assert.rejects(view.api.beginGoogleDeletion(), /cancelled/);
+    assert.equal(view.requests.length, 1);
+  }
+});
+
+function screen({ needsSignup = true, guardianPending = false } = {}) {
   const states = [], requests = [], navigation = [];
   let index = 0;
   const jsx = (type, props) => ({ type, props });
@@ -75,6 +97,7 @@ function screen({ needsSignup = true } = {}) {
     'expo-router': { Redirect: 'Redirect', Stack: { Screen: 'Screen' }, useLocalSearchParams: () => ({}), useRouter: () => ({ replace: path => navigation.push(path) }) },
     '@/src/auth/AuthProvider': { useAuth: () => ({ user: null, isLoading: false, signInGoogle: async (secret, signup) => {
       requests.push({ secret, signup });
+      if (guardianPending && signup) return { guardian_approval_required: true, detail: 'Guardian approval required' };
       if (signup || !needsSignup) return { access: 'access', refresh: 'refresh', user: { role: 'ATHLETE' } };
       return { signup_required: true, email: 'verified@example.com' };
     } }) },
@@ -112,4 +135,19 @@ test('established Google identity signs in without forcing a new Terms acceptanc
   view.button('Continue with Google').props.onPress(); await flush();
   assert.equal(view.navigation[0], '/(tabs)');
   assert.equal(view.requests[0].signup, undefined);
+});
+
+test('Google child signup shows pending approval and never navigates into the signed-in app', async () => {
+  const view = screen({ guardianPending: true });
+  view.button('Continue with Google').props.onPress(); await flush();
+  view.render().find(node => node.props?.accessibilityRole === 'radio').props.onPress();
+  const fields = view.render().filter(node => node.type === 'Input');
+  fields.find(node => node.props.accessibilityLabel.startsWith('Date of birth')).props.onChangeText('2020-01-01');
+  fields.find(node => node.props.accessibilityLabel.startsWith('Guardian email')).props.onChangeText('adult@example.invalid');
+  view.render().find(node => node.props?.accessibilityRole === 'checkbox').props.onPress();
+  view.button('Create account').props.onPress(); await flush();
+  assert.equal(view.requests[1].signup.date_of_birth, '2020-01-01');
+  assert.equal(view.requests[1].signup.guardian_email, 'adult@example.invalid');
+  assert.equal(view.navigation.length, 0);
+  assert.ok(view.render().find(node => node.props?.accessibilityRole === 'alert' && String(node.props.children).includes('verified adult guardian')));
 });

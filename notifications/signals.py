@@ -25,6 +25,9 @@ def publish_notification(notification_id):
         notification = Notification.objects.select_related("user").get(
             pk=notification_id,
         )
+        from .age_safety import notification_allowed
+        if not notification_allowed(notification):
+            return
         from learning.classroom_notifications import classroom_notification_is_current
         if not classroom_notification_is_current(notification):
             return

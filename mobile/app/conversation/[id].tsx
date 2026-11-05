@@ -68,7 +68,12 @@ export default function ConversationScreen() {
         method: 'POST',
       });
     } catch (loadError) {
-      if (generation === loadGeneration.current) setError(loadError instanceof Error ? loadError.message : 'Unable to load this conversation.');
+      if (generation === loadGeneration.current) {
+        if (loadError && typeof loadError === 'object' && 'status' in loadError && [401, 403, 404].includes(Number(loadError.status))) {
+          messageRevision.current += 1; setMessages([]); setDraft('');
+        }
+        setError(loadError instanceof Error ? loadError.message : 'Unable to load this conversation.');
+      }
     } finally {
       if (generation === loadGeneration.current) setLoading(false);
     }

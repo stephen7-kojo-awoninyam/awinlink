@@ -79,6 +79,7 @@ class CourseForm(forms.ModelForm):
             "thumbnail",
             "level",
             "duration",
+            "minimum_age",
         ]
 
         widgets = {

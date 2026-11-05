@@ -47,7 +47,7 @@ class PublicRoleSecurityTests(TestCase):
     def signup(self, **extra):
         return dict(username='new-role-member', email='new-role@example.invalid',
             first_name='Role', last_name='Member', country='GH', phone_number='+233501234567',
-            role='ATHLETE', password1=self.password, password2=self.password,
+            role='ATHLETE', date_of_birth='1990-01-01', password1=self.password, password2=self.password,
             terms_accepted=True, terms_version=TERMS_VERSION, **extra)
 
     def test_csrf_valid_admin_escalation_is_rejected_and_moderation_remains_denied(self):

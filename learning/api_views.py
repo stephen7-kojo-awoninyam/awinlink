@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .services import LearningService
+from .age_permissions import AgeSafeLearningPermission, courses_for
 from .models import (
     LearningCategory,
     Course,
@@ -51,7 +52,7 @@ from .serializers import (
 
 class LearningCategoryListAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request):
 
@@ -78,7 +79,7 @@ class LearningCategoryListAPIView(APIView):
 
 class CourseListAPIView(PagedAPIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request):
 
@@ -89,6 +90,7 @@ class CourseListAPIView(PagedAPIView):
             "category"
         )
 
+        courses = courses_for(request.user, courses)
         serializer = CourseSerializer(
             self.page(request, courses),
             many=True
@@ -103,7 +105,7 @@ class CourseListAPIView(PagedAPIView):
 
 class CourseDetailAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request, course_id):
 
@@ -146,7 +148,7 @@ class CourseDetailAPIView(APIView):
 
 
 class CourseSubmissionReadinessAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request, course_id):
         course = get_object_or_404(Course, id=course_id)
@@ -164,7 +166,7 @@ class CourseSubmissionReadinessAPIView(APIView):
 
 class CourseCreateAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def post(self, request):
         if not LearningService.can_create_course(request.user):
@@ -181,7 +183,7 @@ class CourseCreateAPIView(APIView):
 
 class MyCoursesAPIView(PagedAPIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request):
 
@@ -191,6 +193,7 @@ class MyCoursesAPIView(PagedAPIView):
             "category"
         )
 
+        courses = courses_for(request.user, courses)
         serializer = CourseSerializer(
             self.page(request, courses),
             many=True
@@ -204,7 +207,7 @@ class MyCoursesAPIView(PagedAPIView):
 
 class CourseSubmitAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def post(self, request, course_id):
 
@@ -246,7 +249,7 @@ class CourseSubmitAPIView(APIView):
 
 class CourseApproveAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def post(self, request, course_id):
 
@@ -289,7 +292,7 @@ class CourseApproveAPIView(APIView):
 
 class CourseRejectAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def post(self, request, course_id):
         if request.user.role != 'ADMIN':
@@ -313,7 +316,7 @@ class LessonPagination(OrderedCursorPagination):
 class CourseLessonsAPIView(PagedAPIView):
     pagination_class = LessonPagination
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request, course_id):
 
@@ -348,7 +351,7 @@ class CourseLessonsAPIView(PagedAPIView):
 
 
 class CourseModulesAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     @staticmethod
     def _available(course, user):
@@ -377,7 +380,7 @@ class CourseModulesAPIView(APIView):
 
 
 class CourseModuleDetailAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     @transaction.atomic
     def patch(self, request, module_id):
@@ -412,7 +415,7 @@ class CourseModuleDetailAPIView(APIView):
 
 class LessonCreateAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     @transaction.atomic
     def post(self, request, course_id):
@@ -481,7 +484,7 @@ class LessonCreateAPIView(APIView):
 
 class LessonDetailAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request, lesson_id):
 
@@ -533,7 +536,7 @@ class LessonDetailAPIView(APIView):
 
 
 class StudioLessonQuizAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def _lesson(self, request, lesson_id, *, lock=False):
         query = Lesson.objects.select_related('course')
@@ -586,7 +589,7 @@ class StudioLessonQuizAPIView(APIView):
 
 
 class StudioQuizQuestionsAPIView(PagedAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
     pagination_class = OrderedCursorPagination
 
     def _quiz(self, request, quiz_id, *, lock=False):
@@ -620,7 +623,7 @@ class StudioQuizQuestionsAPIView(PagedAPIView):
 
 
 class StudioQuestionDetailAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     @transaction.atomic
     def patch(self, request, question_id):
@@ -644,7 +647,7 @@ class StudioQuestionDetailAPIView(APIView):
 
 class CourseEnrollmentAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def post(self, request, course_id):
         course = get_object_or_404(Course, id=course_id, status='APPROVED')
@@ -663,7 +666,7 @@ class CourseEnrollmentAPIView(APIView):
 
 class MyEnrollmentsAPIView(PagedAPIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request):
 
@@ -673,6 +676,7 @@ class MyEnrollmentsAPIView(PagedAPIView):
             "course"
         )
 
+        enrollments = enrollments.filter(course__in=courses_for(request.user, Course.objects.all()))
         serializer = EnrollmentSerializer(
             self.page(request, enrollments),
             many=True
@@ -687,7 +691,7 @@ class MyEnrollmentsAPIView(PagedAPIView):
 
 class LessonProgressAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def post(self, request, lesson_id):
         lesson = get_object_or_404(Lesson.objects.select_related('course'), id=lesson_id)
@@ -712,7 +716,7 @@ class LessonProgressAPIView(APIView):
 
 class CourseProgressAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request, course_id):
 
@@ -769,7 +773,7 @@ class CourseProgressAPIView(APIView):
 
 class CourseReviewListCreateAPIView(PagedAPIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request, course_id):
 
@@ -859,7 +863,7 @@ class CourseReviewListCreateAPIView(PagedAPIView):
 
 class MyCertificatesAPIView(PagedAPIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request):
 
@@ -883,7 +887,7 @@ class MyCertificatesAPIView(PagedAPIView):
 
 class LessonQuizAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request, lesson_id):
         lesson = get_object_or_404(Lesson.objects.select_related('course'), id=lesson_id)
@@ -899,7 +903,7 @@ class LessonQuizAPIView(APIView):
 class QuizQuestionsAPIView(PagedAPIView):
     pagination_class = OrderedCursorPagination
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request, quiz_id):
         quiz = get_object_or_404(Quiz.objects.select_related('lesson__course'), id=quiz_id)
@@ -913,7 +917,7 @@ class QuizQuestionsAPIView(PagedAPIView):
 
 class QuizAttemptAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def post(self, request, quiz_id):
         quiz = get_object_or_404(Quiz.objects.select_related('lesson__course'), id=quiz_id)
@@ -935,7 +939,7 @@ class QuizAttemptAPIView(APIView):
 
 class MyQuizAttemptsAPIView(PagedAPIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request):
 
@@ -956,7 +960,7 @@ class MyQuizAttemptsAPIView(PagedAPIView):
 
 class PendingCoursesAPIView(PagedAPIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeLearningPermission]
 
     def get(self, request):
         if request.user.role != "ADMIN":

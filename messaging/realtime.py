@@ -31,10 +31,11 @@ def mark_read(user, conversation_id, at=None):
 
 def can_access(user, conversation_id):
     from accounts.safety import blocked_user_ids
+    from .age_permissions import conversation_allowed
     return (user.is_active and
             ConversationParticipant.objects.filter(conversation_id=conversation_id, user=user, user__is_active=True).exists() and
             not ConversationParticipant.objects.filter(
-                conversation_id=conversation_id, user_id__in=blocked_user_ids(user)).exists())
+                conversation_id=conversation_id, user_id__in=blocked_user_ids(user)).exists() and conversation_allowed(conversation_id))
 
 
 def publish(conversation_id, data):

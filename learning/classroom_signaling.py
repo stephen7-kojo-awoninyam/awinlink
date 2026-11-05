@@ -68,6 +68,9 @@ def credential_valid(user_id, *, claims=None, session_key=None):
     user = get_user_model().objects.filter(pk=user_id, is_active=True).first()
     if user is None:
         return False
+    from accounts.age_policy import age_access_allowed
+    if not age_access_allowed(user):
+        return False
     stored_hash = store.get(HASH_SESSION_KEY, "")
     hashes = [user.get_session_auth_hash(), *user.get_session_auth_fallback_hash()]
     return bool(stored_hash) and any(constant_time_compare(stored_hash, value) for value in hashes)
@@ -80,6 +83,9 @@ def connection_state(session_id, user_id, connection_id, channel_name, *, requir
     if interval is None:
         return "replaced"
     participant, member, session = interval.participant, interval.participant.membership, interval.participant.session
+    from .age_permissions import course_allowed
+    if not course_allowed(member.user, session.classroom.course, live=True):
+        return "removed"
     if session.status != "LIVE" or session.ended_at is not None:
         return "ended"
     if not session.classroom.is_active or not member.user.is_active or not member.is_active:
@@ -97,7 +103,7 @@ def connection_state(session_id, user_id, connection_id, channel_name, *, requir
     return "authorized"
 
 
-def _live_intervals(session_id):
+def _base_live_intervals(session_id):
     return AttendanceInterval.objects.filter(
         participant__session_id=session_id, left_at__isnull=True,
         signaling_channel_name__isnull=False,
@@ -113,6 +119,14 @@ def _live_intervals(session_id):
             Q(participant__role__in=[ClassroomRole.HOST, ClassroomRole.COHOST]) |
             Q(participant__role=ClassroomRole.LEARNER, enrolled=True,
               participant__session__classroom__course__status="APPROVED"))
+
+
+def _live_intervals(session_id):
+    from .age_permissions import course_allowed
+    query = _base_live_intervals(session_id)
+    denied = [row.pk for row in query.select_related("participant__membership__user", "participant__session__classroom__course")
+              if not course_allowed(row.participant.membership.user, row.participant.session.classroom.course, live=True)]
+    return query.exclude(pk__in=denied)
 
 
 @transaction.atomic

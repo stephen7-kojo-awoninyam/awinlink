@@ -11,6 +11,8 @@ from django.views.decorators.http import require_POST
 from .models import User
 from .security import enforce_auth_limit, AuthenticationUnavailable
 from rest_framework.exceptions import Throttled
+from django.db import transaction
+from .age_policy import age_access_allowed
 
 
 def authentication_limit_response(request, scope):
@@ -33,6 +35,7 @@ def loading_page(request):
 
     return render(request, "loading.html")
 
+@transaction.atomic
 def register(request):
 
     if request.method == "POST":
@@ -75,6 +78,8 @@ def register(request):
                 )
 
             
+            if not age_access_allowed(user):
+                return render(request, "accounts/guardian_pending.html", status=202)
             login(request, user)
 
             # Redirect users according to their account role
@@ -134,6 +139,9 @@ def user_login(request):
         if form.is_valid():
 
             user = form.get_user()
+
+            if not age_access_allowed(user):
+                return render(request, "accounts/guardian_pending.html", status=403)
 
             login(request, user)
 

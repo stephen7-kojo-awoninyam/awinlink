@@ -16,6 +16,13 @@ SharedPost,
 # ============================================================
 
 class PostSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        from accounts.age_safety import minor, can_view_private_data
+        viewer = getattr(self.context.get("request"), "user", None)
+        if minor(instance.author) and not can_view_private_data(viewer, instance.author):
+            data["location"] = ""
+        return data
 
     author_name = serializers.SerializerMethodField()
 

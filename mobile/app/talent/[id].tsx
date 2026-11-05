@@ -195,6 +195,7 @@ export default function TalentProfileScreen() {
 
   async function openConversation() {
     if (!profile) return;
+    if (profile.interaction_capabilities?.can_message === false) { setActionError('Age-safety approval is required before messaging.'); return; }
     setWorking(true);
     setActionError('');
     try {
@@ -280,7 +281,7 @@ export default function TalentProfileScreen() {
               </Text>
               {!!profile.talent_area && <Text style={styles.headline}>{profile.talent_area}</Text>}
               <Text style={styles.location}>
-                {[profile.city, profile.country || profile.user.country].filter(Boolean).join(', ') ||
+                {profile.interaction_capabilities?.location_visible === false ? 'Location protected' : [profile.city, profile.country || profile.user.country].filter(Boolean).join(', ') ||
                   'Location not set'}
               </Text>
               <Text style={styles.followers}>
@@ -339,7 +340,7 @@ export default function TalentProfileScreen() {
                 </View>
                 <Pressable
                   accessibilityRole="button"
-                  disabled={working}
+                  disabled={working || profile.interaction_capabilities?.can_message === false}
                   onPress={() => void openConversation()}
                   style={({ pressed }) => [
                     styles.messageButton,

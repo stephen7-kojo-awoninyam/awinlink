@@ -1,4 +1,5 @@
 from django.contrib.auth import login
+from collections.abc import Mapping
 import secrets
 from urllib.parse import urlencode
 from django.db import IntegrityError, transaction
@@ -16,6 +17,7 @@ from .google_auth import GoogleAuthError, begin, complete, digest, exchange, pri
 from .models import GoogleAuthAttempt
 from .security import GoogleThrottle
 from .views import authentication_limit_response
+from .age_policy import age_access_allowed, PENDING_MESSAGE
 
 
 def error_page(request, message, status=400):
@@ -30,12 +32,21 @@ def google_start(request):
         if limited is not None:
             return limited
         link = request.POST.get("link") == "true"
+        deleting = request.POST.get("purpose") == "DELETE"
+        if deleting:
+            if link or not request.user.is_authenticated:
+                raise GoogleAuthError("Sign in before confirming account deletion with Google.")
+            attempt, url, _ = begin(reauth_user=request.user)
+            request.session["google_delete_state"] = attempt.state
+            request.session.pop("google_delete_verified", None)
+            return redirect(url)
         if link and (not request.user.is_authenticated or not request.user.is_active or not request.user.check_password(request.POST.get("password", ""))):
             raise GoogleAuthError("Sign in and confirm your current Awinlink password before linking Google.")
         if request.user.is_authenticated and not link:
             return redirect("dashboard")
         attempt, url, _ = begin(link_user=request.user if link else None)
         request.session["google_state"] = attempt.state
+        request.session["google_return_to_deletion"] = request.POST.get("next") == "/delete-account/"
         request.session.pop("google_verified", None)
         return redirect(url)
     except GoogleAuthError as exc:
@@ -49,8 +60,11 @@ def google_callback(request):
     attempt = GoogleAuthAttempt.objects.filter(state=state).first() if len(state) <= 64 else None
     if not attempt:
         return error_page(request, "Invalid Google sign-in. Start again.")
-    if not attempt.mobile_secret_hash and request.session.get("google_state") != state:
-        return error_page(request, "Google sign-in does not match this browser. Start again.")
+    if not attempt.mobile_secret_hash:
+        state_key = "google_delete_state" if attempt.purpose == "DELETE" else "google_state"
+        if request.session.get(state_key) != state or (attempt.purpose == "DELETE" and (
+            not request.user.is_authenticated or request.user.pk != attempt.reauth_user_id)):
+            return error_page(request, "Google sign-in does not match this browser or account. Start again.")
     try:
         code = request.GET.get("code", "")
         if request.GET.get("error") or not code or len(code) > 4096:
@@ -58,6 +72,10 @@ def google_callback(request):
             raise GoogleAuthError("Google sign-in was cancelled or denied. You can try again.")
         attempt = exchange(state, code)
         if not attempt.mobile_secret_hash:
+            if attempt.purpose == "DELETE":
+                request.session.pop("google_delete_state", None)
+                request.session["google_delete_verified"] = state
+                return redirect("delete_account")
             request.session.pop("google_state", None)
             request.session["google_verified"] = state
             return redirect("google_complete")
@@ -82,6 +100,8 @@ def google_complete(request):
             attempt = GoogleAuthAttempt.objects.select_for_update().filter(state=request.session.get("google_verified", "")).first()
             if not attempt or attempt.mobile_secret_hash:
                 raise GoogleAuthError("Start Google sign-in again in this browser.")
+            if attempt.purpose != "LOGIN" or attempt.reauth_user_id:
+                raise GoogleAuthError("This Google confirmation is only valid for account deletion.")
             if attempt.link_user_id and (not request.user.is_authenticated or request.user.pk != attempt.link_user_id):
                 raise GoogleAuthError("Sign in to the original account before linking Google.")
             if not attempt.link_user_id and request.user.is_authenticated:
@@ -100,7 +120,11 @@ def google_complete(request):
             if form:
                 return render(request, "accounts/google.html", {"form": form, "ready": True}, status=400)
         request.session.pop("google_verified", None)
+        if not age_access_allowed(user):
+            return render(request, "accounts/guardian_pending.html", status=202)
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        if request.session.pop("google_return_to_deletion", False):
+            return redirect("delete_account")
         if user.role == "ATHLETE" and not getattr(getattr(user, "talent_profile", None), "talent_category", None):
             return redirect("select_talent_category")
         if user.role == "SCOUT" and not getattr(getattr(user, "scout_profile", None), "scout_category", None):
@@ -127,8 +151,16 @@ class GoogleMobileStart(APIView):
     throttle_classes = [GoogleThrottle]
 
     def post(self, request):
+        if not isinstance(request.data, Mapping):
+            return Response({"detail": "Invalid Google sign-in details."}, status=400)
         try:
             linking = request.data.get("link") is True
+            deleting = request.data.get("purpose") == "DELETE"
+            if deleting:
+                if linking or not request.user.is_authenticated:
+                    raise GoogleAuthError("Sign in before confirming account deletion with Google.")
+                _, url, secret = begin(mobile=True, reauth_user=request.user)
+                return Response({"authorization_url": url, "exchange_secret": secret})
             if linking and (not request.user.is_authenticated or not request.user.is_active or not request.user.check_password(request.data.get("password", ""))):
                 raise GoogleAuthError("Confirm your current Awinlink password before linking Google.")
             _, url, secret = begin(mobile=True, link_user=request.user if linking else None)
@@ -143,7 +175,9 @@ class GoogleMobileComplete(APIView):
     throttle_classes = [GoogleThrottle]
 
     def post(self, request):
-        from api.serializers import UserSerializer
+        from api.serializers import AccountUserSerializer as UserSerializer
+        if not isinstance(request.data, Mapping):
+            return Response({"detail": "Invalid Google exchange."}, status=400)
         secret = request.data.get("exchange_secret")
         if not isinstance(secret, str) or not 32 <= len(secret) <= 128:
             return Response({"detail": "Invalid Google exchange."}, status=400)
@@ -155,6 +189,8 @@ class GoogleMobileComplete(APIView):
                 attempt = GoogleAuthAttempt.objects.select_for_update().filter(mobile_secret_hash=digest(secret)).first()
                 if not attempt or attempt.expires_at <= timezone.now():
                     raise GoogleAuthError("Google sign-in expired. Start again.")
+                if attempt.purpose != "LOGIN" or attempt.reauth_user_id:
+                    raise GoogleAuthError("This Google confirmation is only valid for account deletion.")
                 if attempt.status in {"PENDING", "EXCHANGING"}:
                     return Response({"pending": True})
                 handoff = request.data.get("handoff")
@@ -168,6 +204,8 @@ class GoogleMobileComplete(APIView):
                     if signup is not None:
                         return Response({"errors": form.errors}, status=400)
                     return Response({"signup_required": True, "email": attempt.claims["email"]})
+                if not age_access_allowed(user):
+                    return Response({"guardian_approval_required": True, "detail": PENDING_MESSAGE}, status=202)
                 refresh = RefreshToken.for_user(user)
                 return Response({"user": UserSerializer(user).data, "access": str(refresh.access_token), "refresh": str(refresh)})
         except (GoogleAuthError, IntegrityError) as exc:

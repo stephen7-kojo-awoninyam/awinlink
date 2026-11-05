@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -52,6 +52,7 @@ class AdvertisingTests(TestCase):
             username="ad_talent",
             password="test-password",
             role="ATHLETE",
+            date_of_birth=date(1990, 1, 1),
         )
         self.talent = TalentProfile.objects.create(
             user=self.talent_user,

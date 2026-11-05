@@ -16,6 +16,10 @@ from .models import (
 # ============================================================
 
 class MessagingUserSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        from accounts.age_safety import public_user_data
+        return public_user_data(super().to_representation(instance), instance,
+                                getattr(self.context.get("request"), "user", None))
 
     class Meta:
         model = User

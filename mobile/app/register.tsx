@@ -36,6 +36,8 @@ export default function RegisterScreen() {
     last_name: '',
     username: '',
     email: '',
+    date_of_birth: '',
+    guardian_email: '',
     phone_number: '',
     country: '',
     role: 'ATHLETE' as Role,
@@ -49,6 +51,7 @@ export default function RegisterScreen() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [pending, setPending] = useState(false);
 
   if (isLoading) return null;
   if (user) return <Redirect href="/(tabs)" />;
@@ -77,6 +80,8 @@ export default function RegisterScreen() {
         last_name: values.last_name.trim(),
         username: values.username.trim().replace(/^@/, ''),
         email: values.email.trim(),
+        date_of_birth: values.date_of_birth.trim(),
+        guardian_email: values.guardian_email.trim(),
         phone_number: values.phone_number.trim(),
         country: values.country.trim().toUpperCase(),
         role: values.role,
@@ -89,7 +94,8 @@ export default function RegisterScreen() {
         data.organization_email = values.organization_email.trim();
         data.website = values.website.trim();
       }
-      await signUp(data);
+      const result = await signUp(data);
+      if ('guardian_approval_required' in result) { setPending(true); return; }
       router.replace(
         values.role === 'ATHLETE' || values.role === 'ORGANIZATION'
           ? '/onboarding'
@@ -126,7 +132,12 @@ export default function RegisterScreen() {
             </Text>
 
             <Pressable accessibilityRole="button" onPress={() => router.push('/google-auth')}><Text>Continue with Google</Text></Pressable>
-            <View style={styles.form}>
+            {pending ? <View style={styles.form}>
+              <Text accessibilityRole="header">Guardian approval required</Text>
+              <Text accessibilityRole="alert">Your child account is restricted until a verified adult guardian approves. The guardian needs their own adult account and must contact support for identity and relationship verification, then approve in Guardian authorizations under Account and safety.</Text>
+              <Pressable onPress={() => void Linking.openURL(new URL('/support/', policyUrl('terms')).toString()).catch(() => setError('Unable to open support.'))}><Text>Contact support</Text></Pressable>
+              <Pressable onPress={() => router.replace('/login')}><Text>Return to sign in</Text></Pressable>
+            </View> : <View style={styles.form}>
               <Text style={styles.label}>I am joining as</Text>
               <View style={styles.roles}>
                 {ROLES.map((role) => (
@@ -150,6 +161,9 @@ export default function RegisterScreen() {
               </View>
               <Field label="Username" autoCapitalize="none" value={values.username} onChangeText={(value) => setField('username', value)} placeholder="Choose a username" />
               <Field label="Email address" autoCapitalize="none" keyboardType="email-address" value={values.email} onChangeText={(value) => setField('email', value)} placeholder="you@example.com" />
+              <Field label="Date of birth (private, YYYY-MM-DD)" autoCapitalize="none" value={values.date_of_birth} onChangeText={(value) => setField('date_of_birth', value)} placeholder="YYYY-MM-DD" />
+              <Field label="Guardian email (required under 13)" autoCapitalize="none" keyboardType="email-address" value={values.guardian_email} onChangeText={(value) => setField('guardian_email', value)} placeholder="guardian@example.com" />
+              <Text style={styles.countryNote}>Children under 13 need verified adult guardian approval before sign-in.</Text>
               <View style={styles.nameRow}>
                 <Field label="Country code" autoCapitalize="characters" value={values.country} onChangeText={(value) => setField('country', value)} placeholder="GH, US, GB..." />
                 <Field label="Phone number" keyboardType="phone-pad" value={values.phone_number} onChangeText={(value) => setField('phone_number', value)} placeholder="+233..." />
@@ -203,7 +217,7 @@ export default function RegisterScreen() {
               <Pressable accessibilityRole="button" onPress={() => router.back()}>
                 <Text style={styles.loginLink}>Already have an account? Sign in</Text>
               </Pressable>
-            </View>
+            </View>}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

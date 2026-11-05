@@ -1,5 +1,5 @@
-// Keep in sync with accounts/legal.py when legally reviewed Terms change.
-export const TERMS_VERSION = '2026-10-18-draft-1';
+// Keep in sync with accounts/legal.py whenever Terms text changes, including drafts.
+export const TERMS_VERSION = '2026-11-04-draft-2';
 
 export function policyUrl(path: 'terms' | 'privacy' | 'community-guidelines') {
   const origin = process.env.EXPO_PUBLIC_API_URL;

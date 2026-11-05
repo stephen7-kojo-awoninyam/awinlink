@@ -19,7 +19,10 @@ def visible_talent_profiles_for(user):
         if organizations_for_capability(user, OrganizationCapability.VIEW_TALENTS).exists():
             visibility |= Q(profile_visibility="ORGANIZATIONS")
     from accounts.safety import blocked_user_ids
-    return TalentProfile.objects.filter(visibility, user__is_active=True).exclude(user_id__in=blocked_user_ids(user))
+    from accounts.age_safety import visible_users_for, approved_authorizations
+    if user.is_authenticated:
+        visibility |= Q(user_id__in=approved_authorizations().filter(guardian_id=user.pk).values("child_id"))
+    return TalentProfile.objects.filter(visibility, user__in=visible_users_for(user)).exclude(user_id__in=blocked_user_ids(user))
 
 
 def public_talent_profiles_for(user):

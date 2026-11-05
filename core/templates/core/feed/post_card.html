@@ -16,7 +16,7 @@
                 </a>
                 <div class="feed-creator-copy">
                     <a href="{% url 'organization_profile' post.organization.id %}" id="creator-{{ card_prefix }}-{{ entry_id }}" class="feed-creator-name">{{ post.organization.name }}{% if post.organization.verified %}<i class="bi bi-patch-check-fill feed-verified" aria-label="Verified organization"></i>{% endif %}</a>
-                    <span class="feed-creator-meta">Organization{% if post.location %} · {{ post.location }}{% endif %}</span>
+                    <span class="feed-creator-meta">Organization{% if post.location and post.author.age_group != 'CHILD' and post.author.age_group != 'TEEN' %} · {{ post.location }}{% endif %}</span>
                 </div>
             {% elif post.talent %}
                 <a href="{% url 'talent_profile' post.talent.id %}" class="feed-avatar" aria-label="{{ post.author.get_full_name|default:post.author.username }} profile">
@@ -24,13 +24,13 @@
                 </a>
                 <div class="feed-creator-copy">
                     <a href="{% url 'talent_profile' post.talent.id %}" id="creator-{{ card_prefix }}-{{ entry_id }}" class="feed-creator-name">{{ post.author.get_full_name|default:post.author.username }}</a>
-                    <span class="feed-creator-meta">{{ post.talent.get_talent_category_display|default:post.author.get_role_display }}{% if post.location %} · {{ post.location }}{% endif %}</span>
+                    <span class="feed-creator-meta">{{ post.talent.get_talent_category_display|default:post.author.get_role_display }}{% if post.location and post.author.age_group != 'CHILD' and post.author.age_group != 'TEEN' %} · {{ post.location }}{% endif %}</span>
                 </div>
             {% else %}
                 <span class="feed-avatar">{% if post.author.profile_picture %}<img src="{{ post.author.profile_picture.url }}" alt="" loading="lazy" decoding="async">{% else %}<i class="bi bi-person" aria-hidden="true"></i>{% endif %}</span>
                 <div class="feed-creator-copy">
                     <strong id="creator-{{ card_prefix }}-{{ entry_id }}" class="feed-creator-name">{{ post.author.get_full_name|default:post.author.username }}</strong>
-                    <span class="feed-creator-meta">{{ post.author.get_role_display }}{% if post.location %} · {{ post.location }}{% endif %}</span>
+                    <span class="feed-creator-meta">{{ post.author.get_role_display }}{% if post.location and post.author.age_group != 'CHILD' and post.author.age_group != 'TEEN' %} · {{ post.location }}{% endif %}</span>
                 </div>
             {% endif %}
         </div>

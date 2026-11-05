@@ -2070,7 +2070,15 @@ function showCallInterface(
                 </main>
 
                 <footer class="awinlink-call-footer">
+                    <form id="callInviteForm" class="call-invite-form" hidden>
+                        <label for="callInviteUsername">Username to invite</label>
+                        <input id="callInviteUsername" name="username" autocomplete="off" required maxlength="150">
+                        <button type="submit">Send invitation</button>
+                        <button type="button" id="closeCallInvite">Close</button>
+                        <p id="callInviteMessage" role="status"></p>
+                    </form>
                     <div class="call-controls" aria-label="Call controls">
+                        <button type="button" id="addCallPerson" class="call-control-button" aria-expanded="false" aria-controls="callInviteForm"><i class="bi bi-person-plus" aria-hidden="true"></i><span>Add person</span></button>
                         <button type="button" id="toggleCallMicrophone" class="call-control-button" aria-label="Mute microphone" aria-pressed="false" title="Mute microphone">
                             <i class="bi bi-mic-fill" aria-hidden="true"></i>
                             <span>Mute</span>
@@ -2116,6 +2124,36 @@ function showCallInterface(
         });
 
         document.getElementById("endAwinlinkCall").addEventListener("click", endWebRTCCall);
+        const inviteForm = document.getElementById('callInviteForm');
+        const inviteButton = document.getElementById('addCallPerson');
+        inviteButton.onclick = () => {
+            inviteForm.hidden = !inviteForm.hidden;
+            inviteButton.setAttribute('aria-expanded', String(!inviteForm.hidden));
+            if (!inviteForm.hidden) document.getElementById('callInviteUsername').focus();
+        };
+        document.getElementById('closeCallInvite').onclick = () => {
+            inviteForm.hidden = true; inviteButton.setAttribute('aria-expanded', 'false'); inviteButton.focus();
+        };
+        inviteForm.onsubmit = async event => {
+            event.preventDefault();
+            const submit = inviteForm.querySelector('button[type="submit"]');
+            if (submit.disabled || !currentCallId) return;
+            submit.disabled = true;
+            const message = document.getElementById('callInviteMessage');
+            const callId = currentCallId;
+            try {
+                const response = await fetch(`/api/messaging/calls/${callId}/invite/`, {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ username: document.getElementById('callInviteUsername').value.trim() }),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Unable to invite this person.');
+                message.textContent = 'Invitation sent.';
+                inviteForm.reset();
+            } catch (error) { message.textContent = error.message || 'Unable to send invitation.'; }
+            finally { submit.disabled = false; }
+        };
     }
 
     const isVideoCall = callType === "VIDEO";
@@ -2800,6 +2838,11 @@ function connectGlobalUserSocket() {
                 if (['message_created', 'messages_read', 'typing'].includes(data.type)) {
                     window.dispatchEvent(new CustomEvent('awinlink:messaging', { detail: data }));
                 }
+                if (data.type === 'age_safety_changed') {
+                    // Reauthorize rendered history, profile data and active media after a permission change.
+                    window.location.reload();
+                    return;
+                }
                 if (data.type === 'call_ended') handleCallEnded(data);
                 if (data.type === "notification_created") {
                     window.dispatchEvent(
@@ -2827,7 +2870,8 @@ function connectGlobalUserSocket() {
 
 
     socket.onclose =
-        function () {
+        function (event) {
+            if (event && [4001, 4003].includes(event.code)) { window.location.reload(); return; }
 
             console.log(
                 "Awinlink global WebSocket disconnected."

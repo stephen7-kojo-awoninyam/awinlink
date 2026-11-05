@@ -16,7 +16,7 @@ from talents.models import TalentProfile
 class TermsRegistrationTests(TestCase):
     def payload(self, role="ATHLETE"):
         return dict(first_name="Ada", last_name="Lovelace", username="newmember", email="ada@example.com",
-            phone_number="+233501234567", country="GH", role=role,
+            phone_number="+233501234567", country="GH", role=role, date_of_birth="1990-01-01",
             password1="StrongPass123!", password2="StrongPass123!", terms_accepted=True,
             terms_version=TERMS_VERSION, organization_name="Club", organization_username="club",
             organization_email="club@example.com")

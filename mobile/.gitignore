@@ -51,3 +51,4 @@ GoogleService-Info.plist
 *.xcarchive/
 .eas-inspect/
 .eas-inspect-check/
+.eas-inspect*/

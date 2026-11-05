@@ -32,6 +32,7 @@ class PlaybackMediaStorage(MediaCloudinaryStorage):
     AUDIO_PREFIX = "messages/audio/"
     VIDEO_PREFIXES = ("feed/videos/", "messages/videos/")
     PRIVATE_PREFIXES = (
+        "profiles/", "coaches/profiles/", "coaches/covers/",
         "feed/images/", "feed/videos/", "messages/groups/", "messages/images/",
         "messages/videos/", "messages/audio/", "messages/files/",
         "learning/videos/", "learning/notes/", "learning/captions/",

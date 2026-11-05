@@ -87,7 +87,10 @@ def conversation(request, conversation_id):
     )
 
 
-    from .realtime import mark_read
+    from .realtime import can_access, mark_read
+    from django.core.exceptions import PermissionDenied
+    if not can_access(request.user, conversation.pk):
+        raise PermissionDenied("This conversation requires age-safety approval.")
     mark_read(request.user, conversation.pk)
 
     # ==========================================
@@ -631,6 +634,7 @@ def send_message(request, conversation_id):
 
 @login_required
 def conversation_list(request):
+    from .age_permissions import visible_conversations
 
     conversations = Conversation.objects.filter(
 
@@ -648,6 +652,7 @@ def conversation_list(request):
     )
 
 
+    conversations = visible_conversations(conversations)
     for conversation in conversations:
 
         # ==========================================

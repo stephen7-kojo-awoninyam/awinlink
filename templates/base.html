@@ -861,6 +861,10 @@
     </a>
 
 
+    <a class="sidebar-link" href="{% url 'guardian_authorizations' %}">
+        <i class="bi bi-shield-check" aria-hidden="true"></i><span>Guardian authorizations</span>
+    </a>
+
     <form class="sidebar-logout" method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button type="submit" class="sidebar-link logout-link">

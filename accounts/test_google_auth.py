@@ -40,10 +40,17 @@ class GoogleTokenValidationTests(TestCase):
             exp=now + 300, iat=now, sub="google-subject", nonce="nonce", email="person@example.com",
             email_verified=True, **changes) if not changes else {**self.claims(), **changes}
 
-    def validate(self, claims, key=None, algorithm="RS256"):
+    def validate(self, claims, key=None, algorithm="RS256", recent=False):
         token = jwt.encode(claims, key or self.key, algorithm=algorithm, headers={"kid": "test"})
         with patch("accounts.google_auth.JWKS.get_signing_key_from_jwt", return_value=SimpleNamespace(key=self.key.public_key())):
-            return validate_id_token(token, "nonce")
+            return validate_id_token(token, "nonce", recent=recent)
+
+    def test_deletion_requires_recent_signed_auth_time(self):
+        self.assertEqual(self.validate(self.claims(auth_time=int(time.time())), recent=True)['sub'], 'google-subject')
+        for changes in ({}, {'auth_time': None}, {'auth_time': True}, {'auth_time': time.time()},
+                        {'auth_time': int(time.time()) - 301}, {'auth_time': int(time.time()) + 90}):
+            with self.subTest(changes=changes), self.assertRaises(GoogleAuthError):
+                self.validate(self.claims(**changes), recent=True)
 
     def test_valid_signed_token(self):
         self.assertEqual(self.validate(self.claims())["sub"], "google-subject")
@@ -86,7 +93,7 @@ class GoogleFlowTests(TestCase):
 
     def signup(self, role="ATHLETE"):
         return dict(username="newmember", first_name="Ada", last_name="Lovelace", country="GH",
-            phone_number="+233501234567", role=role, terms_accepted=True, terms_version=TERMS_VERSION,
+            phone_number="+233501234567", role=role, date_of_birth="1990-01-01", terms_accepted=True, terms_version=TERMS_VERSION,
             organization_name="Club", organization_username="club", organization_email="club@example.com")
 
     def test_start_uses_code_nonce_pkce_fixed_redirect_and_hashed_mobile_secret(self):

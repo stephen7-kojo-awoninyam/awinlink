@@ -22,7 +22,7 @@ test('mobile call diagnostic allowlist removes call IDs, peer IDs, addresses, an
 });
 
 test('mobile call screen emits only sanitized diagnostics in development builds', () => {
-  const source = fs.readFileSync(require.resolve('../app/call/[id].tsx'), 'utf8');
+  const source = fs.readFileSync(require.resolve('../src/calls/CallScreen.tsx'), 'utf8');
   assert.match(source, /if \(__DEV__\)\s*\{\s*const entry = safeCallDiagnostic\(event, detail\);\s*if \(entry\) console\.debug/);
   assert.doesNotMatch(source, /console\.info\('\[Awinlink call\]'/);
 });

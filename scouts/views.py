@@ -1,3 +1,4 @@
+from accounts.profile_privacy import render as age_safe_render
 from accounts.roles import active_user_has_role
 from talents.visibility import public_talent_profiles_for
 from django.views.decorators.cache import never_cache
@@ -30,7 +31,7 @@ from .models import (
 def scout_dashboard(request):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -80,7 +81,7 @@ def scout_dashboard(request):
         .order_by("-created_at")[:5]
     )
 
-    return render(
+    return age_safe_render(
         request,
         "dashboard/scout_dashboard.html",
         {
@@ -103,7 +104,7 @@ def scout_talent_detail(request, talent_id):
 
     if not active_user_has_role(request.user, "SCOUT"):
 
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -157,7 +158,7 @@ def scout_talent_detail(request, talent_id):
         scout=scout,
         talent=talent
     ).first()    
-    return render(
+    return age_safe_render(
         request,
         "scouts/talent_detail.html",
         {
@@ -179,7 +180,7 @@ def scout_talent_detail(request, talent_id):
 def follow_talent(request, talent_id):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -231,7 +232,7 @@ def follow_talent(request, talent_id):
 def bookmark_talent(request, talent_id):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -284,7 +285,7 @@ def bookmark_talent(request, talent_id):
 def remove_bookmark(request, talent_id):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -311,7 +312,7 @@ def remove_bookmark(request, talent_id):
 def saved_talents(request):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -334,7 +335,7 @@ def saved_talents(request):
         .order_by("-created_at")
     )
 
-    return render(
+    return age_safe_render(
         request,
         "scouts/saved_talents.html",
         {
@@ -353,7 +354,7 @@ def saved_talents(request):
 def scout_talent_list(request):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -418,7 +419,7 @@ def scout_talent_list(request):
     # RENDER
     # =====================================================
 
-    return render(
+    return age_safe_render(
         request,
         "scouts/talent_list.html",
         {
@@ -438,7 +439,7 @@ def scout_talent_list(request):
 def scout_bookmarked_talents(request):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -464,7 +465,7 @@ def scout_bookmarked_talents(request):
         .order_by("-created_at")
     )
 
-    return render(
+    return age_safe_render(
         request,
         "scouts/bookmarked_talents.html",
         {
@@ -483,7 +484,7 @@ def scout_bookmarked_talents(request):
 def scout_followed_talents(request):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -509,7 +510,7 @@ def scout_followed_talents(request):
         .order_by("-created_at")
     )
 
-    return render(
+    return age_safe_render(
         request,
         "scouts/followed_talents.html",
         {
@@ -530,7 +531,7 @@ def update_bookmark_notes(request, talent_id):
 
     if not active_user_has_role(request.user, "SCOUT"):
 
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -574,7 +575,7 @@ def update_bookmark_notes(request, talent_id):
 def select_scout_category(request):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -604,7 +605,7 @@ def select_scout_category(request):
             instance=scout
         )
 
-    return render(
+    return age_safe_render(
         request,
         "scouts/select_category.html",
         {
@@ -619,7 +620,7 @@ def select_scout_category(request):
 def create_scout_profile(request):
 
     if not active_user_has_role(request.user, "SCOUT"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -656,7 +657,7 @@ def create_scout_profile(request):
             instance=scout
         )
 
-    return render(
+    return age_safe_render(
         request,
         "scouts/create_profile.html",
         {

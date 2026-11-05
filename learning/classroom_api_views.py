@@ -56,8 +56,9 @@ class ClassroomPagination(PageNumberPagination):
 
 def visible_classrooms(user):
     """Enrollment enables discovery; a revoked membership overrides discovery."""
+    from .age_permissions import courses_for
     memberships = ClassroomMembership.objects.filter(classroom_id=OuterRef("pk"), user=user)
-    return Classroom.objects.annotate(
+    return Classroom.objects.filter(course__in=courses_for(user, Course.objects.all(), live=True)).annotate(
         requester_staff=Exists(memberships.filter(is_active=True, role__in=[ClassroomRole.HOST, ClassroomRole.COHOST])),
         requester_blocked=Exists(memberships.filter(is_active=False)),
         requester_enrolled=Exists(Enrollment.objects.filter(course_id=OuterRef("course_id"), user=user)),
@@ -362,7 +363,8 @@ class ClassroomUserSearchAPIView(ClassroomAPIView):
             require_course_creator(request.user, classroom.course)
         if not classroom.is_active:
             raise ValidationError("This classroom is inactive.")
-        users = get_user_model().objects.filter(is_active=True, username__icontains=query.validated_data["q"])
+        from accounts.age_safety import visible_users_for
+        users = visible_users_for(request.user).filter(username__icontains=query.validated_data["q"])
         if purpose == "invite":
             if classroom.course.status != "APPROVED":
                 raise ValidationError("Only approved courses can invite learners.")

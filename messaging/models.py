@@ -318,6 +318,10 @@ class Call(models.Model):
 
 class CallParticipant(models.Model):
 
+    # Explicit call-only access; never grants conversation history access.
+    is_guest = models.BooleanField(default=False)
+    invitation_expires_at = models.DateTimeField(null=True, blank=True)
+
     STATUS_CHOICES = (
         ("INVITED", "Invited"),
         ("RINGING", "Ringing"),

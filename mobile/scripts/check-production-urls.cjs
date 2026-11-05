@@ -1,5 +1,6 @@
 /* Read-only production checks. No login, uploads, mutations or publication. */
 const path = require('node:path');
+const { assertLegalPageReady } = require('./legal-page-check.cjs');
 process.env.NODE_ENV ||= 'production';
 require('@expo/env').load(path.resolve(__dirname, '..'));
 const api = process.env.EXPO_PUBLIC_API_URL;
@@ -8,6 +9,7 @@ const checks = [
   ['API feed', api && new URL('/api/feed/posts/', api).href, [200, 401, 403]],
   ['API login route (GET must not create a session)', api && new URL('/api/auth/login/', api).href, [405]],
   ...['WEB', 'PRIVACY', 'TERMS', 'SUPPORT', 'DELETE_ACCOUNT'].map(key => [key, process.env[`EXPO_PUBLIC_${key}_URL`], [200]]),
+  ['COMMUNITY', api && new URL('/community-guidelines/', api).href, [200]],
 ];
 (async () => {
   let failures = 0;
@@ -21,11 +23,10 @@ const checks = [
       const contentType = response.headers.get('content-type') || '';
       if (name.startsWith('API') && !contentType.includes('json')) throw new Error(`Expected API JSON, received ${response.status} ${contentType}`);
       if (!expected.includes(response.status)) throw new Error(`HTTP ${response.status}, expected ${expected.join('/')}`);
-      if (['PRIVACY', 'TERMS', 'SUPPORT', 'DELETE_ACCOUNT'].includes(name)) {
+      if (['PRIVACY', 'TERMS', 'COMMUNITY', 'SUPPORT', 'DELETE_ACCOUNT'].includes(name)) {
         if (!contentType.includes('text/html')) throw new Error('Expected a public HTML page');
         const body = await response.text();
-        if (!body.includes('Awinlink')) throw new Error('Public page must identify Awinlink');
-        if (body.includes('Release information is awaiting completion')) throw new Error('Operator/contact configuration is incomplete');
+        assertLegalPageReady(body);
       }
       console.log(`PASS ${name}: ${response.status} ${response.url}`);
       await response.body?.cancel();

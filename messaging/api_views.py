@@ -1,6 +1,7 @@
 from accounts.models import User
 from api.pagination import BoundedCursorPagination, OrderedCursorPagination, PagedAPIView
 from accounts.safety import require_unblocked, blocked_user_ids
+from .age_permissions import AgeSafeMessagingPermission, visible_conversations, call_allowed
 import base64
 import hashlib
 import hmac
@@ -45,7 +46,7 @@ CALL_RING_TIMEOUT = timedelta(seconds=30)
 class CallIceServersAPIView(APIView):
     """Return STUN and optional time-limited TURN credentials for authenticated callers."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def finalize_response(self, request, response, *args, **kwargs):
         response = super().finalize_response(request, response, *args, **kwargs)
@@ -206,7 +207,7 @@ class RecentConversationPagination(OrderedCursorPagination):
 class MyConversationsAPIView(PagedAPIView):
     pagination_class = RecentConversationPagination
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def get(self, request):
 
@@ -227,6 +228,7 @@ class MyConversationsAPIView(PagedAPIView):
             )
         )
 
+        conversations = visible_conversations(conversations)
         latest = Message.objects.filter(conversation_id=OuterRef('pk')).order_by('-pk').values('pk')[:1]
         page = self.page(request, conversations.annotate(_latest_id=Subquery(latest)))
         latest_messages = {message.pk: message for message in Message.objects.filter(
@@ -252,10 +254,11 @@ class MyConversationsAPIView(PagedAPIView):
 
 
 class UnreadMessageCountAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def get(self, request):
-        count = Message.objects.filter(
+        allowed_rooms = visible_conversations(Conversation.objects.filter(participants__user=request.user).distinct())
+        count = Message.objects.filter(conversation__in=allowed_rooms).filter(
             Q(conversation__participants__last_read_at__isnull=True) |
             Q(created_at__gt=F('conversation__participants__last_read_at')),
             conversation__participants__user=request.user,
@@ -270,7 +273,7 @@ class UnreadMessageCountAPIView(APIView):
 
 class ConversationCreateAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def post(self, request):
 
@@ -576,7 +579,7 @@ class ConversationCreateAPIView(APIView):
 
 class ConversationDetailAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def get(self, request, conversation_id):
 
@@ -650,7 +653,7 @@ class ChronologicalMessagePagination(BoundedCursorPagination):
 class ConversationMessagesAPIView(PagedAPIView):
     pagination_class = ChronologicalMessagePagination
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def get(self, request, conversation_id):
 
@@ -729,7 +732,7 @@ class ConversationMessagesAPIView(PagedAPIView):
 
 class SendMessageAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     @transaction.atomic
     def post(self, request, conversation_id):
@@ -942,7 +945,7 @@ class SendMessageAPIView(APIView):
 
 class MessageReadAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def patch(self, request, message_id):
 
@@ -1026,7 +1029,7 @@ class MessageReadAPIView(APIView):
 
 class ConversationReadAllAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def post(self, request, conversation_id):
 
@@ -1100,7 +1103,7 @@ class ConversationReadAllAPIView(APIView):
         
 class StartCallAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     @transaction.atomic
     def post(self, request, conversation_id):
@@ -1301,9 +1304,61 @@ class StartCallAPIView(APIView):
             status=status.HTTP_201_CREATED
         )
 
+class InviteCallAPIView(APIView):
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
+
+    @transaction.atomic
+    def post(self, request, call_id):
+        call = Call.objects.select_for_update().filter(pk=call_id).first()
+        if not call:
+            return Response({'detail': 'Call not found.'}, status=404)
+        member = ConversationParticipant.objects.filter(
+            conversation=call.conversation, user=request.user).exists()
+        if not member or not call.participants.filter(user=request.user, status='JOINED').exists():
+            return Response({'detail': 'Only joined conversation members can invite people.'}, status=403)
+        if call.status not in ('RINGING', 'ACTIVE') or expire_ringing_call(call):
+            return Response({'detail': 'This call has ended.'}, status=409)
+        username = request.data.get('username')
+        if not isinstance(username, str) or not username.strip() or len(username) > 150:
+            return Response({'detail': 'Enter a valid username.'}, status=400)
+        target = User.objects.filter(username__iexact=username.strip(), is_active=True).first()
+        if not target:
+            return Response({'detail': 'User unavailable.'}, status=400)
+        existing_member = ConversationParticipant.objects.filter(conversation=call.conversation, user=target).exists()
+        if not existing_member and request.user.pk != call.initiated_by_id:
+            return Response({'detail': 'Only the call initiator can invite guests.'}, status=403)
+        require_unblocked(target, list(call.participants.values_list('user_id', flat=True)))
+        from accounts.age_safety import require_contact
+        require_contact(target, call.participants.values_list('user_id', flat=True), calls=True)
+        participant = call.participants.filter(user=target).first()
+        if participant and participant.status == 'RINGING' and participant.invitation_expires_at and participant.invitation_expires_at <= timezone.now():
+            participant.status = 'MISSED'
+        if participant and participant.status in ('JOINED', 'RINGING', 'INVITED'):
+            return Response({'detail': 'This person is already in the call or invited.'}, status=409)
+        if call.participants.filter(status__in=['JOINED', 'RINGING', 'INVITED']).filter(Q(status='JOINED') | Q(invitation_expires_at__isnull=True) | Q(invitation_expires_at__gt=timezone.now())).count() >= 8:
+            return Response({'detail': 'This call supports up to eight people.'}, status=409)
+        if participant:
+            participant.status = 'RINGING'
+            participant.joined_at = participant.left_at = None
+            participant.is_guest = not existing_member
+            participant.invitation_expires_at = timezone.now() + CALL_RING_TIMEOUT
+            participant.save(update_fields=['status', 'joined_at', 'left_at', 'is_guest', 'invitation_expires_at'])
+        else:
+            CallParticipant.objects.create(call=call, user=target, status='RINGING', is_guest=not existing_member, invitation_expires_at=timezone.now() + CALL_RING_TIMEOUT)
+        Notification.objects.create(
+            user=target, sender=request.user, notification_type='INCOMING_CALL',
+            message=f'{request.user.username} invited you to a {call.call_type.lower()} call.',
+            conversation=call.conversation)
+        event = {'type': 'incoming_call', 'call_id': call.pk, 'call_type': call.call_type,
+                 'caller_id': request.user.pk, 'caller_username': request.user.username,
+                 'caller_first_name': request.user.first_name, 'caller_last_name': request.user.last_name}
+        transaction.on_commit(lambda: async_to_sync(get_channel_layer().group_send)(f'user_{target.pk}', event))
+        return Response(CallSerializer(call).data, status=201)
+
+
 class AcceptCallAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     @transaction.atomic
     def post(self, request, call_id):
@@ -1351,6 +1406,14 @@ class AcceptCallAPIView(APIView):
          # ---------------------------------------------------------
         # CHECK CALL TIMEOUT
         # ---------------------------------------------------------
+
+        if participant.invitation_expires_at and participant.invitation_expires_at <= timezone.now():
+            return Response({'detail': 'This invitation has expired.'}, status=400)
+        if not participant.is_guest and not ConversationParticipant.objects.filter(conversation=call.conversation, user=request.user).exists():
+            return Response({'detail': 'Conversation membership required.'}, status=403)
+        require_unblocked(request.user, list(call.participants.values_list('user_id', flat=True)))
+        from accounts.age_safety import require_contact
+        require_contact(request.user, call.participants.values_list("user_id", flat=True), calls=True)
 
         if call.status == "RINGING":
 
@@ -1401,7 +1464,6 @@ class AcceptCallAPIView(APIView):
 
         Notification.objects.filter(
             user=request.user,
-            sender=call.initiated_by,
             conversation=call.conversation,
             notification_type="INCOMING_CALL",
             is_read=False,
@@ -1429,6 +1491,7 @@ class AcceptCallAPIView(APIView):
         # RETURN UPDATED CALL
         # ---------------------------------------------------------
 
+        call._prefetched_objects_cache = {}
         serializer = CallSerializer(call)
 
         return Response(
@@ -1439,7 +1502,7 @@ class AcceptCallAPIView(APIView):
         
 class RejectCallAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     @transaction.atomic
     def post(self, request, call_id):
@@ -1508,7 +1571,6 @@ class RejectCallAPIView(APIView):
 
         Notification.objects.filter(
             user=request.user,
-            sender=call.initiated_by,
             conversation=call.conversation,
             notification_type="INCOMING_CALL",
             is_read=False,
@@ -1543,6 +1605,7 @@ class RejectCallAPIView(APIView):
         if not remaining:
             finish_call(call, request.user.pk)
 
+        call._prefetched_objects_cache = {}
         serializer = CallSerializer(call)
 
         return Response(
@@ -1552,7 +1615,7 @@ class RejectCallAPIView(APIView):
         
 
 class EndCallAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     @transaction.atomic
     def post(self, request, call_id):
@@ -1566,6 +1629,8 @@ class EndCallAPIView(APIView):
         # Repeated end requests are harmless, including delayed requests after redial.
         if call.status not in ('RINGING', 'ACTIVE'):
             return Response(CallSerializer(call).data)
+        if participant.is_guest and participant.status not in ('JOINED', 'LEFT'):
+            return Response({'detail': 'Accept the invitation before ending the call.'}, status=403)
         # Closing the signaling socket may already have marked the caller LEFT.
         if participant.status not in ('JOINED', 'RINGING', 'LEFT'):
             return Response({'detail': 'You are no longer active in this call.'}, status=400)
@@ -1578,7 +1643,7 @@ class EndCallAPIView(APIView):
 
 class IncomingCallsAPIView(PagedAPIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def get(self, request):
 
@@ -1602,6 +1667,7 @@ class IncomingCallsAPIView(PagedAPIView):
         calls = (
             Call.objects
             .filter(
+                Q(participants__invitation_expires_at__isnull=True) | Q(participants__invitation_expires_at__gt=timezone.now()),
                 participants__user=request.user,
                 participants__status="RINGING",
                 status__in=["RINGING", "ACTIVE"],
@@ -1617,6 +1683,7 @@ class IncomingCallsAPIView(PagedAPIView):
             .order_by("-started_at")
         )
 
+        calls = calls.exclude(pk__in=[call.pk for call in calls if not call_allowed(call.pk)])
         serializer = CallSerializer(
             self.page(request, calls),
             many=True
@@ -1633,7 +1700,7 @@ class IncomingCallsAPIView(PagedAPIView):
 
 class AddGroupMemberAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def post(self, request, conversation_id):
 
@@ -1756,6 +1823,7 @@ class AddGroupMemberAPIView(APIView):
         # ADD MEMBER
         # ----------------------------------------------------
 
+        require_unblocked(user, conversation.participants.values_list("user_id", flat=True))
         participant = ConversationParticipant.objects.create(
             conversation=conversation,
             user=user
@@ -1791,7 +1859,7 @@ class AddGroupMemberAPIView(APIView):
 
 class RemoveGroupMemberAPIView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AgeSafeMessagingPermission]
 
     def delete(self, request, conversation_id, user_id):
 

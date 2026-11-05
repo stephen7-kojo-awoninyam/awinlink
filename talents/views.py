@@ -1,3 +1,4 @@
+from accounts.profile_privacy import render as age_safe_render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 from talents.visibility import visible_talent_profiles_for
@@ -234,7 +235,7 @@ def talent_dashboard(request):
     # DASHBOARD
     # =====================================
 
-    return render(
+    return age_safe_render(
         request,
         "talents/dashboard.html",
         {
@@ -322,7 +323,7 @@ def request_verification(request):
 
         form = VerificationRequestForm()
 
-    return render(
+    return age_safe_render(
         request,
         "talents/request_verification.html",
         {
@@ -444,7 +445,7 @@ def talent_profile(request, talent_id):
     # RENDER PROFILE
     # =====================================================
 
-    return render(
+    return age_safe_render(
         request,
         "talents/profile.html",
         {
@@ -521,6 +522,8 @@ def talent_search(request):
 
 
     if country:
+        from accounts.age_safety import searchable_profiles
+        talents = searchable_profiles(request.user, talents)
 
 
         talents = talents.filter(
@@ -575,7 +578,7 @@ def talent_search(request):
 
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -639,7 +642,7 @@ def edit_profile(request):
             )
 
 
-    return render(
+    return age_safe_render(
         request,
         "talents/edit_profile.html",
         {
@@ -754,7 +757,7 @@ def talent_analytics(request):
 
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -818,7 +821,7 @@ def add_experience(request):
 
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -929,7 +932,7 @@ def edit_experience(request, experience_id):
 
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -999,7 +1002,7 @@ def add_certification(request):
 
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -1108,7 +1111,7 @@ def edit_certification(request, certification_id):
         )
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -1177,7 +1180,7 @@ def add_achievement(request):
 
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -1283,7 +1286,7 @@ def edit_achievement(request, achievement_id):
         )
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -1320,7 +1323,7 @@ def talent_invitations(request):
     )
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -1450,7 +1453,7 @@ def profile_strength(request):
     except TalentProfile.DoesNotExist:
 
 
-        return render(
+        return age_safe_render(
 
             request,
 
@@ -1473,7 +1476,7 @@ def profile_strength(request):
     )
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -1515,7 +1518,7 @@ def talent_settings(request):
 
         return redirect("talent_settings")
 
-    return render(
+    return age_safe_render(
         request,
         "talents/settings.html",
         {
@@ -1550,7 +1553,7 @@ def role_models(request):
     )
 
 
-    return render(
+    return age_safe_render(
 
         request,
 
@@ -1664,7 +1667,7 @@ def select_talent_category(request):
             instance=talent
         )
 
-    return render(
+    return age_safe_render(
         request,
         "talents/select_category.html",
         {
@@ -1769,7 +1772,7 @@ def sports_profile_setup(request):
         .order_by("name")
     )
 
-    return render(
+    return age_safe_render(
         request,
         "sports/profile_setup.html",
         {
@@ -1829,7 +1832,7 @@ def technology_profile_setup(request):
             instance=profile
         )
 
-    return render(
+    return age_safe_render(
         request,
         "talents/technology_profile_setup.html",
         {
@@ -1885,7 +1888,7 @@ def arts_profile_setup(request):
             instance=profile
         )
 
-    return render(
+    return age_safe_render(
         request,
         "talents/arts_profile_setup.html",
         {

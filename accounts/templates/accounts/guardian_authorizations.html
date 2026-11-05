@@ -1,0 +1,55 @@
+{% extends 'accounts/base_auth.html' %}
+{% block content %}
+<div class="auth-card p-4">
+<h1>Guardian authorizations</h1>
+{% if error %}<p role="alert">{{ error }}</p>{% endif %}
+{% if age_unknown %}<p>Record your private date of birth before acting as a guardian. <a href="{% url 'age_details' %}">Add age details</a></p>{% endif %}
+<p>Requests appear after support verifies your identity, adulthood and relationship to the child. Contact <a href="{% url 'support' %}">support</a> to arrange verification. Google sign-in and an email match alone do not establish guardianship.</p>
+{% for item in authorizations %}
+<section><h2>{{ item.child.username }}</h2><p>{{ item.get_status_display }}</p>
+{% if item.status == 'APPROVED' %}
+<h3>Approved contacts</h3>
+{% for permission in item.contact_permissions.all %}
+<form method="post">{% csrf_token %}
+<input type="hidden" name="authorization_id" value="{{ item.pk }}"><input type="hidden" name="action" value="remove_contact">
+<input type="hidden" name="username" value="{{ permission.contact.username }}">
+<span>@{{ permission.contact.username }} · Messages{% if permission.allow_calls %} and calls{% endif %}</span>
+<button type="submit">Withdraw contact permission</button></form>{% endfor %}
+<form method="post">{% csrf_token %}
+<input type="hidden" name="authorization_id" value="{{ item.pk }}"><input type="hidden" name="action" value="allow_contact">
+<label>Contact username <input name="username" required maxlength="150"></label>
+<label><input type="checkbox" name="allow_calls"> Also allow voice and video calls</label>
+<button type="submit">Approve contact</button></form>
+<h3>Learning approvals</h3>
+<p><a href="{% url 'guardian_learning' item.pk %}">View learning progress</a></p>
+<p>Live approval includes interaction with the instructor, staff and admitted learners. It does not allow private messages or calls outside the class.</p>
+{% for permission in item.course_permissions.all %}
+<form method="post">{% csrf_token %}
+<input type="hidden" name="authorization_id" value="{{ item.pk }}"><input type="hidden" name="action" value="remove_course">
+<input type="hidden" name="course_id" value="{{ permission.course_id }}">
+<span>{{ permission.course.title }} · {% if permission.allow_live %}Lessons and live classes{% else %}Lessons only{% endif %}</span>
+<button type="submit">Withdraw learning permission</button></form>{% endfor %}
+<form method="post">{% csrf_token %}
+<input type="hidden" name="authorization_id" value="{{ item.pk }}"><input type="hidden" name="action" value="allow_course">
+<label>Course <select name="course_id" required>{% for course in available_courses %}<option value="{{ course.pk }}">{{ course.title }}{% if course.minimum_age %} · Ages {{ course.minimum_age }}+{% endif %}</option>{% endfor %}</select></label>
+<label><input type="checkbox" name="allow_live"> Also approve live classroom participation</label>
+<button type="submit">Approve learning</button></form>
+{% endif %}
+{% if item.status == 'PENDING' %}
+<form method="post">{% csrf_token %}
+<input type="hidden" name="authorization_id" value="{{ item.pk }}">
+<input type="hidden" name="action" value="approve">
+<input type="hidden" name="version" value="{{ consent_version }}">
+<p>{{ consent_text }}</p>
+<label><input type="checkbox" name="accepted" required> I explicitly approve ({{ consent_version }}).</label>
+<button type="submit">Approve child account</button></form>
+{% endif %}
+{% if item.status != 'REVOKED' %}
+<form method="post">{% csrf_token %}
+<input type="hidden" name="authorization_id" value="{{ item.pk }}">
+<input type="hidden" name="action" value="revoke">
+<button type="submit">Withdraw authorization and restrict child account</button></form>
+{% endif %}</section>
+{% empty %}<p>No verified requests are linked to your account yet.</p>{% endfor %}
+</div>
+{% endblock %}

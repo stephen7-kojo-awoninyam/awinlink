@@ -100,8 +100,9 @@ def send_expo_call_push(notification):
     call = (
         Call.objects.filter(
             conversation_id=notification.conversation_id,
-            initiated_by_id=notification.sender_id,
-            status="RINGING",
+            participants__user_id=notification.user_id,
+            participants__status="RINGING",
+            status__in=["RINGING", "ACTIVE"],
         )
         .order_by("-started_at")
         .first()
@@ -132,7 +133,7 @@ def send_expo_call_push(notification):
     }
     from .voip import native_call_uuid, send_voip_call_push
     data['uuid'] = native_call_uuid(call.pk)
-    data['expires_at'] = int(call.started_at.timestamp()) + 30
+    data['expires_at'] = int(notification.created_at.timestamp()) + 30
     delivered = send_voip_call_push(notification.user_id, data)
     tokens = [(token, platform) for token, platform in tokens if token not in delivered]
     if not tokens:

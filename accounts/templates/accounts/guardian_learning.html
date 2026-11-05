@@ -1,0 +1,8 @@
+{% extends 'accounts/base_auth.html' %}
+{% block content %}<div class="auth-card p-4">
+<h1>Learning progress for {{ child.username }}</h1>
+{% for enrollment in enrollments %}<section><h2>{{ enrollment.course.title }}</h2>
+<p>{% if enrollment.completed %}Completed{% else %}In progress{% endif %}</p>
+<p>Enrolled {{ enrollment.enrolled_at|date:"DATE_FORMAT" }}</p></section>
+{% empty %}<p>No enrollments yet.</p>{% endfor %}
+<a href="{% url 'guardian_authorizations' %}">Guardian authorizations</a></div>{% endblock %}

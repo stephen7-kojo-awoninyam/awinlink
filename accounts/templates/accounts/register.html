@@ -384,6 +384,15 @@ Create Account | Awinlink
         </div>
 
 
+        <div class="col-12">
+            {{ form.date_of_birth.label_tag }} {{ form.date_of_birth }}
+            {{ form.date_of_birth.errors }}
+            <p class="small">{{ form.date_of_birth.help_text }}</p>
+            {{ form.guardian_email.label_tag }} {{ form.guardian_email }}
+            {{ form.guardian_email.errors }}
+            <p class="small">{{ form.guardian_email.help_text }}</p>
+        </div>
+
         <!-- COUNTRY -->
         <div class="col-md-6">
 

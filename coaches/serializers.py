@@ -12,7 +12,10 @@ from .models import (
 # COACH PROFILE
 # ============================================================
 
-class CoachProfileSerializer(serializers.ModelSerializer):
+from accounts.profile_privacy import MinorProfileSerializerMixin
+
+
+class CoachProfileSerializer(MinorProfileSerializerMixin, serializers.ModelSerializer):
 
     username = serializers.CharField(
         source="user.username",

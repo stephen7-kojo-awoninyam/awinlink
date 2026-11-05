@@ -23,7 +23,19 @@ class InvalidTrackingToken(ValueError):
     pass
 
 
+def ad_viewer_allowed(user_id, *, lock=False):
+    """Use current account age, never a stale profile or a role as proof of adulthood."""
+    from accounts.models import User
+    users = User.objects.filter(pk=user_id, is_active=True)
+    if lock:
+        users = users.select_for_update()
+    current = users.first()
+    return bool(current and current.age_group == 'ADULT')
+
+
 def create_tracking_token(advertisement_id, user_id):
+    if not ad_viewer_allowed(user_id):
+        raise InvalidTrackingToken('Advertising is unavailable for this account.')
     return signing.dumps(
         {
             "advertisement_id": advertisement_id,
@@ -140,6 +152,8 @@ def _within_frequency_cap(campaign, user, now):
 
 @transaction.atomic
 def record_ad_event(advertisement_id, user, event_type, token):
+    if not ad_viewer_allowed(user.pk, lock=True):
+        raise InvalidTrackingToken('Advertising is unavailable for this account.')
     advertisement = Advertisement.objects.select_related("campaign").get(
         pk=advertisement_id
     )
@@ -180,7 +194,7 @@ def record_ad_event(advertisement_id, user, event_type, token):
 
 def get_ads_for_user(user, limit=3):
     """Return eligible targeted ads, or general ads when no targeted match exists."""
-    if limit <= 0:
+    if limit <= 0 or not ad_viewer_allowed(user.pk):
         return []
 
     today = timezone.localdate()
@@ -254,6 +268,8 @@ def insert_ads_into_feed(feed_items, advertisements, user, interval=5):
     """Insert sponsored items without reordering the personalized feed."""
     if interval <= 0:
         raise ValueError("Feed ad interval must be greater than zero.")
+    if not ad_viewer_allowed(user.pk):
+        return list(feed_items)
     items = []
     ad_index = 0
     now = timezone.now()

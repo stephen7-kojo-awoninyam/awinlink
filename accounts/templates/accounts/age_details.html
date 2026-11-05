@@ -1,0 +1,5 @@
+{% extends 'accounts/base_auth.html' %}
+{% block content %}<div class="auth-card p-4">
+<h1>Private age details</h1><p>Your date of birth determines account protections and is not shown on your public profile. Children under 13 require verified guardian approval. Contact support to correct a date already recorded.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save age details</button></form>
+</div>{% endblock %}

@@ -7,6 +7,13 @@ export type User = {
   role: 'ATHLETE' | 'ORGANIZATION' | 'SCOUT' | 'COACH' | 'ADMIN' | string;
   profile_picture: string | null;
   country: string | null;
+  account_capabilities?: {
+    age_group: 'UNKNOWN' | 'CHILD' | 'TEEN' | 'ADULT';
+    guardian_approval_required: boolean;
+    can_access_account: boolean;
+    can_manage_children: boolean;
+    protected_teen: boolean;
+  };
 };
 
 export type AuthResponse = {
@@ -16,8 +23,12 @@ export type AuthResponse = {
 };
 
 export type PublicUser = Omit<User, 'email'>;
+export type PendingRegistration = { guardian_approval_required: true; detail: string };
+export type RegistrationResult = AuthResponse | PendingRegistration;
 
 export type RegistrationData = {
+  date_of_birth: string;
+  guardian_email?: string;
   terms_accepted: boolean;
   terms_version: string;
   first_name: string;
@@ -53,6 +64,7 @@ export type FeedPost = {
 };
 
 export type TalentProfile = {
+  interaction_capabilities?: { can_message: boolean; can_call: boolean; location_visible: boolean };
   id: number;
   specialist_bookmark_id?: number | null;
   specialist_follow_id?: number | null;

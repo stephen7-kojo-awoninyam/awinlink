@@ -109,10 +109,17 @@ from .views import (
 )
 
 
+from accounts.guardian_views import GuardianAuthorizationsAPI, AgeDetailsAPI, GuardianLearningAPI, GuardianCourseCatalogAPI
+
 app_name = "api"
 
 
 urlpatterns = [
+    path("auth/guardians/<int:authorization_id>/courses/", GuardianCourseCatalogAPI.as_view()),
+    path("auth/guardians/<int:authorization_id>/learning/", GuardianLearningAPI.as_view()),
+    path("auth/age-details/", AgeDetailsAPI.as_view(), name="age_details"),
+    path("auth/guardians/", GuardianAuthorizationsAPI.as_view(), name="guardian_authorizations"),
+    path("auth/guardians/<int:authorization_id>/", GuardianAuthorizationsAPI.as_view(), name="guardian_authorization_action"),
     path("rising-talent/preferences/", RisingPreferencesAPI.as_view(), name="rising_talent_preferences"),
     path("rising-talent/matches/", RisingMatchesAPI.as_view(), name="rising_talent_matches"),
     path("rising-talent/options/", RisingOptionsAPI.as_view(), name="rising_talent_options"),

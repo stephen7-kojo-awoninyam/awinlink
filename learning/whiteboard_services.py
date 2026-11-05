@@ -26,6 +26,8 @@ def group(session_id):
 
 def access(actor, session, *, edit=False, host=False):
     actor = require_active_user(actor)
+    from .age_permissions import require_course_access
+    require_course_access(actor, session.classroom.course, live=True)
     participant = SessionParticipant.objects.select_related("membership", "session__classroom__course").filter(
         session=session, membership__user=actor, membership__is_active=True,
         admission_state=AdmissionState.ADMITTED).first()

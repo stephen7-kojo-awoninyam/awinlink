@@ -55,6 +55,11 @@ class JWTWebSocketMiddleware:
     async def __call__(self, scope, receive, send):
         headers = dict(scope.get("headers", []))
         authorization = headers.get(b"authorization", b"").decode("latin1")
+        # Browser WebSockets cannot set Authorization headers. Keep credentials
+        # out of URLs and never select/echo the credential as a subprotocol.
+        protocols = scope.get('subprotocols', [])
+        if not authorization and protocols and protocols[0] == 'bearer':
+            authorization = 'Bearer ' + protocols[1] if len(protocols) == 2 else 'Invalid'
         scheme, _, token = authorization.partition(" ")
         if authorization:
             identity = await _jwt_socket_identity(token) if scheme.lower() == "bearer" and 0 < len(token) <= 16384 else None

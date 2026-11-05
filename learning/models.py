@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import F, Q
 from django.utils import timezone
 from django.db import transaction
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.validators import RegexValidator
 from .validators import validate_webvtt, validate_transcript
 import uuid
@@ -44,6 +44,7 @@ class LearningCategory(models.Model):
     
     
 class Course(models.Model):
+    minimum_age = models.PositiveSmallIntegerField(default=0, validators=[MaxValueValidator(18)])
 
     LEVELS = (
 

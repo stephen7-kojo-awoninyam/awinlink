@@ -18,6 +18,7 @@ class UserRegistrationRoleTests(TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "username": "ada123",
+                "date_of_birth": "1990-01-01",
                 "email": "ada@example.com",
                 "phone_number": "+233501234567",
                 "country": "GH",
@@ -37,6 +38,7 @@ class UserRegistrationRoleTests(TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "username": "ada456",
+                "date_of_birth": "1990-01-01",
                 "email": "ada2@example.com",
                 "phone_number": "+233501234567",
                 "country": "GH",
@@ -57,6 +59,7 @@ class UserRegistrationRoleTests(TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "username": "@takenhandle",
+                "date_of_birth": "1990-01-01",
                 "email": "case-check@example.com",
                 "phone_number": "+233501234567",
                 "country": "GH",
@@ -122,12 +125,22 @@ class UsernameAvailabilityTests(TestCase):
     }
 )
 class RegistrationProfileTests(TestCase):
+    def setUp(self):
+        # Rate-limit cache survives database rollback and other account suites.
+        from django.core.cache import cache
+        cache.clear()
+
+    def tearDown(self):
+        from django.core.cache import cache
+        cache.clear()
+
     @staticmethod
     def registration_data(username, role):
         return {
             "first_name": "Ada",
             "last_name": "Lovelace",
             "username": username,
+            "date_of_birth": "1990-01-01",
             "email": f"{username}@example.com",
             "phone_number": "+233501234567",
             "country": "GH",

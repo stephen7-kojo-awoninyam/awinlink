@@ -70,6 +70,10 @@ class ConversationListSearchTests(TestCase):
         self.assertContains(response, 'data-search-username="search_handle"')
 
 
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
 class StartConversationTests(TestCase):
     def test_unconnected_user_is_redirected_to_connections_page(self):
         user_model = get_user_model()

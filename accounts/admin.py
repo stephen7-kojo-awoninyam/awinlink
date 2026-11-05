@@ -15,3 +15,4 @@ class UserBlockAdmin(admin.ModelAdmin):
     list_display = ['user', 'blocked_user', 'created_at']
 
 # Register your models here.
+from . import guardian_admin  # noqa: F401

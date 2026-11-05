@@ -1,6 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '@/src/auth/tokenStorage';
 
-import type { AuthResponse, RegistrationData } from '@/src/types';
+import type { AuthResponse, RegistrationData, RegistrationResult } from '@/src/types';
 import { continuationPath, withNextPage } from '@/src/pagination';
 
 const ACCESS_TOKEN_KEY = 'awinlink.access-token';
@@ -38,12 +38,12 @@ export function resolveMediaFields(value: unknown): unknown {
 }
 
 export function validateMultipartUploads(body: FormData) {
-  const native = body as FormData & { getParts?: () => { name?: string }[] };
+  const native = body as FormData & { getParts?: () => { name?: string }[]; entries?: () => IterableIterator<[string, unknown]> };
   const names = typeof native.getParts === 'function' ? native.getParts().map(part => part.name).filter(Boolean)
-    : typeof body.entries === 'function' ? Array.from(body.entries()).map(([, value]) =>
-      typeof value === 'object' && 'name' in value ? String(value.name) : '') : [];
+    : typeof native.entries === 'function' ? Array.from(native.entries()).map(([, value]) =>
+      value && typeof value === 'object' && 'name' in value ? String(value.name) : '') : [];
   for (const name of names) {
-    if (/\.(html?|xhtml|svgz?|xml|js|mjs|exe|bat|cmd|com|ps1|sh)\s*$/i.test(name || '')) {
+    if (/\.(html?|xhtml|svgz?|xml|js|mjs|exe|bat|cmd|com|ps1|sh)\s*$/i.test(String(name || ''))) {
       throw new Error('This file type is not supported. Choose an image, recording, video or document.');
     }
   }
@@ -279,7 +279,7 @@ export async function signInRequest(username: string, password: string) {
 }
 
 export async function signUpRequest(data: RegistrationData) {
-  return apiRequest<AuthResponse>('auth/register/', {
+  return apiRequest<RegistrationResult>('auth/register/', {
     method: 'POST',
     authenticated: false,
     body: data,

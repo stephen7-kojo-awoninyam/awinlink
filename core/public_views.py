@@ -1,9 +1,10 @@
-from django.conf import settings
-from django.contrib.auth import get_user_model, logout
+from django.contrib.auth import logout
 from django.db import transaction
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 from accounts.legal import TERMS_VERSION
+from .legal import legal_context
+from accounts.age_policy import age_access_allowed
 
 
 @require_http_methods(['GET', 'HEAD', 'POST'])
@@ -18,23 +19,27 @@ def public_page(request, page):
             error = 'Sign in before deleting your account.'
         else:
             with transaction.atomic():
-                user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
-                from organizations.models import Organization
-                if not user.check_password(request.POST.get('password', '')):
-                    error = 'Enter your current password.'
-                elif request.POST.get('confirm') != 'yes':
+                from accounts.deletion import delete_own_account, DeletionDenied
+                if request.POST.get('confirm') != 'yes':
                     error = 'Confirm permanent account deletion.'
-                elif Organization.objects.filter(user=user).exists():
-                    error = 'Transfer organization ownership in Awinlink before deleting your account.'
                 else:
-                    user.delete()
-                    logout(request)
-                    deleted = True
+                    try:
+                        if request.POST.get('auth_method') == 'google':
+                            delete_own_account(user_id=request.user.pk, browser_state=request.session.get('google_delete_verified', ''))
+                        else:
+                            delete_own_account(user_id=request.user.pk, password=request.POST.get('password'))
+                    except DeletionDenied as exc:
+                        error = str(exc)
+                    else:
+                        logout(request)
+                        deleted = True
     response = render(request, 'core/public_page.html', {
         'page': page, 'error': error, 'deleted': deleted,
-        'support_email': settings.AWINLINK_SUPPORT_EMAIL,
-        'operator': settings.AWINLINK_LEGAL_OPERATOR,
+        **legal_context(),
         'terms_version': TERMS_VERSION,
+        'google_linked': request.user.is_authenticated and hasattr(request.user, 'google_identity'),
+        'google_delete_ready': bool(request.session.get('google_delete_verified')),
+        'deletion_access': bool(request.user.is_authenticated and request.user.is_active and age_access_allowed(request.user)),
     }, status=400 if error else 200)
     response['Cache-Control'] = 'no-store'
     return response

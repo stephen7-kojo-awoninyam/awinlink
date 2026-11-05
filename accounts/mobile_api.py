@@ -12,6 +12,7 @@ from rest_framework.views import APIView
 from redis.exceptions import RedisError
 
 from .models import ContentReport, UserBlock
+from .security import GoogleThrottle
 from .recovery import RecoveryForm, RecoverySetPasswordForm, RecoveryUnavailable, allow_request, allow_confirmation, send_recovery, GENERIC_SENT, INVALID_LINK
 from .recovery_views import PrivateRecoveryResponse
 from django.utils.decorators import method_decorator
@@ -76,20 +77,25 @@ class PasswordResetConfirm(PrivateRecoveryResponse, APIView):
         return Response({'detail': 'Password updated. Sign in with your new password.'})
 
 
+@method_decorator(never_cache, name='dispatch')
 class DeleteAccount(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [GoogleThrottle]
 
     @transaction.atomic
     def delete(self, request):
-        user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
-        password = request.data.get('password')
-        if not isinstance(password, str) or not user.check_password(password):
-            return Response({'detail': 'Enter your current password.'}, status=400)
-        # Organizations belong to their team. Require an explicit ownership decision.
-        from organizations.models import Organization
-        if Organization.objects.filter(user=user).exists():
-            return Response({'detail': 'Transfer organization ownership before deleting your account.'}, status=409)
-        user.delete()
+        from .deletion import delete_own_account, DeletionDenied
+        if not isinstance(request.data, Mapping):
+            return Response({'detail': 'Invalid deletion details.'}, status=400)
+        try:
+            if 'google_reauth' in request.data:
+                if request.data.get('confirm') is not True or not isinstance(request.data['google_reauth'], Mapping):
+                    raise DeletionDenied('Confirm permanent account deletion after Google reauthentication.')
+                delete_own_account(user_id=request.user.pk, google_proof=request.data['google_reauth'])
+            else:
+                delete_own_account(user_id=request.user.pk, password=request.data.get('password'))
+        except DeletionDenied as exc:
+            return Response({'detail': str(exc)}, status=exc.status)
         logout(request)
         return Response(status=204)
 

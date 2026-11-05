@@ -10,6 +10,7 @@ from .api_views import (
     MessageReadAPIView,
     ConversationReadAllAPIView,
     StartCallAPIView,
+    InviteCallAPIView,
     AcceptCallAPIView,
     RejectCallAPIView,
     EndCallAPIView,
@@ -24,6 +25,7 @@ app_name = "messaging_api"
 
 
 urlpatterns = [
+    path('calls/<int:call_id>/invite/', InviteCallAPIView.as_view(), name='call_invite'),
 
     path('conversations/unread-count/', UnreadMessageCountAPIView.as_view(), name='unread_count'),
 

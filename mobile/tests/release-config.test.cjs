@@ -45,6 +45,7 @@ test('production validates real origins, identities, public policy links and FCM
     assert.throws(configure, /GOOGLE_SERVICES_FILE/);
     process.env.EAS_BUILD_PLATFORM = 'ios';
     assert.equal(configure().ios.bundleIdentifier, 'com.example.awinlink');
+    assert.equal(configure().ios.infoPlist.NSAppTransportSecurity.NSAllowsArbitraryLoads, false);
     delete process.env.EXPO_PUBLIC_PRIVACY_URL;
     assert.throws(configure, /PRIVACY_URL/);
     process.env.EXPO_PUBLIC_PRIVACY_URL = 'https://app.example/privacy';

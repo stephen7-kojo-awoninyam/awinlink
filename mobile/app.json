@@ -10,7 +10,12 @@
     "ios": {
       "bundleIdentifier": "com.awinlink.app",
       "supportsTablet": true,
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Awinlink to use your camera during video calls and classrooms.",
+        "NSMicrophoneUsageDescription": "Allow Awinlink to use your microphone for calls, classrooms, and voice messages.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.awinlink.app",
@@ -42,7 +47,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Allow Awinlink to record voice messages.",
+          "microphonePermission": "Allow Awinlink to use your microphone for calls, classrooms, and voice messages.",
           "enableBackgroundPlayback": false,
           "enableBackgroundRecording": false
         }
@@ -50,8 +55,8 @@
       [
         "@config-plugins/react-native-webrtc",
         {
-          "cameraPermission": "Allow Awinlink to use your camera during video calls.",
-          "microphonePermission": "Allow Awinlink to use your microphone during calls."
+          "cameraPermission": "Allow Awinlink to use your camera during video calls and classrooms.",
+          "microphonePermission": "Allow Awinlink to use your microphone for calls, classrooms, and voice messages."
         }
       ],
       [

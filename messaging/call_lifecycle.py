@@ -35,6 +35,6 @@ def finish_call(call, ended_by=None):
     call.duration = max(0, int((now - call.answered_at).total_seconds())) if call.answered_at else 0
     call.save(update_fields=['status', 'ended_at', 'duration'])
     CallParticipant.objects.filter(call=call, status__in=['JOINED', 'RINGING', 'INVITED']).update(status='LEFT', left_at=now)
-    Notification.objects.filter(conversation_id=call.conversation_id, sender_id=call.initiated_by_id,
+    Notification.objects.filter(conversation_id=call.conversation_id,
                                 notification_type='INCOMING_CALL', is_read=False).update(is_read=True)
     publish_call_ended(call, ended_by)

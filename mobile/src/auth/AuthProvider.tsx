@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from '@/src/auth/tokenStorage';
 import {
   createContext,
   useCallback,
@@ -20,7 +20,7 @@ import {
   storeTokens,
   onSessionCleared,
 } from '@/src/api/client';
-import type { RegistrationData, User } from '@/src/types';
+import type { RegistrationData, RegistrationResult, User } from '@/src/types';
 import { exchangeGoogle, type GoogleResult, type GoogleExchange } from '@/src/google';
 
 const USER_KEY = 'awinlink.user';
@@ -30,7 +30,7 @@ type AuthContextValue = {
   isLoading: boolean;
   sessionError: string | null;
   signIn: (username: string, password: string) => Promise<void>;
-  signUp: (data: RegistrationData) => Promise<void>;
+  signUp: (data: RegistrationData) => Promise<RegistrationResult>;
   signInGoogle: (exchange: GoogleExchange, signup?: Record<string, unknown>, link?: boolean) => Promise<GoogleResult>;
   signOut: () => Promise<void>;
 };
@@ -110,10 +110,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signUp = useCallback(async (data: RegistrationData) => {
     const response = await signUpRequest(data);
+    if (!('access' in response)) return response;
     await storeTokens(response.access, response.refresh);
     await SecureStore.setItemAsync(USER_KEY, JSON.stringify(response.user));
     setUser(response.user);
     setSessionError(null);
+    return response;
   }, []);
 
   const signInGoogle = useCallback(async (exchange: GoogleExchange, signup?: Record<string, unknown>, link = false) => {

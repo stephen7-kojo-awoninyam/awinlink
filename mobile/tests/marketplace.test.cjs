@@ -25,7 +25,7 @@ function fixture() {
     permissions: { can_message: true, can_accept: true, can_decline: true, can_withdraw: false } };
   const api = compile('../src/api/client.ts', name => {
     if (name === '@/src/pagination') return require('./pagination-helpers.cjs').pagination;
-    assert.equal(name, 'expo-secure-store');
+    assert.equal(name, '@/src/auth/tokenStorage');
     return { getItemAsync: async () => 'fixture-token' };
   }, { process: { env: { EXPO_PUBLIC_API_URL: 'https://fixture.invalid' } },
     fetch: async (url, options) => {

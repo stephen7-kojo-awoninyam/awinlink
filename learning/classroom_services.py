@@ -68,6 +68,8 @@ def _participant(session, participant):
 def _eligible(participant):
     membership = ClassroomMembership.objects.select_related("user").get(pk=participant.membership_id)
     require_active_user(membership.user)
+    from .age_permissions import require_course_access
+    require_course_access(membership.user, participant.session.classroom.course, live=True)
     if not membership.is_active or membership.role != participant.role:
         raise PermissionDenied("The participant's classroom assignment is no longer active.")
     if membership.role == ClassroomRole.LEARNER:
@@ -111,6 +113,8 @@ def assign_classroom_role(*, actor, classroom, user, role):
     actor = require_course_creator(actor, classroom.course)
     _available(classroom)
     user = require_active_user(user)
+    from .age_permissions import require_course_access
+    require_course_access(user, classroom.course, live=True)
     if role not in ClassroomRole.values:
         raise ValidationError({"role": "Unknown classroom role."})
     if classroom.live_sessions.filter(status=LiveSession.Status.LIVE).exists():
@@ -348,6 +352,8 @@ def invite_classroom_user(*, actor, classroom, recipient, message="", expires_at
     if classroom.course.status != "APPROVED":
         raise ValidationError("Only approved courses can invite learners.")
     recipient = require_active_user(recipient)
+    from .age_permissions import require_course_access
+    require_course_access(recipient, classroom.course, live=True)
     if recipient.pk in {actor.pk, classroom.course.creator_id}:
         raise ValidationError("The creator and inviter cannot be invited as learners.")
     member = classroom.memberships.filter(user=recipient).first()

@@ -95,6 +95,8 @@ def course_list(request):
 
     categories = LearningCategory.objects.all()
 
+    from .age_permissions import courses_for
+    courses = courses_for(request.user, courses)
     category_id = request.GET.get("category")
     level = request.GET.get("level")
     search = request.GET.get("q")
@@ -202,6 +204,8 @@ def add_course_comment(request, course_id):
 def course_detail(request, slug):
 
     course = get_object_or_404(Course.objects.select_related("category", "creator"), slug=slug)
+    from .age_permissions import require_course_access
+    require_course_access(request.user, course)
     preview = course.status != "APPROVED"
     if preview and course.creator_id != request.user.pk and request.user.role != "ADMIN":
         from django.http import Http404
@@ -399,6 +403,8 @@ def lesson_detail(request, lesson_id):
         id=lesson_id
     )
 
+    from .age_permissions import require_course_access
+    require_course_access(request.user, lesson.course)
     enrollment = Enrollment.objects.filter(user=request.user, course=lesson.course).first()
     preview = enrollment is None
     if preview and lesson.course.creator_id != request.user.pk and request.user.role != "ADMIN":
@@ -2284,6 +2290,11 @@ def verify_certificate(request, certificate_id=None):
 
         )
 
+    if certificate:
+        from accounts.age_safety import minor, can_view_private_data
+        owner = certificate.enrollment.user
+        if minor(owner) and not can_view_private_data(request.user, owner):
+            certificate = None
     return render(
         request,
         "learning/verify_certificate.html",

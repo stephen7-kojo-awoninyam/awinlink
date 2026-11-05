@@ -84,9 +84,10 @@ def safe_skills(skills):
 
 
 def eligible_talents():
+    from accounts.age_safety import public_discovery_q
     return TalentProfile.objects.filter(user__is_active=True, user__role="ATHLETE",
         profile_visibility="PUBLIC", talent_category__in=CATEGORIES,
-        user__rising_talent_preference__discovery_enabled=True)
+        user__rising_talent_preference__discovery_enabled=True).filter(public_discovery_q())
 
 
 def evidence_rows(rows, day):
@@ -95,7 +96,7 @@ def evidence_rows(rows, day):
 
 def public_candidate_rows(rows):
     return rows.select_related("user").only("id", "user_id", "talent_category",
-        "user__id", "user__username", "user__first_name", "user__last_name")
+        "user__id", "user__username", "user__first_name", "user__last_name", "user__date_of_birth")
 
 
 def assess(talent, day=None, *, _skills=None, _topics=None):

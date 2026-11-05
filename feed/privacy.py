@@ -8,8 +8,9 @@ from .models import Post
 
 
 def visible_association_posts_for(user):
+    from accounts.age_safety import visible_users_for
     return Post.objects.filter(
         Q(talent__isnull=True) | Q(talent__in=visible_talent_profiles_for(user)),
         Q(event__isnull=True) | Q(event__in=visible_events_for(user)),
-        author__is_active=True,
+        author__in=visible_users_for(user),
     ).exclude(author_id__in=blocked_user_ids(user))

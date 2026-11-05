@@ -11,6 +11,15 @@
       "extends": "preview",
       "ios": { "simulator": false, "credentialsSource": "remote" }
     },
+    "ios-simulator": {
+      "extends": "preview",
+      "ios": { "simulator": true }
+    },
+    "ios-device": {
+      "extends": "preview-device",
+      "env": { "AWINLINK_APNS_ENVIRONMENT": "production" },
+      "ios": { "simulator": false, "credentialsSource": "remote" }
+    },
     "android-apk": {
       "extends": "preview",
       "environment": "preview",

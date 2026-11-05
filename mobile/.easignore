@@ -24,3 +24,6 @@ credentials.json
 *.ipa
 
 # Keep native config plugins, native-call sources and vendor dependencies in the archive.
+.eas-inspect/
+.eas-inspect-check/
+.eas-inspect*/

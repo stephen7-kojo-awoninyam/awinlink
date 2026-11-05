@@ -1,3 +1,4 @@
+from accounts.profile_privacy import render as age_safe_render
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import AthleteProfileForm, AthleteMediaForm
@@ -75,7 +76,7 @@ def create_profile(request):
 
         form = AthleteProfileForm()
 
-    return render(
+    return age_safe_render(
         request,
         "athletes/create_profile.html",
         {
@@ -93,7 +94,7 @@ def athlete_profile(request, id):
         id=id
     )
 
-    return render(
+    return age_safe_render(
         request,
         "athletes/profile.html",
         {
@@ -137,7 +138,7 @@ def add_media(request):
         form = AthleteMediaForm()
 
 
-    return render(
+    return age_safe_render(
         request,
         "athletes/add_media.html",
         {

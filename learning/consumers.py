@@ -258,6 +258,8 @@ class ClassroomConsumer(AsyncWebsocketConsumer):
             await self.cleanup()
 
     async def send_json(self, data):
+        if not self.closing and getattr(self, "active", False) and not await self.authorized():
+            return
         # Database awaits may cross the token deadline. Check again immediately
         # before emitting anything, not only when a queued event was received.
         if self.deadline is not None and time.time() >= self.deadline:

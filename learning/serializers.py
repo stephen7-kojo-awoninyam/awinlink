@@ -102,6 +102,7 @@ class CourseSerializer(serializers.ModelSerializer):
             "level",
             "duration",
             "is_free",
+            "minimum_age",
             "status",
             "rejection_reason",
             "lesson_count",
@@ -388,6 +389,7 @@ class CourseCreateSerializer(serializers.ModelSerializer):
             "level",
             "duration",
             "is_free",
+            "minimum_age",
         ]
 
     def validate(self, attrs):

@@ -15,6 +15,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 
 from .models import Notification, PushSubscription
+from .age_safety import visible_notifications
 
 
 # ==========================================
@@ -33,6 +34,7 @@ def notification_list(request):
         "conversation"
     )
 
+    notifications = visible_notifications(notifications)
     return render(
         request,
         "notifications/list.html",
@@ -54,6 +56,10 @@ def notification_detail(
     )
 
     notification.is_read = True
+    from .age_safety import notification_allowed
+    if not notification_allowed(notification):
+        from django.http import Http404
+        raise Http404
 
     notification.save(
         update_fields=["is_read"]

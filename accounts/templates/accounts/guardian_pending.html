@@ -1,0 +1,11 @@
+{% extends 'accounts/base_auth.html' %}
+{% block content %}
+<div class="auth-card p-4">
+  <h1>Guardian approval required</h1>
+  <p role="status">This child account is restricted until a verified adult guardian approves it. No sign-in session has been granted.</p>
+  <p>The nominated guardian needs their own adult Awinlink account. Contact support to arrange verification of their identity, adulthood and relationship to the child. After verification, they can review and approve from Guardian authorizations.</p>
+  <a href="{% url 'guardian_authorizations' %}">Guardian authorizations</a> ·
+  <a href="{% url 'support' %}">Contact support</a> ·
+  <a href="{% url 'login' %}">Sign in</a>
+</div>
+{% endblock %}

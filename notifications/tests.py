@@ -311,6 +311,18 @@ class ExpoCallPushDeliveryTests(TestCase):
 		self.assertFalse(MobilePushToken.objects.exists())
 
 
+	def test_invitation_to_active_call_pushes_with_fresh_expiry(self):
+		from .push import send_expo_call_push
+		self.call.status = 'ACTIVE'
+		self.call.started_at = timezone.now() - timedelta(minutes=10)
+		self.call.save(update_fields=['status', 'started_at'])
+		with patch('notifications.push.urlopen', return_value=self.fake_response([{'status': 'ok'}])) as send:
+			send_expo_call_push(self.notification)
+		payload = json.loads(send.call_args.args[0].data)[0]
+		self.assertEqual(payload['data']['call_id'], self.call.pk)
+		self.assertGreater(payload['data']['expires_at'], int(timezone.now().timestamp()))
+
+
 class MissedCallNotificationTests(TestCase):
 	def create_expired_call(self, prefix):
 		user_model = get_user_model()

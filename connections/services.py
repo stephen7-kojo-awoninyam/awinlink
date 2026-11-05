@@ -19,6 +19,9 @@ def respond_to_connection(connection_id, user, new_status):
         raise ConnectionResponseError("Connection request not found.", 404)
     if connection.receiver_id != user.pk:
         raise ConnectionResponseError("Only the receiver can respond to this connection request.", 403)
+    if new_status == "ACCEPTED":
+        from accounts.age_safety import require_connection_request
+        require_connection_request(connection.sender, connection.receiver)
     if connection.status == new_status:
         return connection
     if connection.status != "PENDING":

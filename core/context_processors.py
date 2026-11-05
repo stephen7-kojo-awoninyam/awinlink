@@ -10,7 +10,10 @@ def unread_messages(request):
             "unread_message_count": 0
         }
 
-    count = Message.objects.filter(
+    from messaging.models import Conversation
+    from messaging.age_permissions import visible_conversations
+    rooms = visible_conversations(Conversation.objects.filter(participants__user=request.user).distinct())
+    count = Message.objects.filter(conversation__in=rooms).filter(
         Q(conversation__participants__last_read_at__isnull=True) |
         Q(created_at__gt=F('conversation__participants__last_read_at')),
         conversation__participants__user=request.user,

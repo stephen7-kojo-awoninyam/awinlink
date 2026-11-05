@@ -21,6 +21,14 @@ class AccountTokenRefreshView(TokenRefreshView):
 
 class AccountRefreshToken(RefreshToken):
     """Tie each access token to its revocable refresh-session JTI."""
+    @classmethod
+    def for_user(cls, user):
+        from .age_policy import age_access_allowed, PENDING_MESSAGE
+        age_allowed = age_access_allowed(user)
+        if not user.is_active or not age_allowed:
+            raise AuthenticationFailed(PENDING_MESSAGE if not age_allowed else "This account is unavailable.")
+        return super().for_user(user)
+
     @property
     def access_token(self):
         access = super().access_token
@@ -39,6 +47,9 @@ class AccountTokenRefreshSerializer(TokenRefreshSerializer):
         user = get_user_model().objects.filter(pk=token.get(api_settings.USER_ID_CLAIM), is_active=True).first()
         if not user or token.get(api_settings.REVOKE_TOKEN_CLAIM) != get_md5_hash_password(user.password):
             raise AuthenticationFailed('This session has expired. Sign in again.')
+        from .age_policy import age_access_allowed, PENDING_MESSAGE
+        if not age_access_allowed(user):
+            raise AuthenticationFailed(PENDING_MESSAGE)
         return super().validate(attrs)
 
 

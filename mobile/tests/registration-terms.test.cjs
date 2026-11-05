@@ -17,7 +17,7 @@ function load(path, imports, globals = {}) {
 
 const legal = load('../src/legal.ts', {}, { process: { env: { EXPO_PUBLIC_API_URL: 'https://awinlink.example/api/' } } });
 
-function screen({ fail = false } = {}) {
+function screen({ fail = false, pending = false } = {}) {
   const states = [], requests = [], navigation = [], links = [];
   let index = 0;
   const jsx = (type, props) => ({ type, props });
@@ -37,6 +37,8 @@ function screen({ fail = false } = {}) {
     'react-native-safe-area-context': { SafeAreaView: 'SafeArea' },
     '@/src/auth/AuthProvider': { useAuth: () => ({ user: null, isLoading: false, signUp: async data => {
       requests.push(data); if (fail) throw new Error('The Terms have changed. Reload registration.');
+      return pending ? { guardian_approval_required: true, detail: 'Guardian approval required.' }
+        : { access: 'access', refresh: 'refresh', user: { role: data.role } };
     } }) },
     '@/src/theme': { colors: {} }, '@/src/legal': legal,
   });
@@ -97,4 +99,16 @@ test('server rejection does not navigate and unchecking prevents resubmission', 
   view.checkbox().props.onPress();
   view.submit().props.onPress(); await flush();
   assert.equal(view.requests.length, 1);
+});
+
+test('child password registration submits age details and shows approval instructions without navigating', async () => {
+  const view = screen({ pending: true });
+  view.render().find(node => node.props?.label === 'Date of birth (private, YYYY-MM-DD)').props.onChangeText('2020-01-01');
+  view.render().find(node => node.props?.label === 'Guardian email (required under 13)').props.onChangeText('adult@example.invalid');
+  view.checkbox().props.onPress();
+  view.submit().props.onPress(); await flush();
+  assert.equal(view.requests[0].date_of_birth, '2020-01-01');
+  assert.equal(view.requests[0].guardian_email, 'adult@example.invalid');
+  assert.equal(view.navigation.length, 0);
+  assert.ok(view.render().find(node => node.props?.accessibilityRole === 'alert' && String(node.props.children).includes('verified adult guardian')));
 });

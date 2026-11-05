@@ -46,6 +46,9 @@ MOBILE_APNS_PRIVATE_KEY = os.environ.get('MOBILE_APNS_PRIVATE_KEY', '').replace(
 MOBILE_IOS_BUNDLE_ID = os.environ.get('MOBILE_IOS_BUNDLE_ID', 'com.awinlink.app')
 AWINLINK_SUPPORT_EMAIL = os.environ.get('AWINLINK_SUPPORT_EMAIL', '').strip()
 AWINLINK_LEGAL_OPERATOR = os.environ.get('AWINLINK_LEGAL_OPERATOR', '').strip()
+AWINLINK_LEGAL_ADDRESS = os.environ.get('AWINLINK_LEGAL_ADDRESS', '').strip()
+AWINLINK_PRIVACY_EMAIL = os.environ.get('AWINLINK_PRIVACY_EMAIL', '').strip()
+AWINLINK_CHILD_SAFETY_EMAIL = os.environ.get('AWINLINK_CHILD_SAFETY_EMAIL', '').strip()
 
 # The new unified ranking pipeline remains opt-in until explicitly enabled.
 UNIFIED_RECOMMENDATIONS_ENABLED = os.environ.get(
@@ -161,6 +164,7 @@ MIDDLEWARE = [
     "config.upload_handlers.UploadSecurityMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "accounts.age_middleware.AgeAccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

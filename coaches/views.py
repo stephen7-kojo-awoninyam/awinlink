@@ -1,3 +1,4 @@
+from accounts.profile_privacy import render as age_safe_render
 from accounts.roles import active_user_has_role
 from talents.visibility import public_talent_profiles_for
 from django.views.decorators.cache import never_cache
@@ -68,7 +69,7 @@ def coach_profile(request):
         user=request.user
     )
 
-    return render(
+    return age_safe_render(
         request,
         "coaches/coach_profile.html",
         {
@@ -250,7 +251,7 @@ def edit_coach_profile(request):
     # RENDER
     # -----------------------------------------------------
 
-    return render(
+    return age_safe_render(
         request,
         "coaches/edit_coach_profile.html",
         {
@@ -400,7 +401,7 @@ def coach_talent_directory(request):
     # RENDER
     # -----------------------------------------------------
 
-    return render(
+    return age_safe_render(
         request,
         "coaches/talent_directory.html",
         {
@@ -484,7 +485,7 @@ def coach_view_talent(request, talent_id):
 
     is_saved = bookmark is not None
 
-    return render(
+    return age_safe_render(
         request,
         "coaches/talent_detail.html",
         {
@@ -575,7 +576,7 @@ def saved_talents(request):
     # RENDER
     # -----------------------------------------------------
 
-    return render(
+    return age_safe_render(
         request,
         "coaches/saved_talents.html",
         {
@@ -986,7 +987,7 @@ def coach_analytics(request):
     # RENDER
     # -----------------------------------------------------
 
-    return render(
+    return age_safe_render(
         request,
         "coaches/coach_analytics.html",
         {
@@ -1588,7 +1589,7 @@ def coach_talent_directory(request):
     # RENDER
     # ==========================================
 
-    return render(
+    return age_safe_render(
         request,
         "coaches/talent_directory.html",
         {
@@ -1604,7 +1605,7 @@ def coach_talent_directory(request):
 def select_coach_category(request):
 
     if not active_user_has_role(request.user, "COACH"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -1634,7 +1635,7 @@ def select_coach_category(request):
             instance=coach
         )
 
-    return render(
+    return age_safe_render(
         request,
         "coaches/select_category.html",
         {
@@ -1649,7 +1650,7 @@ def select_coach_category(request):
 def create_coach_profile(request):
 
     if not active_user_has_role(request.user, "COACH"):
-        return render(
+        return age_safe_render(
             request,
             "analytics/access_denied.html"
         )
@@ -1687,7 +1688,7 @@ def create_coach_profile(request):
             instance=coach
         )
 
-    return render(
+    return age_safe_render(
         request,
         "coaches/create_profile.html",
         {

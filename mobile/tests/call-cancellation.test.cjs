@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
-function compile(source) { return ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText; }
+function compile(source) { return ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText; }
 
 function nativeScreen({ incoming = false, media = null, accepting = null, ending = null, iceFailure = false,
   iceServers = [{ urls: 'turn:relay.test:3478', username: 'fixture', credential: 'fixture' }], icePolicy = 'relay' } = {}) {
@@ -31,16 +31,16 @@ function nativeScreen({ incoming = false, media = null, accepting = null, ending
   const exports = {};
   const iceModule = {};
   vm.runInNewContext(compile(fs.readFileSync(require.resolve('../src/calls/iceServers.ts'), 'utf8')), { exports: iceModule });
-  vm.runInNewContext(compile(fs.readFileSync(require.resolve('../app/call/[id].tsx'), 'utf8')), {
+  vm.runInNewContext(compile(fs.readFileSync(require.resolve('../src/calls/CallScreen.tsx'), 'utf8')), {
     exports, __DEV__: false, WebSocket: Socket, console: { info() {} },
     setTimeout: fn => { const id = timers.size + 1; timers.set(id, fn); return id; },
     setInterval: fn => { const id = timers.size + 1; timers.set(id, fn); return id; },
     clearTimeout: id => timers.delete(id), clearInterval: id => timers.delete(id),
     require: name => ({
       react, 'react/jsx-runtime': { jsx: () => ({}), jsxs: () => ({}) },
-      'react-native': { Alert: { alert: (...args) => alerts.push(args) }, StyleSheet: { create: value => value } }, 'react-native-safe-area-context': {},
+      'react-native': { useWindowDimensions: () => ({ width: 390, height: 844 }), Platform: { OS: 'android' }, Alert: { alert: (...args) => alerts.push(args) }, StyleSheet: { create: value => value } }, 'react-native-safe-area-context': {},
       'expo-router': { Stack: { Screen() {} }, router: { back: () => { back++; } }, useLocalSearchParams: () => ({ id: '42', mode: incoming ? 'incoming' : 'outgoing', autoAccept: incoming ? 'true' : 'false' }) },
-      'react-native-webrtc': { MediaStream: Stream, RTCPeerConnection: Peer, mediaDevices: { getUserMedia: () => { captures++; return media?.promise || Promise.resolve(stream); } } },
+      '@/src/calls/rtc': { MediaStream: Stream, RTCPeerConnection: Peer, mediaDevices: { getUserMedia: () => { captures++; return media?.promise || Promise.resolve(stream); } } },
       '@/src/auth/AuthProvider': { useAuth: () => ({ user: { id: incoming ? 2 : 1 } }) },
       '@/src/api/socketAuthentication': { socketAccessToken: async () => 'token', maintainSocketAuthentication() {} },
       '@/src/api/client': { getAccessToken: async () => 'token', getWebSocketUrl: value => value,
@@ -207,7 +207,7 @@ test('mobile drains ICE queued before answer and attaches streamless remote audi
   socket.onmessage({ data: JSON.stringify({ type: 'answer', sender_id: 2, answer: { type: 'answer', sdp: 'remote-answer' } }) });
   await flush(); assert.equal(peer.remoteDescription.sdp, 'remote-answer'); assert.equal(peer.candidates.length, 1);
   const track = { id: 'audio-1', kind: 'audio' }; peer.ontrack({ streams: [], track });
-  assert.equal(screen.states[6][2].getTracks()[0], track);
+  assert.equal(screen.states[10][2].getTracks()[0], track);
   assert.equal(peer.tracks.length, 1);
   assert.equal(peer.config.iceTransportPolicy, 'relay');
   screen.unmount();
@@ -245,5 +245,22 @@ test('native all policy preserves direct-call startup without TURN', async () =>
   const socket = screen.sockets[0]; socket.onopen();
   socket.onmessage({ data: JSON.stringify({ type: 'participant_joined', user_id: 2 }) }); await flush();
   assert.equal(screen.peers[0].config.iceTransportPolicy, 'all');
+  screen.unmount();
+});
+
+
+test('native late participants each get an independent peer and leaving one preserves the call', async () => {
+  const screen = nativeScreen();
+  await flush();
+  const socket = screen.sockets[0];
+  socket.onopen();
+  for (const id of [2, 3, 4, 5, 6]) socket.onmessage({ data: JSON.stringify({ type: 'participant_joined', user_id: id }) });
+  await flush(); await flush();
+  assert.equal(screen.peers.length, 5);
+  assert.deepEqual(socket.sent.filter(row => row.type === 'offer').map(row => row.to_user_id), [2, 3, 4, 5, 6]);
+  socket.onmessage({ data: JSON.stringify({ type: 'participant_left', user_id: 4 }) });
+  await flush();
+  assert.equal(screen.peers[2].closed, true);
+  assert.equal(screen.peers[0].closed, undefined);
   screen.unmount();
 });
