@@ -1,8 +1,10 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Awinlink — {{ page|title }}</title>
-<style>body{font:17px/1.65 system-ui,sans-serif;color:#172542;max-width:780px;margin:40px auto;padding:0 22px}a{color:#2458d3}nav{display:flex;gap:18px;flex-wrap:wrap}input,button{font:inherit;padding:10px}label{display:block;margin:16px 0}button{cursor:pointer}aside{padding:16px;background:#fff3cd}h1,h2{line-height:1.25}</style></head>
-<body data-legal-status="draft"><nav aria-label="Public information"><a href="/">Awinlink</a><a href="{% url 'privacy' %}">Privacy</a><a href="{% url 'terms' %}">Terms</a><a href="{% url 'community_guidelines' %}">Community Guidelines</a><a href="{% url 'support' %}">Support</a><a href="{% url 'delete_account' %}">Delete account</a></nav>
+<title>Awinlink — {% if page == 'child-safety' %}Child Safety Standards{% else %}{{ page|title }}{% endif %}</title>
+<style>body{font:17px/1.65 system-ui,sans-serif;color:#172542;max-width:780px;margin:40px auto;padding:0 22px}a{color:#2458d3}nav{display:flex;gap:18px;flex-wrap:wrap}input,button{font:inherit;padding:10px}label{display:block;margin:16px 0}button{cursor:pointer}aside{padding:16px;background:#fff3cd}h1,h2{line-height:1.25}</style>
+{% if page == 'child-safety' %}{% include 'core/policies/child_safety_styles.html' %}{% endif %}
+</head>
+<body data-legal-status="draft"><nav aria-label="Public information"><a href="/">Awinlink</a><a href="{% url 'privacy' %}">Privacy</a><a href="{% url 'terms' %}">Terms</a><a href="{% url 'community_guidelines' %}">Community Guidelines</a><a href="{% url 'child_safety' %}">Child Safety Standards</a><a href="{% url 'support' %}">Support</a><a href="{% url 'delete_account' %}">Delete account</a></nav>
 {% if not operator_details_complete %}<aside>Release information is awaiting completion by the Awinlink operator. Legal identity, postal address and monitored support, privacy and child-safety contacts require confirmation before store release.</aside>{% endif %}
 <aside><strong>Draft for legal review.</strong> Version {{ terms_version }}. Reviewed against local implementation {{ policy_review_date }}. These drafts require operator and legal approval before release. No effective date or legal approval is asserted.</aside>
 {% if page == 'privacy' %}
@@ -11,13 +13,18 @@
 {% include 'core/policies/terms.html' %}
 {% elif page == 'community-guidelines' %}
 {% include 'core/policies/community.html' %}
+{% elif page == 'child-safety' %}
+{% include 'core/policies/child_safety.html' %}
+{% elif page == 'child-safety-report' %}
+{% include 'core/policies/child_safety_report.html' %}
 {% elif page == 'support' %}
 <h1>Awinlink support</h1><p>For sign-in problems, use <a href="{% url 'password_reset' %}">password recovery</a>. You can <a href="{% url 'delete_account' %}">delete your account here without reinstalling the app</a>.</p>
 <p>Google-only accounts should sign in with Google. They can confirm account deletion with their linked Google identity without setting an Awinlink password. Password reset applies to eligible password accounts.</p>
 <p>For abuse, use Report on the relevant profile, post or message. Block accounts under Account and safety to manage unwanted contact.</p>
+<p>For child-safety concerns, <a href="{% url 'child_safety_report' %}">submit a text-only safety report</a> without signing in, or use Report a child-safety concern in the app's Account and safety screen. The form stores reports for administrator review; monitoring and response procedures still need operator confirmation.</p>
 {% if support_email %}<p>Contact: <a href="mailto:{{ support_email }}">{{ support_email }}</a>. Include the issue, device and app version. Never send your password or authentication tokens.</p>{% else %}<p>A public support email has not yet been configured by the operator.</p>{% endif %}
 {% if privacy_email %}<p>Privacy requests: <a href="mailto:{{ privacy_email }}">{{ privacy_email }}</a>.</p>{% else %}<p>A monitored privacy contact has not yet been configured.</p>{% endif %}
-{% if child_safety_email %}<p>Child-safety reports: <a href="mailto:{{ child_safety_email }}">{{ child_safety_email }}</a>.</p>{% else %}<p>A monitored child-safety contact has not yet been configured.</p>{% endif %}
+{% if child_safety_email %}<p>Designated child-safety email: <a href="mailto:{{ child_safety_email }}">{{ child_safety_email }}</a>. Mailbox monitoring and email delivery have not been verified.</p>{% else %}<p>A monitored child-safety contact has not yet been configured.</p>{% endif %}
 {% if operator %}<p>Operator: {{ operator }}.</p>{% endif %}{% if legal_address %}<p>Postal address: {{ legal_address }}.</p>{% endif %}
 <p>Guardians can request review, correction or deletion of a child's information through the privacy contact. Identity and guardian authority must be checked. Withdrawal of guardian authorization restricts access; it is not deletion. Inactive accounts and shared-record deletion conflicts require a verified support process. Do not send identity documents unless a verified support process specifically requests them.</p>
 <p>For immediate danger, contact appropriate local emergency services. Do not forward or attach suspected child sexual abuse material. Provide relevant usernames, record links and approximate times. Moderation staffing, escalation, appeals and response times remain subject to operator confirmation.</p>

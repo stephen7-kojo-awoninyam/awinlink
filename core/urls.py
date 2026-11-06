@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from .public_views import public_page
+from .safety_views import child_safety_report
 from accounts.login_views import SharedLimitLoginView
 
 urlpatterns = [
@@ -8,6 +9,8 @@ urlpatterns = [
     path('privacy/', public_page, {'page': 'privacy'}, name='privacy'),
     path('terms/', public_page, {'page': 'terms'}, name='terms'),
     path('community-guidelines/', public_page, {'page': 'community-guidelines'}, name='community_guidelines'),
+    path('child-safety/', public_page, {'page': 'child-safety'}, name='child_safety'),
+    path('child-safety/report/', child_safety_report, name='child_safety_report'),
     path('support/', public_page, {'page': 'support'}, name='support'),
     path('delete-account/', public_page, {'page': 'delete-account'}, name='delete_account'),
     path("", views.home, name="home"),

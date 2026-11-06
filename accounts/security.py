@@ -88,3 +88,7 @@ class GoogleThrottle(AuthenticationThrottle):
 
 class PushThrottle(AuthenticationThrottle):
     scope = 'push'
+
+
+class SafetyReportThrottle(AuthenticationThrottle):
+    scope = 'safety_report'

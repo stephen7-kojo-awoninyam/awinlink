@@ -10,7 +10,7 @@ class PublicReleasePagesTests(TestCase):
         user = get_user_model().objects.create_user(username='pending-reader', is_active=True,
             date_of_birth=date(timezone.localdate().year - 10, 1, 1))
         self.client.force_login(user)
-        for page in ['privacy', 'terms', 'community-guidelines', 'support', 'delete-account']:
+        for page in ['privacy', 'terms', 'community-guidelines', 'child-safety', 'support', 'delete-account']:
             self.assertEqual(self.client.get(f'/{page}/').status_code, 200)
             self.assertEqual(self.client.head(f'/{page}/').status_code, 200)
         self.assertNotContains(self.client.get('/delete-account/'), 'name="auth_method"')
@@ -28,7 +28,7 @@ class PublicReleasePagesTests(TestCase):
         self.assertEqual(user.terms_accepted_version, '2026-10-18-draft-1')
         self.assertEqual(user.terms_accepted_at, before)
     def test_every_legal_page_retains_draft_warning_and_current_version(self):
-        for page in ['privacy', 'terms', 'community-guidelines', 'support', 'delete-account']:
+        for page in ['privacy', 'terms', 'community-guidelines', 'child-safety', 'support', 'delete-account']:
             response = self.client.get(f'/{page}/')
             self.assertContains(response, 'data-legal-status="draft"')
             self.assertContains(response, 'Draft for legal review.')
@@ -84,7 +84,7 @@ class PublicReleasePagesTests(TestCase):
         self.assertContains(self.client.get('/delete-account/'), 'retention details')
 
     def test_public_pages_are_accessible_without_login(self):
-        for page in ['privacy', 'terms', 'support', 'delete-account']:
+        for page in ['privacy', 'terms', 'child-safety', 'support', 'delete-account']:
             response = self.client.get(f'/{page}/')
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, 'Awinlink')

@@ -1,0 +1,71 @@
+<main class="child-safety-page" id="child-safety-standards">
+  <header class="cs-hero">
+    <p class="cs-eyebrow">Awinlink · Safety and trust</p>
+    <h1>Child Safety Standards</h1>
+    <p>Zero tolerance for child sexual abuse and exploitation. These standards apply to profiles, posts, media, messages, calls, classrooms, learning and opportunities.</p>
+    <a href="#reporting">How to report a concern</a>
+  </header>
+  <p class="cs-note"><strong>Draft standards — compliance is not yet claimed.</strong> This page describes existing controls and the safeguards still needed before release. Publishing a policy alone does not complete Google Play child-safety requirements.</p>
+  <nav class="cs-contents" aria-label="Child safety sections">
+    <a href="#prohibited">Prohibited conduct</a><a href="#reporting">Reporting</a><a href="#moderation">Moderation and enforcement</a><a href="#legal-escalation">Legal escalation</a><a href="#before-release">Outstanding safeguards</a>
+  </nav>
+
+  <section class="cs-section" id="prohibited" aria-labelledby="prohibited-heading">
+    <h2 id="prohibited-heading">Zero tolerance: CSAE and CSAM</h2>
+    <p>Awinlink prohibits child sexual abuse and exploitation (CSAE), including child sexual abuse material (CSAM). No guardian permission, payment, private group or claimed consent creates an exception.</p>
+    <ul>
+      <li>Do not create, upload, request, distribute or link to sexual content involving minors, including generated depictions.</li>
+      <li>Do not groom, sexually solicit, sexually extort or traffic a child, or coerce a child into sexual activity or images.</li>
+      <li>Do not pressure minors for private images, addresses, school locations, identity documents, money or off-platform contact.</li>
+      <li>Do not impersonate a guardian, misrepresent age, or bypass contact, call, classroom, guardian or account restrictions.</li>
+    </ul>
+  </section>
+
+  <section class="cs-section" id="reporting" aria-labelledby="reporting-heading">
+    <h2 id="reporting-heading">Report a safety concern</h2>
+    <div class="cs-cards">
+      <div class="cs-card">
+        <h3>In the app</h3>
+        <p>Use Report on an accessible profile, post or conversation message. Choose <strong>Child safety (CSAE/CSAM)</strong> and describe the concern; existing unsafe/other categories remain available. Reports require a signed-in account; access checks apply to the reported item.</p>
+        <p>For call/classroom incidents or concerns without a specific accessible item, choose <strong>Report a child-safety concern</strong> in Account and safety. General incident reports do not grant access to private records.</p>
+        <p>Use Block to limit unwanted contact. Reporting and blocking are separate actions; neither promises immediate removal of reported material.</p>
+      </div>
+      <div class="cs-card">
+        <h3>Child-safety and support contacts</h3>
+        <p><a href="{% url 'child_safety_report' %}">Submit a child-safety report without signing in</a>. The text-only form stores a report for administrator review without relying on email delivery. A reply email is optional.</p>
+        {% if child_safety_email %}<p>Designated child-safety email: <a href="mailto:{{ child_safety_email }}">{{ child_safety_email }}</a>. Mailbox monitoring and email delivery have not been verified.</p>{% else %}<p><strong>Not yet configured:</strong> a monitored child-safety contact is required before release.</p>{% endif %}
+        {% if support_email %}<p>Support: <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>{% else %}<p>A monitored public support email has not yet been configured.</p>{% endif %}
+        <p>See <a href="{% url 'support' %}">support and contact information</a> for other channels. Configured contact details or a working form alone do not establish that a channel is staffed.</p>
+      </div>
+    </div>
+    <p>Provide the relevant username or record link, approximate time and a brief description. <strong>Do not download, forward or attach suspected CSAM.</strong> Never send passwords or authentication tokens. This public page is information only; it does not submit a report.</p>
+    <p>If someone is in immediate danger, contact appropriate local emergency services. Awinlink is not an emergency service, and no response deadline is promised here.</p>
+  </section>
+
+  <section class="cs-section" id="moderation" aria-labelledby="moderation-heading">
+    <h2 id="moderation-heading">Moderation and enforcement</h2>
+    <p>The service stores submitted reports for review, prioritizes open child-safety reports in the administration queue, and provides permission-checked review transitions with required notes and a review history. Submission does not automatically remove content, suspend an account or notify law enforcement. A reviewed or resolved status alone is not evidence that those actions occurred.</p>
+    <p>Authorized reviewers can mark a report reviewed, flag it as requiring escalation, resolve a reviewed case or reopen it. Removing a reported post requires separate post-deletion permission, records the action and leaves the report requiring escalation for storage, evidence and legal follow-up. This removes the database post; historical public media/CDN copies are not guaranteed erased.</p>
+    <p>The <a href="{% url 'community_guidelines' %}">Community Guidelines</a> describe broader content removal, restrictions and suspension. A complete investigation, message/media takedown, appeals and notice process still requires operator implementation/verification. The form and review queue do not establish staffing or response times.</p>
+    <p>Existing age controls restrict under-13 accounts until independently verified guardian authorization and explicit approval. Guardians have scoped contact, call, course and live-classroom permissions. Known minors have protected discovery and unsolicited-contact controls. Age declarations are self-reported; these controls are not proof of legally sufficient parental consent or a guarantee that every user is correctly age-classified.</p>
+  </section>
+
+  <section class="cs-section" id="legal-escalation" aria-labelledby="legal-heading">
+    <h2 id="legal-heading">Legal escalation and evidence handling</h2>
+    <p>Before release, the operator must establish how authorized personnel restrict or remove known CSAM, handle evidence securely, and report or respond to the appropriate authorities when applicable law requires it. The relevant jurisdictions, authorized contacts, preservation rules and escalation procedures require legal and operational confirmation.</p>
+    <p>No automated law-enforcement reporting, external CSAM-reporting integration, round-the-clock monitoring or guaranteed reporting deadline is claimed. Report records can survive account deletion with the reporter link removed; their text may still contain personal information. Retention and erasure procedures remain subject to review. See the <a href="{% url 'privacy' %}#retention">Privacy Policy</a>.</p>
+  </section>
+
+  <section class="cs-section" id="before-release" aria-labelledby="release-heading">
+    <h2 id="release-heading">Outstanding safeguards before a compliance claim</h2>
+    <ul>
+      <li><strong>Operator approval and contacts:</strong> approve the exact standards, confirm operator identity and monitored support/safety contacts, and designate a child-safety point of contact in Play Console where required.</li>
+      <li><strong>Operational moderation:</strong> verify staff monitoring of the working intake/review queue and establish a complete known-CSAM removal/restriction, secure evidence, lawful escalation, notices and appeals process. Audited review and database post removal do not complete external media cleanup or legal reporting.</li>
+      <li><strong>Detection and reporting coverage:</strong> verify how harmful material will be identified and handled, including call/classroom incidents. Automated CSAM scanning and re-upload detection are not claimed; Google does not prescribe a particular detection method.</li>
+      <li><strong>Children's privacy:</strong> confirm lawful guardian verification and pre-approval data collection, request handling, retention/deletion, historical public-media protection and adulthood handover.</li>
+      <li><strong>Families safeguards where applicable:</strong> complete the intended-age/SDK/identifier review and implement the missing child-facing safety reminder before freeform sharing. Existing guardian permissions alone do not establish Families compliance.</li>
+      <li><strong>Release evidence:</strong> verify production enforcement and the final mobile build, approve the published pages, and complete the applicable Play declarations. Local tests and this draft are not production verification.</li>
+    </ul>
+    <p>Policy reference: <a href="https://support.google.com/googleplay/android-developer/answer/14747720?hl=en">Google Play Child Safety Standards requirements</a>. Review this page together with Awinlink's <a href="{% url 'terms' %}">Terms</a>, <a href="{% url 'privacy' %}">Privacy Policy</a> and <a href="{% url 'community_guidelines' %}">Community Guidelines</a>.</p>
+  </section>
+</main>

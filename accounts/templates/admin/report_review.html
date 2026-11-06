@@ -1,0 +1,8 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>Review report #{{ report.pk }}</h1>
+<p>Target: {{ report.target_type }} {{ report.target_id }}. Current status: {{ report.status }}.</p>
+<p>Record actual actions and case references, not CSAM or unnecessary personal details. Escalation status does not contact authorities. Removing a post does not erase historical storage/CDN copies.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<input type="submit" value="Record review"></form>
+<h2>Review history</h2><ol>{% for event in events %}<li>{{ event.created_at }} · {{ event.actor }} · {{ event.action }} · {{ event.previous_status }} → {{ event.new_status }}<p>{{ event.notes }}</p></li>{% empty %}<li>No recorded review actions yet.</li>{% endfor %}</ol>
+{% endblock %}

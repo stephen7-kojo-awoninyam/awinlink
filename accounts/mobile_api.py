@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from redis.exceptions import RedisError
 
 from .models import ContentReport, UserBlock
-from .security import GoogleThrottle
+from .security import GoogleThrottle, SafetyReportThrottle
 from .recovery import RecoveryForm, RecoverySetPasswordForm, RecoveryUnavailable, allow_request, allow_confirmation, send_recovery, GENERIC_SENT, INVALID_LINK
 from .recovery_views import PrivateRecoveryResponse
 from django.utils.decorators import method_decorator
@@ -148,6 +148,13 @@ class BlockInput(serializers.Serializer):
 
 
 class ReportInput(serializers.ModelSerializer):
+    def validate(self, attrs):
+        if attrs.get('target_type') == 'safety' and (attrs.get('target_id') != 0 or attrs.get('reason') != 'child_safety'):
+            raise serializers.ValidationError('General safety reports use child_safety and target_id 0.')
+        if attrs.get('reason') == 'child_safety' and len(attrs.get('details', '').strip()) < 10:
+            raise serializers.ValidationError('Describe the child-safety concern in at least 10 characters. Do not attach CSAM.')
+        return attrs
+
     class Meta:
         model = ContentReport
         fields = ['target_type', 'target_id', 'reason', 'details']
@@ -155,8 +162,11 @@ class ReportInput(serializers.ModelSerializer):
 
 class ReportContent(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [SafetyReportThrottle]
 
     def post(self, request):
+        if request.FILES:
+            return Response({'detail': 'Reports accept text only. Do not upload suspected CSAM.'}, status=400)
         serializer = ReportInput(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -168,7 +178,7 @@ class ReportContent(APIView):
             post = get_object_or_404(Post, pk=data['target_id'])
             if not PostDetailAPIView().can_view_post(request.user, post):
                 return Response({'detail': 'Post unavailable.'}, status=404)
-        else:
+        elif data['target_type'] == 'message':
             from messaging.models import Message
             get_object_or_404(Message, pk=data['target_id'], conversation__participants__user=request.user)
         report = serializer.save(reporter=request.user)

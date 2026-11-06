@@ -36,6 +36,7 @@ def public_page(request, page):
     response = render(request, 'core/public_page.html', {
         'page': page, 'error': error, 'deleted': deleted,
         **legal_context(),
+        **({'policy_review_date': 'November 5, 2026'} if page == 'child-safety' else {}),
         'terms_version': TERMS_VERSION,
         'google_linked': request.user.is_authenticated and hasattr(request.user, 'google_identity'),
         'google_delete_ready': bool(request.session.get('google_delete_verified')),

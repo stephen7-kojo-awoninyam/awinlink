@@ -55,6 +55,7 @@ export default function AccountSettings() {
     ['Delete account in browser', process.env.EXPO_PUBLIC_DELETE_ACCOUNT_URL],
   ];
   return <><Stack.Screen options={{ headerShown: true, title: 'Account and safety' }} /><Page title="Account and safety">
+    <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/report', params: { type: 'safety', id: '0' } })}><Text>Report a child-safety concern</Text></Pressable>
     <Pressable accessibilityRole="button" onPress={() => router.push('/guardians')}><Text>Guardian authorizations and private age details</Text></Pressable>
     <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/google-auth', params: { link: '1' } })}><Text>Link Google to this account</Text></Pressable>
     <Pressable accessibilityRole="button" onPress={() => { void Linking.openSettings().catch(() => setError('Unable to open device settings.')); }}><Text>Notification and device permissions</Text></Pressable>

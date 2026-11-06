@@ -524,6 +524,7 @@ AUTH_RATE_LIMITS = {
     "refresh": {"ip": (300, 900)},
     "google": {"ip": (30, 3600), "identity": (10, 900)},
     "push": {"ip": (120, 900), "identity": (60, 900)},
+    "safety_report": {"ip": (30, 3600), "identity": (10, 3600)},
 }
 
 CSRF_TRUSTED_ORIGINS = [

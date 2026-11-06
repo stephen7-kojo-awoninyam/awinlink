@@ -177,9 +177,20 @@ class UserBlock(models.Model):
 
 class ContentReport(models.Model):
     reporter = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    target_type = models.CharField(max_length=16, choices=[('user', 'User'), ('post', 'Post'), ('message', 'Message')])
+    target_type = models.CharField(max_length=16, choices=[('user', 'User'), ('post', 'Post'), ('message', 'Message'), ('safety', 'General child-safety concern')])
     target_id = models.PositiveBigIntegerField()
-    reason = models.CharField(max_length=32, choices=[('spam', 'Spam'), ('harassment', 'Harassment'), ('unsafe', 'Unsafe content'), ('other', 'Other')])
+    reason = models.CharField(max_length=32, choices=[('spam', 'Spam'), ('harassment', 'Harassment'), ('unsafe', 'Unsafe content'), ('other', 'Other'), ('child_safety', 'Child safety (CSAE/CSAM)')])
     details = models.TextField(blank=True, max_length=2000)
-    status = models.CharField(max_length=16, default='OPEN', choices=[('OPEN', 'Open'), ('REVIEWED', 'Reviewed'), ('RESOLVED', 'Resolved')])
+    contact_email = models.EmailField(blank=True, default='', db_default='')
+    status = models.CharField(max_length=16, default='OPEN', choices=[('OPEN', 'Open'), ('REVIEWED', 'Reviewed'), ('ESCALATED', 'Requires escalation'), ('RESOLVED', 'Resolved')])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ReportReviewEvent(models.Model):
+    report = models.ForeignKey(ContentReport, on_delete=models.CASCADE, related_name='review_events')
+    actor = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='+')
+    action = models.CharField(max_length=16, choices=[('REVIEW', 'Review'), ('REMOVE_POST', 'Remove reported post')])
+    previous_status = models.CharField(max_length=16)
+    new_status = models.CharField(max_length=16)
+    notes = models.TextField(max_length=2000)
     created_at = models.DateTimeField(auto_now_add=True)

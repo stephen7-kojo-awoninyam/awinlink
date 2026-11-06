@@ -10,6 +10,7 @@ const checks = [
   ['API login route (GET must not create a session)', api && new URL('/api/auth/login/', api).href, [405]],
   ...['WEB', 'PRIVACY', 'TERMS', 'SUPPORT', 'DELETE_ACCOUNT'].map(key => [key, process.env[`EXPO_PUBLIC_${key}_URL`], [200]]),
   ['COMMUNITY', api && new URL('/community-guidelines/', api).href, [200]],
+  ['CHILD_SAFETY', api && new URL('/child-safety/', api).href, [200]],
 ];
 (async () => {
   let failures = 0;
@@ -23,7 +24,7 @@ const checks = [
       const contentType = response.headers.get('content-type') || '';
       if (name.startsWith('API') && !contentType.includes('json')) throw new Error(`Expected API JSON, received ${response.status} ${contentType}`);
       if (!expected.includes(response.status)) throw new Error(`HTTP ${response.status}, expected ${expected.join('/')}`);
-      if (['PRIVACY', 'TERMS', 'COMMUNITY', 'SUPPORT', 'DELETE_ACCOUNT'].includes(name)) {
+      if (['PRIVACY', 'TERMS', 'COMMUNITY', 'CHILD_SAFETY', 'SUPPORT', 'DELETE_ACCOUNT'].includes(name)) {
         if (!contentType.includes('text/html')) throw new Error('Expected a public HTML page');
         const body = await response.text();
         assertLegalPageReady(body);

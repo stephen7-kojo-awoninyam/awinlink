@@ -1,0 +1,11 @@
+<main>
+<h1>Contact Awinlink about child safety</h1>
+<p>This text-only form works without signing in or using email. Reports are stored for authorized administrator review. It is not an emergency service, and staffing/response times still require operator confirmation.</p>
+<p><strong>Do not upload, forward or describe graphic details of suspected CSAM.</strong> Include a username, relevant record link, approximate time and brief concern. Do not send passwords, identity documents or unnecessary personal information.</p>
+{% if received %}<p role="status">Your child-safety report was received for administrator review. This does not confirm that content has been removed or that authorities have been contacted.</p>{% endif %}
+<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Submit child-safety report</button></form>
+<p>A reply email is optional and may be used for follow-up; this form does not send email or promise a reply. Reports and contact details are visible to authorized reviewers; retention procedures require operator approval. Read the <a href="{% url 'privacy' %}#retention">Privacy Policy</a>.</p>
+{% if child_safety_email %}<p>Designated child-safety email: <a href="mailto:{{ child_safety_email }}">{{ child_safety_email }}</a>. Mailbox monitoring and email delivery have not been verified.</p>{% endif %}
+<p>For immediate danger contact appropriate local emergency services. <a href="{% url 'child_safety' %}">Return to Child Safety Standards</a>.</p>
+</main>
+<style>main{overflow-wrap:anywhere}textarea,input[type=email]{box-sizing:border-box;max-width:100%;width:100%;font:inherit;padding:12px;border:1px solid #9bb5df;border-radius:8px}button{background:#1646a0;color:white;border:0;border-radius:8px}button:focus-visible{outline:3px solid #f3b61f;outline-offset:3px}.errorlist{color:#9b1c1c}</style>

@@ -6,7 +6,7 @@ Previous exact policy template sources are archived in [legal-archive/2026-10-18
 
 Review the rendered `/terms/`, `/privacy/` and `/community-guidelines/` pages and their source in `core/templates/core/policies/` with counsel and the service operator. Existing support and account-deletion routes remain available.
 
-All five public legal/support/deletion pages retain a draft warning and a machine-readable draft marker. Supplying operator configuration does not approve them. The URL preflight now rejects reachable draft pages, including community standards. Do not remove either warning or marker without explicit operator/legal approval of the exact copy and a separately reviewed release change.
+All six public legal/support/deletion pages, including `/child-safety/`, retain a draft warning and a machine-readable draft marker. Supplying operator configuration does not approve them. The URL preflight rejects reachable draft pages, including community and child-safety standards. See [Child Safety Standards implementation](child-safety-standards.md) for the new page's scope and remaining safeguards. Do not remove either warning or marker without explicit operator/legal approval of the exact copy and a separately reviewed release change.
 
 ## Operator confirmation required
 
@@ -37,7 +37,7 @@ No values below were invented or inferred from a developer username, app ID or h
 | Surviving personal data | Classroom chat/whiteboard/audits, ad events and reports can survive with a user link removed. Free text can remain identifying. Full erasure, lawful retention purposes and maximum periods need review; unlinking is not anonymization. |
 | Media/backups | Some scoped cleanup exists, but universal physical erasure, historical public-CDN invalidation, offsite backup rotation/restore safeguards and production completion are unverified. Do not claim deletion removes all files immediately. |
 | Providers | Code supports Cloudinary/filesystem, Railway/VPS, SMTP/Resend, Google OAuth, Expo/FCM/APNs/web push, TURN and Paystack web advertising payments. Code/configuration support is not evidence that a provider is active in production. |
-| Child safety still open | In-app pre-sharing safety reminders, SDK/identifier review, legal age assurance, operational verification, manual support requests and production/device tests are not completed by policy prose. |
+| Child safety still open | Public contact intake, general in-app child-safety reports and an audited permission-checked review/post-removal workflow now exist locally; see [assessment](child-safety-standards.md) and [operator runbook](child-safety-operations.md). Monitored/designated contacts, complete CSAM/media handling, legal escalation, pre-sharing reminders, SDK/identifier review, age assurance, retention and production/device verification remain open. |
 
 Google Play review references: [User Data](https://support.google.com/googleplay/android-developer/answer/10144311?hl=en), [Families](https://support.google.com/googleplay/android-developer/answer/9893335?hl=en), [Child Safety Standards](https://support.google.com/googleplay/android-developer/answer/14747720?hl=en). These require operational evidence as well as accurate published text; this review does not certify compliance.
 

@@ -12,10 +12,13 @@ class AgeAccountMiddleware:
     def __call__(self, request):
         user = request.user
         if user.is_authenticated and not age_access_allowed(user) and request.path != "/accounts/logout/":
+            # Standalone safety intake does not authorize account access or fetch private targets.
+            if request.path == '/child-safety/report/' and request.method in {'GET', 'HEAD', 'POST'}:
+                return self.get_response(request)
             # Legal information and request channels remain readable without
             # lifting the account restriction or allowing any mutation.
             if request.method in {"GET", "HEAD"} and request.path in {
-                "/privacy/", "/terms/", "/community-guidelines/", "/support/", "/delete-account/"
+                "/privacy/", "/terms/", "/community-guidelines/", "/child-safety/", "/support/", "/delete-account/"
             }:
                 return self.get_response(request)
             if request.path.startswith("/api/"):
