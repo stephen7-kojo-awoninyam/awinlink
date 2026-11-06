@@ -86,8 +86,8 @@ def main():
         while True:
             page = drive.files().list(
                 q=f"'{folder_id}' in parents and trashed = false",
-                fields="nextPageToken,files(id,name,createdTime)", page_size=1000,
-                page_token=page_token).execute()
+                fields="nextPageToken,files(id,name,createdTime)", pageSize=1000,
+                pageToken=page_token).execute()
             for item in page.get("files", []):
                 name = item["name"]
                 if not (name.startswith("awinlink-20") and name.endswith(".awenc")):
